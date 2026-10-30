@@ -26,6 +26,8 @@ const TRAIL_OPACITY = [0.7, 0.55, 0.4, 0.28, 0.16];
 const PROBE_SHOW_MS = 20_000;
 const ARROWS = { up: '↑', down: '↓', level: '=' };
 const HIT_RADIUS_PX = 22;
+/** Heading rose drawn around the selected aircraft (screen px, independent of zoom). */
+const ROSE_RADIUS_PX = 78;
 /** A middle-button press that moves less than this is not a pan. */
 const DRAG_THRESHOLD_PX = 3;
 
@@ -56,6 +58,7 @@ function loadColors() {
     ring: '--radar-ring',
     compass: '--radar-compass',
     compassMajor: '--radar-compass-major',
+    roseBg: '--radar-rose-bg',
     terrain: '--radar-terrain',
     terrainMajor: '--radar-terrain-major',
     centreline: '--radar-centreline',
@@ -83,6 +86,8 @@ let fixes: Waypoint[] = [];
 let terrain: TerrainLevel[] = [];
 /** Screen positions of the last frame, for click hit-testing. */
 let hitTargets: { callsign: string; x: number; y: number; box: DOMRect }[] = [];
+/** Mouse position over the scope, for the heading-to-cursor line of the selected aircraft. */
+let cursor: { x: number; y: number } | null = null;
 
 function basePxPerNm(): number {
   return Math.min(width, height) / 2 / (RANGE_NM + FIT_MARGIN_NM);
@@ -330,6 +335,101 @@ function commsColor(ageS: number): string {
   return colors.muted;
 }
 
+/**
+ * Heading rose around the selected aircraft: ticks every 10°, headings every 30°, the
+ * actual heading (filled cyan), the assigned one while still turning (hollow), and a line
+ * to the mouse with the exact heading and distance to give.
+ */
+function drawHeadingRose(
+  ctx: CanvasRenderingContext2D,
+  pos: { x: number; y: number },
+  a: Aircraft,
+): void {
+  const r = ROSE_RADIUS_PX;
+  ctx.fillStyle = colors.roseBg;
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, r + 16, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = colors.compass;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.arc(pos.x, pos.y, r, 0, Math.PI * 2);
+  ctx.stroke();
+
+  const point = (deg: number, radius: number) => {
+    const rad = (deg * Math.PI) / 180;
+    return { x: pos.x + Math.sin(rad) * radius, y: pos.y - Math.cos(rad) * radius };
+  };
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (let deg = 0; deg < 360; deg += 10) {
+    const major = deg % 30 === 0;
+    const outer = point(deg, r);
+    const inner = point(deg, r - (major ? 9 : 5));
+    ctx.strokeStyle = major ? colors.compassMajor : colors.compass;
+    ctx.lineWidth = major ? 1.5 : 1;
+    ctx.beginPath();
+    ctx.moveTo(outer.x, outer.y);
+    ctx.lineTo(inner.x, inner.y);
+    ctx.stroke();
+    if (major) {
+      const label = point(deg, r + 9);
+      ctx.font = `700 11px ${colors.font}`;
+      ctx.fillStyle = colors.compassMajor;
+      ctx.fillText(heading(deg === 0 ? 360 : deg), label.x, label.y);
+    }
+  }
+
+  // Assigned heading (hollow) while the aircraft still turns to it, actual heading (filled).
+  const marker = (deg: number, filled: boolean) => {
+    const tip = point(deg, r - 2);
+    const left = point(deg - 5, r + 10);
+    const right = point(deg + 5, r + 10);
+    ctx.beginPath();
+    ctx.moveTo(tip.x, tip.y);
+    ctx.lineTo(left.x, left.y);
+    ctx.lineTo(right.x, right.y);
+    ctx.closePath();
+    ctx.strokeStyle = colors.selected;
+    ctx.fillStyle = colors.selected;
+    ctx.lineWidth = 1.5;
+    if (filled) ctx.fill();
+    else ctx.stroke();
+  };
+  const assigned = a.target.headingDeg;
+  if (assigned !== undefined && heading(assigned) !== heading(a.headingDeg))
+    marker(assigned, false);
+  marker(a.headingDeg, true);
+
+  // Heading and distance from the aircraft to the mouse.
+  if (cursor) {
+    const dx = cursor.x - pos.x;
+    const dy = cursor.y - pos.y;
+    const px = Math.hypot(dx, dy);
+    if (px > 20) {
+      const deg = ((Math.atan2(dx, -dy) * 180) / Math.PI + 360) % 360;
+      ctx.strokeStyle = colors.selected;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(pos.x, pos.y);
+      ctx.lineTo(cursor.x, cursor.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      const text = `HDG ${heading(Math.round(deg))} · ${(px / pxPerNm).toFixed(1)} NM`;
+      ctx.font = `700 13px ${colors.font}`;
+      const w = ctx.measureText(text).width + 12;
+      ctx.fillStyle = colors.roseBg;
+      ctx.fillRect(cursor.x + 10, cursor.y - 22, w, 20);
+      ctx.fillStyle = colors.selected;
+      ctx.textAlign = 'start';
+      ctx.fillText(text, cursor.x + 16, cursor.y - 12);
+    }
+  }
+  ctx.textAlign = 'start';
+  ctx.textBaseline = 'alphabetic';
+}
+
 function drawTraffic(ctx: CanvasRenderingContext2D, now: number): void {
   const pulse = 0.35 + 0.35 * Math.sin(now / 250);
   const targets: typeof hitTargets = [];
@@ -364,6 +464,7 @@ function drawTraffic(ctx: CanvasRenderingContext2D, now: number): void {
       ctx.beginPath();
       ctx.arc(pos.x, pos.y, 15, 0, Math.PI * 2);
       ctx.stroke();
+      drawHeadingRose(ctx, pos, a);
     }
 
     // History dots
@@ -390,7 +491,8 @@ function drawTraffic(ctx: CanvasRenderingContext2D, now: number): void {
     ctx.strokeRect(pos.x - 4.5, pos.y - 4.5, 9, 9);
 
     // Data block: callsign / level trend target / heading speed type / LC mm:ss
-    const bx = pos.x + 18;
+    // The selected aircraft's label moves outside its heading rose.
+    const bx = pos.x + (isSelected ? ROSE_RADIUS_PX + 10 : 18);
     const by = pos.y - 38;
     ctx.fillStyle = color;
     ctx.font = `700 14px ${colors.font}`;
@@ -453,6 +555,7 @@ function onPointerDown(event: PointerEvent): void {
 }
 
 function onPointerMove(event: PointerEvent): void {
+  cursor = localPoint(event);
   if (!drag) return;
   const dx = event.clientX - drag.x;
   const dy = event.clientY - drag.y;
@@ -530,6 +633,7 @@ onBeforeUnmount(() => {
       @pointermove="onPointerMove"
       @pointerup="onPointerUp"
       @pointercancel="onPointerUp"
+      @pointerleave="cursor = null"
       @auxclick.prevent
       @wheel="onWheel"
     />

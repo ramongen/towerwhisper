@@ -54,6 +54,7 @@
   --radar-aircraft: #c9d4e0;
   --radar-compass: #3d5266;
   --radar-compass-major: #7d90a3;
+  --radar-rose-bg: rgba(7, 12, 18, 0.72); /* behind the selected aircraft's heading rose */
   --radar-terrain: rgba(120, 140, 160, 0.13); /* relief contours: grey, quiet */
   --radar-terrain-major: rgba(140, 160, 180, 0.24);
 
