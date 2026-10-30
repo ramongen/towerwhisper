@@ -1,37 +1,76 @@
-/* Design tokens from the Claude Design handoff. Components use these; never hard-code colours. */
+/* Design tokens from the Claude Design handoff ("TowerWhisper UI"). Components and the
+   radar canvas use these; never hard-code colours. Dark theme only (projector). */
 :root {
   /* Surfaces */
   --color-bg: #0a1017;
   --color-panel: #0e1620;
   --color-panel-raised: #111c28;
+  --color-strips-bg: #0b131c;
+  --color-radar-bg: #070c12;
+  --color-control: #16212d;
   --color-border: #1f2c3a;
+  --color-border-strong: #26364a;
+  --color-border-chip: #2a3b4d;
+  --color-border-control: #2e4256;
+  --color-overlay: rgba(4, 8, 13, 0.82);
 
   /* Text */
   --color-text: #e6edf3;
+  --color-text-secondary: #c9d4e0;
   --color-text-muted: #8b9bad;
+  --color-text-faint: #6f8193;
+  --color-idle: #4e6074;
 
   /* Meaning (colour carries meaning only) */
   --color-atc: #3fd0e8; /* cyan: selected aircraft, ATC entries */
+  --color-atc-bg: rgba(63, 208, 232, 0.14);
+  --color-atc-selected-bg: #16303a;
   --color-pilot: #b9b5ff; /* pilot entries */
+  --color-pilot-bg: rgba(169, 164, 245, 0.16);
+  --color-pilot-key-bg: rgba(169, 164, 245, 0.18);
   --color-caution: #f2b33d; /* amber */
+  --color-caution-bg: rgba(242, 179, 61, 0.1);
+  --color-caution-strong-bg: rgba(242, 179, 61, 0.16);
   --color-warning: #ff6b6b; /* red */
+  --color-warning-text: #ff8a8a;
+  --color-warning-bg: rgba(255, 93, 93, 0.1);
+  --color-warning-strong-bg: rgba(255, 93, 93, 0.18);
+  --color-transmit: #c62828; /* PTT button while on air */
   --color-ok: #4cd486; /* green: confirmed readback only */
+
+  /* Radar */
+  --radar-ring: #1c2a38;
+  --radar-centreline: #2e5a6e;
+  --radar-runway: #e6edf3;
+  --radar-label: #6f8193;
+  --radar-aircraft: #c9d4e0;
 
   /* Typography */
   --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-data: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
   --font-size-data: 14px; /* data text >= 14 px */
-  --font-size-alert: 16px; /* alert reasons >= 16 px */
-  --font-size-label: 12px;
+  --font-size-alert: 17px; /* alert reasons >= 16 px */
+  --font-size-label: 13px;
+  --font-size-caption: 12px;
+  --letter-label: 0.1em;
 
-  /* Layout */
+  /* Layout (1920x1080 projector) */
   --topbar-height: 56px;
-  --strips-height: 168px;
-  --radar-width: 65%;
+  --strips-height: 160px;
+  --aside-width: 688px;
+  --alerts-height: 364px;
+  --ptt-width: 600px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --radius-sm: 4px;
   --radius: 6px;
+  --radius-strip: 8px;
+  --radius-card: 10px;
+  --radius-bar: 14px;
+  --radius-dialog: 16px;
   --border-width: 1px;
 }

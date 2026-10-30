@@ -18,35 +18,52 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--color-atc);
+  outline-offset: 2px;
+}
+
 .mono {
   font-family: var(--font-data);
-  font-size: var(--font-size-data);
 }
 
-.panel {
-  background: var(--color-panel);
-  border: var(--border-width) solid var(--color-border);
-  border-radius: var(--radius);
-  min-width: 0;
-  min-height: 0;
+/* Section headings: 'COMMUNICATIONS', 'ALERTS', 'TARGET' ... */
+.section-title {
+  margin: 0;
+  font-size: var(--font-size-label);
+  font-weight: 700;
+  letter-spacing: var(--letter-label);
+  color: var(--color-text-muted);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
   overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
-.panel-label {
-  display: block;
-  padding: var(--space-2) var(--space-3);
-  font-size: var(--font-size-label);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--color-text-muted);
-  border-bottom: var(--border-width) solid var(--color-border);
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-/* Placeholder look for components that are not built yet. */
-.placeholder {
-  padding: var(--space-3);
-  color: var(--color-text-muted);
-  font-family: var(--font-data);
-  font-size: var(--font-size-label);
+.spinner {
+  animation: spin 0.9s linear infinite;
 }
