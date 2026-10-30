@@ -11,6 +11,7 @@ import { RealtimeModule } from './realtime/realtime.module';
 import { SafetyModule } from './safety/safety.module';
 import { SessionModule } from './session/session.module';
 import { SimulationModule } from './simulation/simulation.module';
+import { TransmissionsModule } from './transmissions/transmissions.module';
 import { VoiceModule } from './voice/voice.module';
 
 const DEFAULT_DATABASE_URL = 'postgres://towerwhisper:towerwhisper@localhost:5432/towerwhisper';
@@ -44,6 +45,7 @@ class AppModeModule {}
     SafetyModule,
     DemoControlModule,
     RealtimeModule,
+    TransmissionsModule,
   ],
   controllers: [HealthController],
 })

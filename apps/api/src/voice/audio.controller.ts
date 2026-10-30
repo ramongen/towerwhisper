@@ -1,12 +1,13 @@
 import { Controller, Get, NotFoundException, Param, Res } from '@nestjs/common';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { AUDIO_DIR, TTS_CACHE_DIR } from './constants';
+
 /** The two Express response methods we use (no @types/express dependency). */
 interface FileResponse {
   setHeader(name: string, value: string): void;
   sendFile(path: string): void;
 }
-import { existsSync } from 'node:fs';
-import { join } from 'node:path';
-import { AUDIO_DIR, TTS_CACHE_DIR } from './constants';
 
 const SAFE_NAME = /^[a-z0-9-]+\.(mp3|webm|ogg|mp4)$/;
 

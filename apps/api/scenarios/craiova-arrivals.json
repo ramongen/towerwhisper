@@ -6,27 +6,35 @@
       "callsign": "ROT301",
       "telephony": "TAROM 301",
       "type": "AT76",
-      "lat": 44.53,
-      "lon": 23.59,
+      "lat": 44.45,
+      "lon": 23.33,
       "altitudeFt": 7000,
       "headingDeg": 170,
       "speedKt": 210,
       "verticalSpeedFpm": 0,
       "turnRateDegS": 0,
-      "target": { "altitudeFt": 7000, "headingDeg": 170, "speedKt": 210 }
+      "target": {
+        "altitudeFt": 7000,
+        "headingDeg": 170,
+        "speedKt": 210
+      }
     },
     {
       "callsign": "WZZ44",
       "telephony": "WIZZ 44",
       "type": "A21N",
-      "lat": 44.35,
+      "lat": 44.45,
       "lon": 24.58,
       "altitudeFt": 12000,
-      "headingDeg": 270,
+      "headingDeg": 250,
       "speedKt": 280,
       "verticalSpeedFpm": 0,
       "turnRateDegS": 0,
-      "target": { "altitudeFt": 12000, "headingDeg": 270, "speedKt": 280 }
+      "target": {
+        "altitudeFt": 12000,
+        "headingDeg": 250,
+        "speedKt": 280
+      }
     },
     {
       "callsign": "ROT612",
@@ -39,7 +47,11 @@
       "speedKt": 260,
       "verticalSpeedFpm": 0,
       "turnRateDegS": 0,
-      "target": { "altitudeFt": 10000, "headingDeg": 340, "speedKt": 260 }
+      "target": {
+        "altitudeFt": 10000,
+        "headingDeg": 340,
+        "speedKt": 260
+      }
     },
     {
       "callsign": "LOT2RP",
@@ -52,7 +64,11 @@
       "speedKt": 290,
       "verticalSpeedFpm": 0,
       "turnRateDegS": 0,
-      "target": { "altitudeFt": 14000, "headingDeg": 190, "speedKt": 290 }
+      "target": {
+        "altitudeFt": 14000,
+        "headingDeg": 190,
+        "speedKt": 290
+      }
     },
     {
       "callsign": "RYR8KQ",
@@ -65,7 +81,11 @@
       "speedKt": 300,
       "verticalSpeedFpm": 0,
       "turnRateDegS": 0,
-      "target": { "altitudeFt": 16000, "headingDeg": 80, "speedKt": 300 }
+      "target": {
+        "altitudeFt": 16000,
+        "headingDeg": 80,
+        "speedKt": 300
+      }
     },
     {
       "callsign": "DLH9TC",
@@ -78,7 +98,11 @@
       "speedKt": 240,
       "verticalSpeedFpm": 0,
       "turnRateDegS": 0,
-      "target": { "altitudeFt": 9000, "headingDeg": 300, "speedKt": 240 }
+      "target": {
+        "altitudeFt": 9000,
+        "headingDeg": 300,
+        "speedKt": 240
+      }
     }
   ]
 }
