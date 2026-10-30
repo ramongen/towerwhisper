@@ -1,6 +1,14 @@
 // WebSocket events (namespace /live) and REST bodies — spec section 8.
 import type { FaultConfig } from './faults';
-import type { Aircraft, AirportWeather, Alert, AppMode, Clearance, LatLon } from './types';
+import type {
+  Aircraft,
+  AirportWeather,
+  Alert,
+  AppMode,
+  Clearance,
+  LatLon,
+  SttProvider,
+} from './types';
 
 // ---------------------------------------------------------------------------
 // WebSocket: server -> client
@@ -121,6 +129,7 @@ export interface ClientToServerEvents {
 export interface HealthResponse {
   status: 'ok';
   mode: AppMode;
+  stt: SttProvider;
 }
 
 /** POST /sessions */
@@ -136,6 +145,7 @@ export interface CurrentSessionResponse {
   sessionId: string;
   startedAt: string;
   mode: AppMode;
+  stt: SttProvider;
   /** Scripted demo phrases, offered as text input in no-keys mode. */
   scriptedPhrases: string[];
 }

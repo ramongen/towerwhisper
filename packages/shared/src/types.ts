@@ -178,3 +178,6 @@ export interface AirspaceResponse {
 
 /** 'full' when speech-to-text is available (local Whisper or OpenAI); 'no-keys' runs on text input. */
 export type AppMode = 'full' | 'no-keys';
+
+/** Who turns PTT audio into text: Whisper on our own GPU, the OpenAI API, or nobody (typed). */
+export type SttProvider = 'local-whisper' | 'openai' | 'none';

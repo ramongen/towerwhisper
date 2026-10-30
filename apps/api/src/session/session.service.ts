@@ -86,6 +86,7 @@ export class SessionService implements OnModuleInit {
       sessionId: this.sessionId,
       startedAt: this.startedAt.toISOString(),
       mode: this.appMode.mode,
+      stt: this.appMode.stt,
       scriptedPhrases: SCRIPTED_PHRASES,
     };
   }

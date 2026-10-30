@@ -8,6 +8,6 @@ export class HealthController {
 
   @Get()
   health(): HealthResponse {
-    return { status: 'ok', mode: this.appMode.mode };
+    return { status: 'ok', mode: this.appMode.mode, stt: this.appMode.stt };
   }
 }

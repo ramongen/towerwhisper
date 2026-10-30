@@ -12,6 +12,20 @@ const now = useNow();
 const { frequencyBusy } = storeToRefs(useCommsStore());
 const { session } = storeToRefs(useDemoStore());
 
+/** Where PTT audio is transcribed. */
+const sttLabel = computed(() => {
+  switch (session.value?.stt) {
+    case 'local-whisper':
+      return { text: 'STT WHISPER LOCAL', title: 'Whisper large-v3 on this machine (GPU)' };
+    case 'openai':
+      return { text: 'STT WHISPER API', title: 'OpenAI Whisper API' };
+    case 'none':
+      return { text: 'TEXT MODE', title: 'No speech-to-text configured: typed transmissions' };
+    default:
+      return null;
+  }
+});
+
 const sessionClock = computed(() => {
   if (!session.value) return '--:--:--';
   const s = Math.max(0, Math.floor((now.value - Date.parse(session.value.startedAt)) / 1000));
@@ -32,13 +46,7 @@ const sessionClock = computed(() => {
       </svg>
       <span>{{ frequencyBusy ? 'FREQUENCY BUSY' : 'FREQUENCY IDLE' }}</span>
     </div>
-    <span
-      v-if="session?.mode === 'no-keys'"
-      class="mono mode"
-      title="No API keys: typed transmissions"
-    >
-      TEXT MODE
-    </span>
+    <span v-if="sttLabel" class="mono mode" :title="sttLabel.title">{{ sttLabel.text }}</span>
     <span class="mono sub">SESSION {{ sessionClock }}</span>
     <span class="mono clock">{{ utcTime(now) }} UTC</span>
     <div class="connection" :class="{ down: !connected }" role="status">

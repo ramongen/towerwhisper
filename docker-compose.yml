@@ -30,6 +30,28 @@ services:
       retries: 30
     restart: unless-stopped
 
+  # Local speech-to-text: Whisper large-v3 (faster-whisper) on an NVIDIA GPU.
+  # Optional: enabled with COMPOSE_PROFILES=whisper (see .env.example). The model is
+  # downloaded into the whisper-models volume on the first start (~3 GB).
+  whisper:
+    image: onerahmet/openai-whisper-asr-webservice:v1.10.0-gpu
+    profiles: ['whisper']
+    environment:
+      ASR_ENGINE: faster_whisper
+      ASR_MODEL: ${WHISPER_MODEL:-large-v3}
+      ASR_QUANTIZATION: float16
+      ASR_MODEL_PATH: /models
+    volumes:
+      - whisper-models:/models
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
   web:
     build: { context: ., dockerfile: apps/web/Dockerfile }
     ports:
@@ -41,3 +63,4 @@ services:
 volumes:
   pgdata:
   audio:
+  whisper-models:

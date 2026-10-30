@@ -2,6 +2,8 @@ import { join } from 'node:path';
 
 export const STT_MODEL = 'whisper-1';
 export const STT_TIMEOUT_MS = 15_000;
+/** Local Whisper: the first request after start-up may wait for the model to load. */
+export const LOCAL_STT_TIMEOUT_MS = 30_000;
 
 export const TTS_MODEL = 'tts-1';
 export const TTS_TIMEOUT_MS = 10_000;

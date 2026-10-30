@@ -107,7 +107,22 @@ pnpm --filter web dev               # Vite on :5173, proxies /api and /socket.io
 
 Checks: `pnpm -r typecheck`, `pnpm -r lint`, `pnpm --filter api test`.
 
-Without `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` the app runs in **no-keys mode**: PTT is replaced by
+### Local speech-to-text (Whisper large-v3 on your GPU)
+
+With an NVIDIA GPU and Docker Desktop GPU support, put these in `.env` and run
+`docker compose up --build`:
+
+```bash
+COMPOSE_PROFILES=whisper
+WHISPER_URL=http://whisper:9000
+WHISPER_MODEL=large-v3          # or large-v3-turbo for even lower latency
+```
+
+The `whisper` container (faster-whisper, float16 on CUDA) downloads the model into a volume on the
+first start. PTT audio then never leaves the laptop; the OpenAI API is only a fallback when a key
+is set. The top bar shows the active source (`STT WHISPER LOCAL`, `STT WHISPER API`, `TEXT MODE`).
+
+Without any speech-to-text (no `WHISPER_URL`, no `OPENAI_API_KEY`) the app runs in **no-keys mode**: PTT is replaced by
 a text input with the scripted phrases, the pilot voice comes from `apps/api/assets/tts-cache`, and
 the LLM parser is disabled. `GET /api/health` reports the active mode.
 
