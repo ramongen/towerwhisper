@@ -11,6 +11,7 @@ import { useAlertStore } from '../stores/useAlertStore';
 import { useCommsStore } from '../stores/useCommsStore';
 import { useDemoStore } from '../stores/useDemoStore';
 import { setProbe, useTrafficStore } from '../stores/useTrafficStore';
+import { useWeatherStore } from '../stores/useWeatherStore';
 
 type LiveSocket = Socket<ServerToClientEvents, ClientToServerEvents>;
 
@@ -26,6 +27,7 @@ export function useSocket() {
     const comms = useCommsStore();
     const alerts = useAlertStore();
     const demo = useDemoStore();
+    const weather = useWeatherStore();
 
     socket.on('connect', () => {
       connected.value = true;
@@ -43,6 +45,7 @@ export function useSocket() {
     socket.on(ServerEvent.AlertCleared, ({ id }) => alerts.clear(id));
     socket.on(ServerEvent.DemoFaults, demo.setFaults);
     socket.on(ServerEvent.FrequencyBusy, ({ busy }) => comms.setFrequencyBusy(busy));
+    socket.on(ServerEvent.WeatherUpdate, weather.set);
     socket.on(ServerEvent.StatsOverlay, ({ visible }) => demo.setOverlay(visible));
     socket.on(ServerEvent.SessionReset, ({ sessionId, startedAt }) => {
       comms.clear();

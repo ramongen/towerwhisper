@@ -1,6 +1,6 @@
 // WebSocket events (namespace /live) and REST bodies — spec section 8.
 import type { FaultConfig } from './faults';
-import type { Aircraft, Alert, AppMode, Clearance, LatLon } from './types';
+import type { Aircraft, AirportWeather, Alert, AppMode, Clearance, LatLon } from './types';
 
 // ---------------------------------------------------------------------------
 // WebSocket: server -> client
@@ -20,6 +20,7 @@ export const ServerEvent = {
   FrequencyBusy: 'frequency:busy',
   SessionReset: 'session:reset',
   StatsOverlay: 'stats:overlay',
+  WeatherUpdate: 'weather:update',
 } as const;
 
 export type ReadbackCheck = 'ok' | 'mismatch' | 'incomplete';
@@ -90,6 +91,8 @@ export interface ServerToClientEvents {
   'frequency:busy': (payload: FrequencyBusyPayload) => void;
   'session:reset': (payload: SessionResetPayload) => void;
   'stats:overlay': (payload: StatsOverlayPayload) => void;
+  /** On connect and whenever a new observation arrives. */
+  'weather:update': (weather: AirportWeather) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -195,6 +198,9 @@ export interface DemoTriggerResponse {
   callsign?: string;
   message: string;
 }
+
+/** GET /weather -> AirportWeather, or 204 when no source answered yet. */
+export type WeatherResponse = AirportWeather;
 
 /** POST /alerts/:id/ack */
 export interface AckAlertResponse {

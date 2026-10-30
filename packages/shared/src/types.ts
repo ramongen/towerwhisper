@@ -92,5 +92,40 @@ export interface LatLon {
   lon: number;
 }
 
-/** 'full' when OPENAI_API_KEY is set; 'no-keys' runs on text input and the TTS cache. */
+export type RunwayId = '09' | '27';
+export type FlightCategory = 'VFR' | 'MVFR' | 'IFR' | 'LIFR';
+
+/** Wind along one runway direction (negative headwind = tailwind). */
+export interface RunwayWind {
+  runway: RunwayId;
+  headwindKt: number;
+  crosswindKt: number;
+}
+
+/** Current weather at the airport, decoded for the controller (METAR, or model data as fallback). */
+export interface AirportWeather {
+  icao: string;
+  source: 'metar' | 'model';
+  observedAt: string;
+  raw: string | null;
+  windDirDeg: number | null; // null = variable
+  windSpeedKt: number;
+  windGustKt: number | null;
+  visibilityM: number | null;
+  clouds: { cover: string; baseFt: number }[];
+  ceilingFt: number | null; // lowest BKN/OVC layer
+  temperatureC: number | null;
+  dewpointC: number | null;
+  qnhHpa: number | null;
+  weather: string | null; // present weather, e.g. '-RA BR'
+  flightCategory: FlightCategory | null;
+  runwayWind: RunwayWind[];
+  /** Runway direction with the most headwind (09 when calm: it has the ILS). */
+  preferredRunway: RunwayId;
+  /** Precipitation reported: the runway is treated as wet for landing distances. */
+  wetRunway: boolean;
+  fetchedAt: string;
+}
+
+/** 'full' when speech-to-text is available (local Whisper or OpenAI); 'no-keys' runs on text input. */
 export type AppMode = 'full' | 'no-keys';

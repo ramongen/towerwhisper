@@ -5,6 +5,7 @@
   --color-bg: #0a1017;
   --color-panel: #0e1620;
   --color-panel-raised: #111c28;
+  --color-panel-overlay: rgba(14, 22, 32, 0.9); /* cards floating over the radar */
   --color-strips-bg: #0b131c;
   --color-radar-bg: #070c12;
   --color-control: #16212d;

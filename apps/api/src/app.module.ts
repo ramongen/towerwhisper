@@ -13,6 +13,7 @@ import { SessionModule } from './session/session.module';
 import { SimulationModule } from './simulation/simulation.module';
 import { TransmissionsModule } from './transmissions/transmissions.module';
 import { VoiceModule } from './voice/voice.module';
+import { WeatherModule } from './weather/weather.module';
 
 const DEFAULT_DATABASE_URL = 'postgres://towerwhisper:towerwhisper@localhost:5432/towerwhisper';
 
@@ -46,6 +47,7 @@ class AppModeModule {}
     DemoControlModule,
     RealtimeModule,
     TransmissionsModule,
+    WeatherModule,
   ],
   controllers: [HealthController],
 })

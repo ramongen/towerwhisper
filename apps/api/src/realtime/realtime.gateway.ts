@@ -22,6 +22,7 @@ import type { Namespace, Socket } from 'socket.io';
 import { FaultService } from '../demo/fault.service';
 import { AlertRegistry } from '../safety/alert-registry';
 import { SimulationService } from '../simulation/simulation.service';
+import { WeatherService } from '../weather/weather.service';
 import { COMMS_HISTORY_SIZE, REALTIME_NAMESPACE } from './constants';
 
 export type CommsEvent =
@@ -48,6 +49,7 @@ export class RealtimeGateway implements OnModuleInit, OnGatewayConnection, OnGat
     private readonly simulation: SimulationService,
     private readonly alerts: AlertRegistry,
     private readonly faults: FaultService,
+    private readonly weather: WeatherService,
   ) {}
 
   onModuleInit(): void {
@@ -59,12 +61,15 @@ export class RealtimeGateway implements OnModuleInit, OnGatewayConnection, OnGat
     });
     this.faults.onChange((config) => this.server?.emit(ServerEvent.DemoFaults, config));
     this.faults.onOverlay((visible) => this.server?.emit(ServerEvent.StatsOverlay, { visible }));
+    this.weather.onUpdate((w) => this.server?.emit(ServerEvent.WeatherUpdate, w));
   }
 
   handleConnection(client: LiveSocket): void {
     client.emit(ServerEvent.DemoFaults, this.faults.getConfig());
     client.emit(ServerEvent.FrequencyBusy, { busy: this.pttHolders.size > 0 });
     client.emit(ServerEvent.StatsOverlay, { visible: this.faults.isOverlayVisible() });
+    const weather = this.weather.get();
+    if (weather) client.emit(ServerEvent.WeatherUpdate, weather);
     for (const event of this.history) {
       if (event.kind === 'transmission') client.emit(ServerEvent.CommsTransmission, event.payload);
       else client.emit(ServerEvent.CommsReadback, event.payload);

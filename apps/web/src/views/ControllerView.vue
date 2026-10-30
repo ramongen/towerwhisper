@@ -9,6 +9,7 @@ import PttBar from '../components/PttBar.vue';
 import RadarScope from '../components/RadarScope.vue';
 import StatsOverlay from '../components/StatsOverlay.vue';
 import TopBar from '../components/TopBar.vue';
+import WeatherPanel from '../components/WeatherPanel.vue';
 import { unlockAudioOnGesture } from '../composables/audioContext';
 import { useDemoShortcuts } from '../composables/useDemoShortcuts';
 import { useRadioVoice } from '../composables/useRadioVoice';
@@ -69,6 +70,9 @@ function toggleSelect(callsign: string): void {
     <div class="main">
       <section class="radar" aria-label="Radar">
         <RadarScope />
+        <div class="top-left">
+          <WeatherPanel />
+        </div>
         <PttBar class="ptt" />
       </section>
 
@@ -118,6 +122,15 @@ function toggleSelect(callsign: string): void {
   min-width: 0;
   overflow: hidden;
   border-right: var(--border-width) solid var(--color-border);
+}
+
+.top-left {
+  position: absolute;
+  top: var(--space-4);
+  left: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
 }
 
 .ptt {
