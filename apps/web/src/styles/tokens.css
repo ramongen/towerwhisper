@@ -40,6 +40,11 @@
   --shadow-transmit: 0 0 0 6px rgba(255, 93, 93, 0.22), 0 0 32px rgba(255, 93, 93, 0.45);
   --color-ok: #4cd486; /* green: confirmed readback only */
 
+  /* Scrollbars */
+  --scrollbar-thumb: #2a3b4d;
+  --scrollbar-thumb-hover: #3a5068;
+  --scrollbar-size: 8px;
+
   /* Radar */
   --radar-ring: #1c2a38;
   --radar-centreline: #2e5a6e;
