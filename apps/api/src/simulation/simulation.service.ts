@@ -73,6 +73,13 @@ export class SimulationService implements OnModuleInit, OnModuleDestroy {
     return this.flightPlans.get(callsign);
   }
 
+  /** Fixes still ahead on own navigation; empty while the aircraft flies a vector. */
+  getRemainingRoute(callsign: string): Waypoint[] {
+    const a = this.aircraft.get(callsign);
+    if (!a || a.target.headingDeg !== undefined) return [];
+    return a.route.slice(a.routeIndex);
+  }
+
   getFixes(): Waypoint[] {
     return [...this.fixes.values()];
   }

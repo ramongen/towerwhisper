@@ -1,6 +1,7 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { AirportModule } from './airport/airport.module';
 import { AppModeService } from './app-mode.service';
 import { ENTITIES } from './database/entities';
 import { DemoControlModule } from './demo/demo.module';
@@ -48,6 +49,7 @@ class AppModeModule {}
     RealtimeModule,
     TransmissionsModule,
     WeatherModule,
+    AirportModule,
   ],
   controllers: [HealthController],
 })

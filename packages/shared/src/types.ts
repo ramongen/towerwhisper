@@ -127,5 +127,54 @@ export interface AirportWeather {
   fetchedAt: string;
 }
 
+/** Published (approximate) data of an aircraft type, for planning advice only. */
+export interface AircraftTypeInfo {
+  icao: string; // 'B738'
+  model: string; // 'Boeing 737-800'
+  wakeCategory: 'L' | 'M' | 'H';
+  aerodromeCode: string; // ICAO aerodrome reference code, e.g. '4C'
+  mtowKg: number;
+  mlwKg: number;
+  wingspanM: number;
+  /** Certified landing field length at MLW, dry, sea level. */
+  landingFieldLengthM: number;
+  maxCrosswindKt: number; // demonstrated
+  minRunwayWidthM: number;
+}
+
+/** Can this aircraft land on one runway direction of our airport right now? */
+export interface RunwayAssessment {
+  runway: RunwayId;
+  compatible: boolean;
+  /** The compatible direction with the most headwind. */
+  recommended: boolean;
+  requiredLandingM: number;
+  availableM: number;
+  headwindKt: number | null; // null without live wind
+  crosswindKt: number | null;
+  /** Why it is (not) compatible, in plain words. */
+  notes: string[];
+}
+
+/** GET /aircraft/:callsign — everything the aircraft popup shows. */
+export interface AircraftDetails {
+  callsign: string;
+  telephony: string;
+  type: AircraftTypeInfo | null;
+  flightPlan: FlightPlan | null;
+  /** Fixes still ahead on its own navigation (empty on vectors). */
+  remainingRoute: Waypoint[];
+  runways: RunwayAssessment[];
+  /** 'live' when the runway advice includes the current wind and runway state. */
+  weatherBasis: 'live' | 'none';
+}
+
+/** GET /airspace — static map data for the scope. */
+export interface AirspaceResponse {
+  airport: { icao: string; name: string; lat: number; lon: number; elevationFt: number };
+  runways: { id: RunwayId; headingDeg: number; lengthM: number; widthM: number; ils: boolean }[];
+  fixes: Waypoint[];
+}
+
 /** 'full' when speech-to-text is available (local Whisper or OpenAI); 'no-keys' runs on text input. */
 export type AppMode = 'full' | 'no-keys';
