@@ -171,27 +171,29 @@ export type PutFaultsResponse = FaultConfig;
 
 /** POST /demo/triggers/:name */
 export type DemoTriggerName =
-  | 'conflict'
-  | 'stepped-on'
-  | 'no-response'
-  | 'age-comms'
-  | 'reset-comms'
-  | 'stats-overlay';
+  'conflict' | 'stepped-on' | 'no-response' | 'age-comms' | 'reset-comms' | 'stats-overlay';
 
 /** POST /demo/triggers/stats-overlay */
 export interface StatsOverlayRequest {
   visible: boolean;
 }
 
-/** POST /demo/triggers/age-comms */
+/** POST /demo/triggers/age-comms — without a callsign, the demo-panel target is used. */
 export interface AgeCommsRequest {
-  callsign: string;
+  callsign?: string;
   ageS: number;
 }
 
-/** POST /demo/triggers/reset-comms */
+/** POST /demo/triggers/reset-comms — without a callsign, the demo-panel target is used. */
 export interface ResetCommsRequest {
-  callsign: string;
+  callsign?: string;
+}
+
+/** POST /demo/triggers/conflict and the other triggers answer with what they did. */
+export interface DemoTriggerResponse {
+  ok: boolean;
+  callsign?: string;
+  message: string;
 }
 
 /** POST /alerts/:id/ack */
