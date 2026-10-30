@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
 import { computed, onMounted, watch } from 'vue';
+import AircraftCard from '../components/AircraftCard.vue';
 import AlertStack from '../components/AlertStack.vue';
 import CommsPanel from '../components/CommsPanel.vue';
 import DemoPanel from '../components/DemoPanel.vue';
@@ -9,6 +10,7 @@ import PttBar from '../components/PttBar.vue';
 import RadarScope from '../components/RadarScope.vue';
 import StatsOverlay from '../components/StatsOverlay.vue';
 import TopBar from '../components/TopBar.vue';
+import UnackedBadge from '../components/UnackedBadge.vue';
 import WeatherPanel from '../components/WeatherPanel.vue';
 import { unlockAudioOnGesture } from '../composables/audioContext';
 import { useDemoShortcuts } from '../composables/useDemoShortcuts';
@@ -32,6 +34,10 @@ function closeOverlay(): void {
 }
 
 const limits = computed(() => faults.value?.commsLimits ?? { cautionS: 900, warningS: 1800 });
+
+/** '15 MIN' or '15 S' for the radar legend. */
+const limitText = (s: number) =>
+  limits.value.cautionS < 120 ? `${s} S` : `${Math.round(s / 60)} MIN`;
 
 /** Only readbacks that arrive live are spoken (not the history replayed on reconnect). */
 const LIVE_READBACK_MS = 3000;
@@ -72,6 +78,19 @@ function toggleSelect(callsign: string): void {
         <RadarScope />
         <div class="top-left">
           <WeatherPanel />
+          <p class="mono legend">
+            LC = TIME SINCE LAST CONTACT · AMBER ≥ {{ limitText(limits.cautionS) }} · RED ≥
+            {{ limitText(limits.warningS) }}<br />
+            RINGS 10 NM · COMPASS ON 40 NM · MIDDLE-DRAG PAN · WHEEL ZOOM · SIMULATED TRAFFIC
+          </p>
+        </div>
+        <div class="top-right">
+          <UnackedBadge />
+          <AircraftCard
+            v-if="selectedCallsign"
+            :callsign="selectedCallsign"
+            @close="traffic.select(null)"
+          />
         </div>
         <PttBar class="ptt" />
       </section>
@@ -131,6 +150,29 @@ function toggleSelect(callsign: string): void {
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+}
+
+.legend {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.6;
+  color: var(--radar-label);
+}
+
+.top-right {
+  position: absolute;
+  top: var(--space-4);
+  right: var(--space-4);
+  bottom: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-2);
+  pointer-events: none;
+}
+
+.top-right > * {
+  pointer-events: auto;
 }
 
 .ptt {

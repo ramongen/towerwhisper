@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import type { Aircraft } from '@towerwhisper/shared';
+import type { Aircraft, AirspaceResponse, Waypoint } from '@towerwhisper/shared';
 import { storeToRefs } from 'pinia';
 import { onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
 import { useAlertStore, type AlertLevel } from '../stores/useAlertStore';
 import { useDemoStore } from '../stores/useDemoStore';
 import { radarFeed, useTrafficStore } from '../stores/useTrafficStore';
-import { formatAge, levelLine } from '../utils/format';
+import { api } from '../utils/api';
+import { formatAge, heading, levelLine } from '../utils/format';
+import { loadTerrain, type TerrainLevel } from '../utils/terrain';
 import { readTokens } from '../utils/tokens';
 
 /** Craiova (LRCV): the centre of the scope. */
@@ -13,21 +15,19 @@ const LRCV = { lat: 44.3181, lon: 23.8886 };
 const COS_LAT0 = Math.cos((LRCV.lat * Math.PI) / 180);
 const RANGE_NM = 40;
 const RING_NM = 10;
-/** The scope height shows 72 NM, so the 40 NM ring just exceeds it (as in the design). */
-const VIEW_HEIGHT_NM = 72;
+/** Margin (NM) around the outer ring at zoom 1, so the compass labels fit. */
+const FIT_MARGIN_NM = 4;
 const RUNWAY_HALF_NM = 1.5;
 const CENTRELINE_NM = 20;
-/** Display-only reporting points. */
-const FIXES = [
-  { name: 'KOVAD', x: -26.3, y: 0 },
-  { name: 'RENOT', x: 12, y: 18.5 },
-  { name: 'PASIX', x: 22, y: -22.3 },
-  { name: 'TUBIL', x: -16.3, y: -27.3 },
-];
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 8;
+const ZOOM_STEP = 1.25;
 const TRAIL_OPACITY = [0.7, 0.55, 0.4, 0.28, 0.16];
 const PROBE_SHOW_MS = 20_000;
 const ARROWS = { up: '↑', down: '↓', level: '=' };
 const HIT_RADIUS_PX = 22;
+/** A middle-button press that moves less than this is not a pan. */
+const DRAG_THRESHOLD_PX = 3;
 
 const traffic = useTrafficStore();
 const { selectedCallsign } = storeToRefs(traffic);
@@ -36,6 +36,8 @@ const demo = useDemoStore();
 
 const wrapper = ref<HTMLDivElement | null>(null);
 const canvas = ref<HTMLCanvasElement | null>(null);
+const panning = ref(false);
+const zoomLabel = ref('1.0×');
 
 // Reactive state copied into plain variables, so the 60 fps loop never touches Vue reactivity.
 let selected: string | null = null;
@@ -52,11 +54,16 @@ function loadColors() {
   return readTokens({
     bg: '--color-radar-bg',
     ring: '--radar-ring',
+    compass: '--radar-compass',
+    compassMajor: '--radar-compass-major',
+    terrain: '--radar-terrain',
+    terrainMajor: '--radar-terrain-major',
     centreline: '--radar-centreline',
     runway: '--radar-runway',
     label: '--radar-label',
     labelStrong: '--color-text-secondary',
     muted: '--color-text-muted',
+    faint: '--color-text-faint',
     aircraft: '--radar-aircraft',
     selected: '--color-atc',
     caution: '--color-caution',
@@ -65,18 +72,43 @@ function loadColors() {
   });
 }
 
+/** View: zoom (1 = the 40 NM ring fits) and the point of the map at the screen centre (NM from LRCV). */
+const view = { zoom: 1, centerX: 0, centerY: 0 };
 let width = 0;
 let height = 0;
-let pxPerNm = 12;
+let pxPerNm = 10;
 let frame = 0;
 let resizeObserver: ResizeObserver | null = null;
+let fixes: Waypoint[] = [];
+let terrain: TerrainLevel[] = [];
 /** Screen positions of the last frame, for click hit-testing. */
 let hitTargets: { callsign: string; x: number; y: number; box: DOMRect }[] = [];
 
+function basePxPerNm(): number {
+  return Math.min(width, height) / 2 / (RANGE_NM + FIT_MARGIN_NM);
+}
+
+function nmToScreen(xNm: number, yNm: number): { x: number; y: number } {
+  return {
+    x: width / 2 + (xNm - view.centerX) * pxPerNm,
+    y: height / 2 - (yNm - view.centerY) * pxPerNm,
+  };
+}
+
 function toScreen(lat: number, lon: number): { x: number; y: number } {
-  const xNm = (lon - LRCV.lon) * 60 * COS_LAT0;
-  const yNm = (lat - LRCV.lat) * 60;
-  return { x: width / 2 + xNm * pxPerNm, y: height / 2 - yNm * pxPerNm };
+  return nmToScreen((lon - LRCV.lon) * 60 * COS_LAT0, (lat - LRCV.lat) * 60);
+}
+
+function screenToNm(x: number, y: number): { x: number; y: number } {
+  return {
+    x: view.centerX + (x - width / 2) / pxPerNm,
+    y: view.centerY - (y - height / 2) / pxPerNm,
+  };
+}
+
+function updateScale(): void {
+  pxPerNm = basePxPerNm() * view.zoom;
+  zoomLabel.value = `${view.zoom.toFixed(1)}×`;
 }
 
 function resize(): void {
@@ -91,7 +123,7 @@ function resize(): void {
   el.style.width = `${width}px`;
   el.style.height = `${height}px`;
   el.getContext('2d')?.setTransform(dpr, 0, 0, dpr, 0, 0);
-  pxPerNm = height / VIEW_HEIGHT_NM;
+  updateScale();
 }
 
 function draw(now: number): void {
@@ -99,71 +131,126 @@ function draw(now: number): void {
   if (ctx && width > 0) {
     ctx.fillStyle = colors.bg;
     ctx.fillRect(0, 0, width, height);
-    drawMap(ctx);
+    drawTerrain(ctx);
+    drawRings(ctx);
+    drawCompass(ctx);
+    drawAirport(ctx);
+    drawFixes(ctx);
+    drawRoute(ctx, now);
     drawProbe(ctx, now);
     drawTraffic(ctx, now);
-    drawLegend(ctx);
   }
   frame = requestAnimationFrame(draw);
 }
 
-function drawMap(ctx: CanvasRenderingContext2D): void {
-  const cx = width / 2;
-  const cy = height / 2;
+/** Relief contours, built once in NM and drawn with one transform per frame. */
+function drawTerrain(ctx: CanvasRenderingContext2D): void {
+  if (!terrain.length) return;
+  const origin = nmToScreen(0, 0);
+  ctx.save();
+  ctx.translate(origin.x, origin.y);
+  ctx.scale(pxPerNm, -pxPerNm);
+  for (const level of terrain) {
+    ctx.strokeStyle = level.major ? colors.terrainMajor : colors.terrain;
+    ctx.lineWidth = (level.major ? 1.2 : 0.8) / pxPerNm;
+    ctx.stroke(level.path);
+  }
+  ctx.restore();
+}
+
+function drawRings(ctx: CanvasRenderingContext2D): void {
+  const c = nmToScreen(0, 0);
   ctx.strokeStyle = colors.ring;
   ctx.lineWidth = 1;
   for (let r = RING_NM; r <= RANGE_NM; r += RING_NM) {
     ctx.beginPath();
-    ctx.arc(cx, cy, r * pxPerNm, 0, Math.PI * 2);
+    ctx.arc(c.x, c.y, r * pxPerNm, 0, Math.PI * 2);
     ctx.stroke();
   }
+  const outer = RANGE_NM * pxPerNm;
   ctx.beginPath();
-  ctx.moveTo(cx, 0);
-  ctx.lineTo(cx, height);
-  ctx.moveTo(0, cy);
-  ctx.lineTo(width, cy);
+  ctx.moveTo(c.x, c.y - outer);
+  ctx.lineTo(c.x, c.y + outer);
+  ctx.moveTo(c.x - outer, c.y);
+  ctx.lineTo(c.x + outer, c.y);
   ctx.stroke();
 
   ctx.font = `12px ${colors.font}`;
   ctx.fillStyle = colors.label;
-  for (let r = RING_NM; r <= RANGE_NM; r += RING_NM) {
-    ctx.fillText(r === RANGE_NM ? `${r} NM` : String(r), cx + r * pxPerNm + 6, cy - 4);
+  for (let r = RING_NM; r < RANGE_NM; r += RING_NM) {
+    ctx.fillText(String(r), c.x + r * pxPerNm + 6, c.y - 4);
   }
+}
 
-  // ILS 09 extended centreline (arrivals from the west) and the runway.
-  const west = cx - RUNWAY_HALF_NM * pxPerNm;
+/** Compass rose on the outer ring: ticks every 5°, headings every 10°, stronger every 30°. */
+function drawCompass(ctx: CanvasRenderingContext2D): void {
+  const c = nmToScreen(0, 0);
+  const r = RANGE_NM * pxPerNm;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (let deg = 0; deg < 360; deg += 5) {
+    const rad = (deg * Math.PI) / 180;
+    const sin = Math.sin(rad);
+    const cos = Math.cos(rad);
+    const major = deg % 30 === 0;
+    const len = major ? 12 : deg % 10 === 0 ? 8 : 4;
+    ctx.strokeStyle = major ? colors.compassMajor : colors.compass;
+    ctx.lineWidth = major ? 1.5 : 1;
+    ctx.beginPath();
+    ctx.moveTo(c.x + sin * r, c.y - cos * r);
+    ctx.lineTo(c.x + sin * (r - len), c.y - cos * (r - len));
+    ctx.stroke();
+    if (deg % 10 === 0) {
+      const lr = r - len - 12;
+      ctx.font = `${major ? '700 ' : ''}11px ${colors.font}`;
+      ctx.fillStyle = major ? colors.compassMajor : colors.compass;
+      ctx.fillText(heading(deg === 0 ? 360 : deg), c.x + sin * lr, c.y - cos * lr);
+    }
+  }
+  ctx.textAlign = 'start';
+  ctx.textBaseline = 'alphabetic';
+}
+
+function drawAirport(ctx: CanvasRenderingContext2D): void {
+  const west = nmToScreen(-RUNWAY_HALF_NM, 0);
+  const east = nmToScreen(RUNWAY_HALF_NM, 0);
+  const ils = nmToScreen(-RUNWAY_HALF_NM - CENTRELINE_NM, 0);
   ctx.strokeStyle = colors.centreline;
   ctx.lineWidth = 1.5;
   ctx.setLineDash([6, 6]);
   ctx.beginPath();
-  ctx.moveTo(west, cy);
-  ctx.lineTo(west - CENTRELINE_NM * pxPerNm, cy);
+  ctx.moveTo(west.x, west.y);
+  ctx.lineTo(ils.x, ils.y);
   ctx.stroke();
   ctx.setLineDash([]);
   ctx.strokeStyle = colors.runway;
   ctx.lineWidth = 5;
   ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.moveTo(west, cy);
-  ctx.lineTo(cx + RUNWAY_HALF_NM * pxPerNm, cy);
+  ctx.moveTo(west.x, west.y);
+  ctx.lineTo(east.x, east.y);
   ctx.stroke();
   ctx.lineCap = 'butt';
 
+  ctx.font = `12px ${colors.font}`;
   ctx.fillStyle = colors.muted;
-  ctx.fillText('09', west - 20, cy - 12);
-  ctx.fillText('27', cx + RUNWAY_HALF_NM * pxPerNm + 4, cy - 12);
-  ctx.fillText('ILS 09', west - (CENTRELINE_NM - 2) * pxPerNm, cy - 8);
+  ctx.fillText('09', west.x - 20, west.y - 12);
+  ctx.fillText('27', east.x + 4, east.y - 12);
+  const ilsLabel = nmToScreen(-CENTRELINE_NM, 0);
+  ctx.fillText('ILS 09', ilsLabel.x, ilsLabel.y - 8);
   ctx.fillStyle = colors.labelStrong;
   ctx.font = `700 12px ${colors.font}`;
-  ctx.fillText('LRCV', cx - 16, cy + 24);
+  const c = nmToScreen(0, 0);
+  ctx.fillText('LRCV', c.x - 16, c.y + 24);
+}
 
+function drawFixes(ctx: CanvasRenderingContext2D): void {
   ctx.font = `12px ${colors.font}`;
   ctx.strokeStyle = colors.label;
   ctx.fillStyle = colors.label;
   ctx.lineWidth = 1.25;
-  for (const fix of FIXES) {
-    const x = cx + fix.x * pxPerNm;
-    const y = cy - fix.y * pxPerNm;
+  for (const fix of fixes) {
+    const { x, y } = toScreen(fix.lat, fix.lon);
     ctx.beginPath();
     ctx.moveTo(x, y - 6);
     ctx.lineTo(x + 7, y + 6);
@@ -172,6 +259,44 @@ function drawMap(ctx: CanvasRenderingContext2D): void {
     ctx.stroke();
     ctx.fillText(fix.name, x + 10, y + 18);
   }
+}
+
+/** The selected aircraft's flight plan: filed route faint, what is left of it in cyan. */
+function drawRoute(ctx: CanvasRenderingContext2D, now: number): void {
+  const route = radarFeed.route;
+  const a = route && radarFeed.current.get(route.callsign);
+  if (!route || !a || route.callsign !== selected) return;
+
+  if (route.filed.length > 1) {
+    ctx.strokeStyle = colors.faint;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 5]);
+    ctx.beginPath();
+    route.filed.forEach((w, i) => {
+      const p = toScreen(w.lat, w.lon);
+      if (i === 0) ctx.moveTo(p.x, p.y);
+      else ctx.lineTo(p.x, p.y);
+    });
+    ctx.stroke();
+  }
+
+  const start = interpolated(a, now);
+  const points = [start, ...route.remaining, LRCV].map((p) => toScreen(p.lat, p.lon));
+  ctx.strokeStyle = colors.selected;
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([8, 6]);
+  ctx.beginPath();
+  points.forEach((p, i) => (i === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = colors.selected;
+  ctx.font = `700 12px ${colors.font}`;
+  route.remaining.forEach((w) => {
+    const p = toScreen(w.lat, w.lon);
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+    ctx.fill();
+  });
 }
 
 function drawProbe(ctx: CanvasRenderingContext2D, now: number): void {
@@ -264,7 +389,7 @@ function drawTraffic(ctx: CanvasRenderingContext2D, now: number): void {
     ctx.lineWidth = 2;
     ctx.strokeRect(pos.x - 4.5, pos.y - 4.5, 9, 9);
 
-    // Data block: callsign / level trend target / speed type / LC mm:ss
+    // Data block: callsign / level trend target / heading speed type / LC mm:ss
     const bx = pos.x + 18;
     const by = pos.y - 38;
     ctx.fillStyle = color;
@@ -272,7 +397,7 @@ function drawTraffic(ctx: CanvasRenderingContext2D, now: number): void {
     ctx.fillText(a.callsign, bx, by);
     ctx.font = `14px ${colors.font}`;
     ctx.fillText(levelLine(a, ARROWS), bx, by + 17);
-    ctx.fillText(`${a.speedKt} ${a.type}`, bx, by + 34);
+    ctx.fillText(`${heading(a.headingDeg)}° ${a.speedKt} ${a.type}`, bx, by + 34);
     ctx.font = `600 13px ${colors.font}`;
     ctx.fillStyle = commsColor(a.commsAgeS);
     ctx.fillText(`LC ${formatAge(a.commsAgeS)}`, bx, by + 51);
@@ -281,30 +406,24 @@ function drawTraffic(ctx: CanvasRenderingContext2D, now: number): void {
       callsign: a.callsign,
       x: pos.x,
       y: pos.y,
-      box: new DOMRect(bx, by - 14, 96, 70),
+      box: new DOMRect(bx, by - 14, 120, 70),
     });
   }
   hitTargets = targets;
 }
 
-function drawLegend(ctx: CanvasRenderingContext2D): void {
-  const unit = limits.cautionS < 120 ? 'S' : 'MIN';
-  const value = (s: number) => (unit === 'S' ? s : Math.round(s / 60));
-  ctx.font = `12px ${colors.font}`;
-  ctx.fillStyle = colors.label;
-  // Top-left: the bottom of the scope belongs to the PTT bar.
-  ctx.fillText(
-    `LC = TIME SINCE LAST CONTACT · AMBER ≥ ${value(limits.cautionS)} ${unit} · RED ≥ ${value(limits.warningS)} ${unit}`,
-    20,
-    28,
-  );
-  ctx.fillText(`RANGE ${RANGE_NM} NM · RINGS ${RING_NM} NM · SIMULATED TRAFFIC`, 20, 48);
+// --- Interaction: click to select, middle-drag to pan, wheel / buttons to zoom ---------------
+
+let drag: { x: number; y: number; centerX: number; centerY: number; moved: boolean } | null = null;
+
+function localPoint(event: MouseEvent): { x: number; y: number } {
+  const rect = canvas.value!.getBoundingClientRect();
+  return { x: event.clientX - rect.left, y: event.clientY - rect.top };
 }
 
 function onClick(event: MouseEvent): void {
-  const rect = canvas.value!.getBoundingClientRect();
-  const x = event.clientX - rect.left;
-  const y = event.clientY - rect.top;
+  if (event.button !== 0) return;
+  const { x, y } = localPoint(event);
   let best: string | null = null;
   let bestDistance = HIT_RADIUS_PX;
   for (const t of hitTargets) {
@@ -319,6 +438,69 @@ function onClick(event: MouseEvent): void {
   traffic.select(best === selected ? null : best);
 }
 
+function onPointerDown(event: PointerEvent): void {
+  if (event.button !== 1) return;
+  event.preventDefault(); // no autoscroll cursor
+  canvas.value?.setPointerCapture(event.pointerId);
+  drag = {
+    x: event.clientX,
+    y: event.clientY,
+    centerX: view.centerX,
+    centerY: view.centerY,
+    moved: false,
+  };
+  panning.value = true;
+}
+
+function onPointerMove(event: PointerEvent): void {
+  if (!drag) return;
+  const dx = event.clientX - drag.x;
+  const dy = event.clientY - drag.y;
+  if (!drag.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
+  drag.moved = true;
+  view.centerX = drag.centerX - dx / pxPerNm;
+  view.centerY = drag.centerY + dy / pxPerNm;
+}
+
+function onPointerUp(event: PointerEvent): void {
+  if (!drag) return;
+  canvas.value?.releasePointerCapture(event.pointerId);
+  drag = null;
+  panning.value = false;
+}
+
+/** Zoom keeping the map point under (x, y) where it is. */
+function zoomAt(factor: number, x = width / 2, y = height / 2): void {
+  const before = screenToNm(x, y);
+  view.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, view.zoom * factor));
+  updateScale();
+  const after = screenToNm(x, y);
+  view.centerX += before.x - after.x;
+  view.centerY += before.y - after.y;
+}
+
+function onWheel(event: WheelEvent): void {
+  event.preventDefault();
+  const { x, y } = localPoint(event);
+  zoomAt(event.deltaY < 0 ? ZOOM_STEP : 1 / ZOOM_STEP, x, y);
+}
+
+function resetView(): void {
+  view.zoom = 1;
+  view.centerX = 0;
+  view.centerY = 0;
+  updateScale();
+}
+
+async function loadMap(): Promise<void> {
+  try {
+    fixes = (await api<AirspaceResponse>('GET', '/airspace')).fixes;
+  } catch {
+    // The scope works without fixes; they come back on the next load.
+  }
+  terrain = await loadTerrain(LRCV, COS_LAT0);
+}
+
 onMounted(() => {
   colors = loadColors();
   resize();
@@ -326,6 +508,7 @@ onMounted(() => {
   if (wrapper.value) resizeObserver.observe(wrapper.value);
   // Fonts arrive after the first frames; re-read tokens once they are ready.
   void document.fonts?.ready.then(() => (colors = loadColors()));
+  void loadMap();
   frame = requestAnimationFrame(draw);
 });
 
@@ -339,10 +522,69 @@ onBeforeUnmount(() => {
   <div ref="wrapper" class="radar-scope">
     <canvas
       ref="canvas"
+      :class="{ panning }"
       role="img"
-      aria-label="Radar scope around Craiova airport; click an aircraft to select it"
+      aria-label="Radar scope around Craiova airport; click an aircraft to select it, middle-drag to pan, wheel to zoom"
       @click="onClick"
+      @pointerdown="onPointerDown"
+      @pointermove="onPointerMove"
+      @pointerup="onPointerUp"
+      @pointercancel="onPointerUp"
+      @auxclick.prevent
+      @wheel="onWheel"
     />
+    <div class="map-controls" role="group" aria-label="Map view">
+      <button type="button" aria-label="Zoom in" title="Zoom in" @click="zoomAt(ZOOM_STEP)">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.2"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <path d="M12 5v14M5 12h14" />
+        </svg>
+      </button>
+      <span class="mono zoom">{{ zoomLabel }}</span>
+      <button type="button" aria-label="Zoom out" title="Zoom out" @click="zoomAt(1 / ZOOM_STEP)">
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2.2"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <path d="M5 12h14" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        aria-label="Back to the initial view"
+        title="Back to the initial view"
+        @click="resetView"
+      >
+        <svg
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="7" />
+          <circle cx="12" cy="12" r="2" />
+          <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+        </svg>
+      </button>
+    </div>
   </div>
 </template>
 
@@ -356,5 +598,46 @@ onBeforeUnmount(() => {
 canvas {
   display: block;
   cursor: crosshair;
+  touch-action: none;
+}
+
+canvas.panning {
+  cursor: grabbing;
+}
+
+.map-controls {
+  position: absolute;
+  right: var(--space-4);
+  bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  background: var(--color-panel-overlay);
+  border: var(--border-width) solid var(--color-border-strong);
+  border-radius: var(--radius-card);
+}
+
+.map-controls button {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--color-text-secondary);
+  background: var(--color-control);
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius);
+}
+
+.map-controls button:hover {
+  color: var(--color-atc);
+  border-color: var(--color-atc);
+}
+
+.zoom {
+  font-size: 11px;
+  color: var(--color-text-muted);
 }
 </style>

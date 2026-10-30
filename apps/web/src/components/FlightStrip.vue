@@ -20,10 +20,13 @@ const levels = computed(() => {
 });
 
 const headingText = computed(() => {
-  const t = props.aircraft.target;
-  if (t.headingDeg === undefined) return heading(props.aircraft.headingDeg);
-  const turn = t.turnDir === 'left' ? ' L' : t.turnDir === 'right' ? ' R' : '';
-  return `${heading(t.headingDeg)}${turn}`;
+  // Actual heading, then the assigned one while the aircraft is still turning to it.
+  const a = props.aircraft;
+  const t = a.target;
+  const now = heading(a.headingDeg);
+  if (t.headingDeg === undefined || heading(t.headingDeg) === now) return now;
+  const turn = t.turnDir === 'left' ? 'L' : t.turnDir === 'right' ? 'R' : '';
+  return `${now}→${heading(t.headingDeg)}${turn}`;
 });
 
 const approach = computed(() => {

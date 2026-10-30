@@ -52,6 +52,10 @@
   --radar-runway: #e6edf3;
   --radar-label: #6f8193;
   --radar-aircraft: #c9d4e0;
+  --radar-compass: #3d5266;
+  --radar-compass-major: #7d90a3;
+  --radar-terrain: rgba(120, 140, 160, 0.13); /* relief contours: grey, quiet */
+  --radar-terrain-major: rgba(140, 160, 180, 0.24);
 
   /* Typography */
   --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;

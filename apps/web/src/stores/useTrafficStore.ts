@@ -1,4 +1,4 @@
-import type { Aircraft, ProbeResultPayload } from '@towerwhisper/shared';
+import type { Aircraft, ProbeResultPayload, Waypoint } from '@towerwhisper/shared';
 import { defineStore } from 'pinia';
 import { ref, shallowRef } from 'vue';
 
@@ -19,6 +19,8 @@ export const radarFeed = {
   lastTrailAt: 0,
   /** Latest Clearance Probe trajectory, drawn dotted for a while after the instruction. */
   probe: null as { result: ProbeResultPayload; at: number } | null,
+  /** Flight plan of the aircraft open in the details card. */
+  route: null as { callsign: string; filed: Waypoint[]; remaining: Waypoint[] } | null,
 };
 
 export function setProbe(result: ProbeResultPayload): void {
