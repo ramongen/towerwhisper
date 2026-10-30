@@ -292,12 +292,13 @@ function drawLegend(ctx: CanvasRenderingContext2D): void {
   const value = (s: number) => (unit === 'S' ? s : Math.round(s / 60));
   ctx.font = `12px ${colors.font}`;
   ctx.fillStyle = colors.label;
+  // Top-left: the bottom of the scope belongs to the PTT bar.
   ctx.fillText(
     `LC = TIME SINCE LAST CONTACT · AMBER ≥ ${value(limits.cautionS)} ${unit} · RED ≥ ${value(limits.warningS)} ${unit}`,
     20,
-    height - 40,
+    28,
   );
-  ctx.fillText(`RANGE ${RANGE_NM} NM · RINGS ${RING_NM} NM · SIMULATED TRAFFIC`, 20, height - 20);
+  ctx.fillText(`RANGE ${RANGE_NM} NM · RINGS ${RING_NM} NM · SIMULATED TRAFFIC`, 20, 48);
 }
 
 function onClick(event: MouseEvent): void {
