@@ -1,0 +1,37 @@
+/* Design tokens from the Claude Design handoff. Components use these; never hard-code colours. */
+:root {
+  /* Surfaces */
+  --color-bg: #0a1017;
+  --color-panel: #0e1620;
+  --color-panel-raised: #111c28;
+  --color-border: #1f2c3a;
+
+  /* Text */
+  --color-text: #e6edf3;
+  --color-text-muted: #8b9bad;
+
+  /* Meaning (colour carries meaning only) */
+  --color-atc: #3fd0e8; /* cyan: selected aircraft, ATC entries */
+  --color-pilot: #b9b5ff; /* pilot entries */
+  --color-caution: #f2b33d; /* amber */
+  --color-warning: #ff6b6b; /* red */
+  --color-ok: #4cd486; /* green: confirmed readback only */
+
+  /* Typography */
+  --font-ui: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-data: 'JetBrains Mono', ui-monospace, 'Cascadia Mono', Consolas, monospace;
+  --font-size-data: 14px; /* data text >= 14 px */
+  --font-size-alert: 16px; /* alert reasons >= 16 px */
+  --font-size-label: 12px;
+
+  /* Layout */
+  --topbar-height: 56px;
+  --strips-height: 168px;
+  --radar-width: 65%;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --radius: 6px;
+  --border-width: 1px;
+}

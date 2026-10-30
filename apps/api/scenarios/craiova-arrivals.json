@@ -1,0 +1,84 @@
+{
+  "name": "craiova-arrivals",
+  "airport": "LRCV",
+  "aircraft": [
+    {
+      "callsign": "ROT301",
+      "telephony": "TAROM 301",
+      "type": "AT76",
+      "lat": 44.53,
+      "lon": 23.59,
+      "altitudeFt": 7000,
+      "headingDeg": 170,
+      "speedKt": 210,
+      "verticalSpeedFpm": 0,
+      "turnRateDegS": 0,
+      "target": { "altitudeFt": 7000, "headingDeg": 170, "speedKt": 210 }
+    },
+    {
+      "callsign": "WZZ44",
+      "telephony": "WIZZ 44",
+      "type": "A21N",
+      "lat": 44.35,
+      "lon": 24.58,
+      "altitudeFt": 12000,
+      "headingDeg": 270,
+      "speedKt": 280,
+      "verticalSpeedFpm": 0,
+      "turnRateDegS": 0,
+      "target": { "altitudeFt": 12000, "headingDeg": 270, "speedKt": 280 }
+    },
+    {
+      "callsign": "ROT612",
+      "telephony": "TAROM 612",
+      "type": "B738",
+      "lat": 43.9,
+      "lon": 23.95,
+      "altitudeFt": 10000,
+      "headingDeg": 340,
+      "speedKt": 260,
+      "verticalSpeedFpm": 0,
+      "turnRateDegS": 0,
+      "target": { "altitudeFt": 10000, "headingDeg": 340, "speedKt": 260 }
+    },
+    {
+      "callsign": "LOT2RP",
+      "telephony": "LOT 2RP",
+      "type": "E195",
+      "lat": 44.78,
+      "lon": 23.8,
+      "altitudeFt": 14000,
+      "headingDeg": 190,
+      "speedKt": 290,
+      "verticalSpeedFpm": 0,
+      "turnRateDegS": 0,
+      "target": { "altitudeFt": 14000, "headingDeg": 190, "speedKt": 290 }
+    },
+    {
+      "callsign": "RYR8KQ",
+      "telephony": "RYANAIR 8KQ",
+      "type": "B38M",
+      "lat": 44.25,
+      "lon": 23.08,
+      "altitudeFt": 16000,
+      "headingDeg": 80,
+      "speedKt": 300,
+      "verticalSpeedFpm": 0,
+      "turnRateDegS": 0,
+      "target": { "altitudeFt": 16000, "headingDeg": 80, "speedKt": 300 }
+    },
+    {
+      "callsign": "DLH9TC",
+      "telephony": "LUFTHANSA 9TC",
+      "type": "CRJ9",
+      "lat": 44.05,
+      "lon": 24.25,
+      "altitudeFt": 9000,
+      "headingDeg": 300,
+      "speedKt": 240,
+      "verticalSpeedFpm": 0,
+      "turnRateDegS": 0,
+      "target": { "altitudeFt": 9000, "headingDeg": 300, "speedKt": 240 }
+    }
+  ]
+}

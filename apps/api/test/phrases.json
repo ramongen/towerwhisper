@@ -1,0 +1,45 @@
+[
+  {
+    "input": "TAROM 301, descend altitude 3000 feet, turn left heading 120",
+    "speaker": "atc",
+    "expected": {
+      "callsign": "ROT301",
+      "altitude": { "valueFt": 3000, "action": "descend", "flightLevel": false },
+      "heading": { "valueDeg": 120, "turn": "left" }
+    }
+  },
+  {
+    "input": "WIZZ 44, descend flight level eight zero, reduce speed 220",
+    "speaker": "atc",
+    "expected": {
+      "callsign": "WZZ44",
+      "altitude": { "valueFt": 8000, "action": "descend", "flightLevel": true },
+      "speed": { "valueKt": 220 }
+    }
+  },
+  {
+    "input": "TAROM 612, cleared ILS approach runway zero niner",
+    "speaker": "atc",
+    "expected": {
+      "callsign": "ROT612",
+      "approach": { "type": "ILS", "runway": "09" }
+    }
+  },
+  {
+    "input": "LUFTHANSA 9TC, contact Bucharest 121 decimal 3",
+    "speaker": "atc",
+    "expected": {
+      "callsign": "DLH9TC",
+      "frequency": { "mhz": "121.3" }
+    }
+  },
+  {
+    "input": "Descend 3000, left heading 120, TAROM 301",
+    "speaker": "pilot",
+    "expected": {
+      "callsign": "ROT301",
+      "altitude": { "valueFt": 3000, "action": "descend", "flightLevel": false },
+      "heading": { "valueDeg": 120, "turn": "left" }
+    }
+  }
+]
