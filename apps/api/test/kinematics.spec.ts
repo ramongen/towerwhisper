@@ -16,6 +16,8 @@ function aircraft(overrides: Partial<SimAircraft> = {}): SimAircraft {
     target: { altitudeFt: 7000, headingDeg: 170, speedKt: 210 },
     lastContactAt: new Date().toISOString(),
     commsAgeS: 0,
+    route: [],
+    routeIndex: 0,
     ...overrides,
   };
 }

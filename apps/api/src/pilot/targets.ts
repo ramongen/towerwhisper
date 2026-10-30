@@ -19,6 +19,8 @@ export function targetsFor(clearance: Clearance): Targets {
   ) {
     targets.approach = { type: 'ILS', runway: clearance.approach.runway };
   }
+  // Direct-to: back to own navigation (the simulator clears the assigned heading).
+  if (clearance.direct && !clearance.heading) targets.directTo = clearance.direct.fix;
   return targets;
 }
 

@@ -176,6 +176,13 @@ export function compare(
     }
   }
 
+  if (i.direct) {
+    if (!r.direct) missing.push(`direct ${i.direct.fix}`);
+    else if (r.direct.fix !== i.direct.fix) {
+      mismatches.push(`cleared direct ${i.direct.fix}, read back ${r.direct.fix}`);
+    }
+  }
+
   const check: ReadbackCheck = mismatches.length
     ? 'mismatch'
     : missing.length
@@ -193,6 +200,7 @@ export function describe(c: Clearance | null): string[] {
   if (c.speed) items.push(`speed ${c.speed.valueKt} kt`);
   if (c.approach) items.push(`ILS ${c.approach.runway}`);
   if (c.frequency) items.push(`frequency ${c.frequency.mhz}`);
+  if (c.direct) items.push(`direct ${c.direct.fix}`);
   return items;
 }
 

@@ -21,5 +21,6 @@ export const SCRIPTED_PHRASES = [
   'LOT 2RP, turn left heading 180',
   'LUFTHANSA 9TC, contact Bucharest 121 decimal 3',
   'TAROM 301, negative, descend 3000',
+  'WIZZ 44, proceed direct KOVAD',
   'BLUE AIR 12, climb flight level 120',
 ];

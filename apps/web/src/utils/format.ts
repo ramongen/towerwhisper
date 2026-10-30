@@ -43,7 +43,10 @@ export function ago(iso: string, now: number): string {
 }
 
 export interface ChipData {
-  key: keyof Pick<Clearance, 'altitude' | 'heading' | 'speed' | 'approach' | 'frequency'>;
+  key: keyof Pick<
+    Clearance,
+    'altitude' | 'heading' | 'speed' | 'approach' | 'frequency' | 'direct'
+  >;
   text: string;
 }
 
@@ -64,6 +67,7 @@ export function chips(c: Clearance | null): ChipData[] {
   }
   if (c.speed) out.push({ key: 'speed', text: `SPD ${c.speed.valueKt}` });
   if (c.approach) out.push({ key: 'approach', text: `ILS ${c.approach.runway}` });
+  if (c.direct) out.push({ key: 'direct', text: `DCT ${c.direct.fix}` });
   if (c.frequency) out.push({ key: 'frequency', text: `FREQ ${c.frequency.mhz}` });
   return out;
 }

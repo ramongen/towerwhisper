@@ -25,3 +25,6 @@ export const GLIDE_SLOPE_FT_PER_NM = 318;
 export const LANDED_NM = 0.6;
 /** Runway half-length from the airport reference point (NM). */
 export const RUNWAY_HALF_LENGTH_NM = 0.7;
+
+/** Own navigation: a fix counts as passed within this distance (turn anticipation). */
+export const WAYPOINT_REACHED_NM = 1.5;

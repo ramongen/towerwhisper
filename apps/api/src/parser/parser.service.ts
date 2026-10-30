@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Clearance } from '@towerwhisper/shared';
 import { randomUUID } from 'node:crypto';
-import { CallsignResolver, type CallsignCandidate } from './callsign-resolver';
+import { CallsignResolver, levenshtein, type CallsignCandidate } from './callsign-resolver';
 import { LLM_CONFIDENCE, RULES_CONFIDENCE, RULES_CONFIDENCE_FALLBACK_CALLSIGN } from './constants';
 import { LlmParser } from './llm-parser';
 import { PhraseNormalizer } from './phrase-normalizer';
@@ -12,6 +12,8 @@ export interface ParseRequest {
   speaker: Clearance['speaker'];
   candidates: CallsignCandidate[];
   selectedCallsign?: string | null;
+  /** Fix names on the scope; a spoken "direct <fix>" is matched against them (fuzzy). */
+  fixes?: string[];
 }
 
 /**
@@ -47,10 +49,26 @@ export class ParserService {
   }
 
   /** Deterministic part only (also used by the parser accuracy test). */
-  parseWithRules({ text, speaker, candidates, selectedCallsign }: ParseRequest): Clearance | null {
+  parseWithRules({
+    text,
+    speaker,
+    candidates,
+    selectedCallsign,
+    fixes,
+  }: ParseRequest): Clearance | null {
     const normalized = this.normalizer.normalize(text);
     const fields = this.rules.parse(normalized);
-    if (!fields) return null;
+    if (fields?.direct && fixes) {
+      // 'covad' -> KOVAD; an unknown fix is dropped rather than guessed.
+      const spoken = fields.direct.fix;
+      const fix = fixes
+        .map((f) => ({ f, d: levenshtein(f.toLowerCase(), spoken.toLowerCase()) }))
+        .filter(({ d }) => d <= 2)
+        .sort((a, b) => a.d - b.d)[0]?.f;
+      if (fix) fields.direct = { fix };
+      else delete fields.direct;
+    }
+    if (!fields || Object.keys(fields).length === 0) return null;
     const resolved = this.callsigns.resolve(normalized, speaker, candidates, selectedCallsign);
     if (!resolved) return null;
     return {

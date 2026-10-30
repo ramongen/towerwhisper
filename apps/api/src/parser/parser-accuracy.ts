@@ -10,7 +10,15 @@ export interface PhraseCase {
   expected: Partial<Omit<Clearance, 'id' | 'rawText' | 'confidence' | 'parsePath'>>;
 }
 
-const FIELDS = ['callsign', 'altitude', 'heading', 'speed', 'approach', 'frequency'] as const;
+const FIELDS = [
+  'callsign',
+  'altitude',
+  'heading',
+  'speed',
+  'approach',
+  'frequency',
+  'direct',
+] as const;
 
 export interface AccuracyReport {
   /** correct fields / scored fields, 0-1 */
@@ -27,6 +35,7 @@ export function measureParserAccuracy(
   parser: ParserService,
   phrases: PhraseCase[],
   candidates: CallsignCandidate[],
+  fixes: string[] = [],
 ): AccuracyReport {
   const perField: AccuracyReport['perField'] = {};
   const failures: AccuracyReport['failures'] = [];
@@ -38,6 +47,7 @@ export function measureParserAccuracy(
       text: phrase.input,
       speaker: phrase.speaker,
       candidates,
+      fixes,
     });
     for (const field of FIELDS) {
       const expected = phrase.expected[field];

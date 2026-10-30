@@ -4,7 +4,7 @@ import type { Clearance, TurnDir } from '@towerwhisper/shared';
 /** The instruction fields a phrase can carry (everything in Clearance except identity/metadata). */
 export type ClearanceFields = Pick<
   Clearance,
-  'altitude' | 'heading' | 'speed' | 'approach' | 'frequency'
+  'altitude' | 'heading' | 'speed' | 'approach' | 'frequency' | 'direct'
 >;
 
 /**
@@ -24,6 +24,8 @@ const RULES = {
   approach: /\bils(?:\s+approach)?\s+(?:rwy)?(\d{2})\b/,
   // 'contact bucharest 121.3', '121.3' (VHF airband 118.000-136.975)
   frequency: /\b(1[1-3]\d\.\d{1,3})\b/,
+  // 'proceed direct kovad', 'direct to kovad' (the fix name is checked by ParserService)
+  direct: /\bdirect(?:\s+to)?\s+([a-z]{4,6})\b/,
 };
 
 @Injectable()
@@ -58,6 +60,9 @@ export class RuleParser {
 
     const freq = RULES.frequency.exec(normalized);
     if (freq) fields.frequency = { mhz: freq[1] };
+
+    const direct = RULES.direct.exec(normalized);
+    if (direct) fields.direct = { fix: direct[1].toUpperCase() };
 
     return Object.keys(fields).length > 0 ? fields : null;
   }

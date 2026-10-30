@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { Aircraft } from '@towerwhisper/shared';
+import type { Aircraft, Waypoint } from '@towerwhisper/shared';
 import {
   GLIDE_SLOPE_FT_PER_NM,
   LEVEL_OFF_FPM_PER_FT,
@@ -12,6 +12,7 @@ import {
   TURN_RATE_DEG_S,
   VERTICAL_RATE_MAX_FPM,
   VERTICAL_RATE_MIN_FPM,
+  WAYPOINT_REACHED_NM,
 } from './constants';
 import { headingDelta, normalizeHeading, toLatLon, toXy, velocity } from './geo';
 
@@ -19,12 +20,19 @@ import { headingDelta, normalizeHeading, toLatLon, toXy, velocity } from './geo'
 export interface SimAircraft extends Aircraft {
   /** true once the ILS localizer is captured; the approach then steers heading and altitude. */
   locCaptured?: boolean;
+  /** Fixes the aircraft navigates by itself (flight plan, or from a direct-to). */
+  route: Waypoint[];
+  /** Index in route of the fix flown to; past the end the aircraft holds over the last fix. */
+  routeIndex: number;
+  /** Heading own navigation steers to while no heading is assigned. */
+  navHeadingDeg?: number;
 }
 
 /**
  * Moves one aircraft towards its targets: standard-rate turns in the cleared direction,
  * 1500-2000 ft/min climbs and descents that ease off near the target level, 2 kt/s speed
- * changes, and a simple ILS (localizer capture, then 3° glide slope).
+ * changes, and a simple ILS (localizer capture, then 3° glide slope). Without an assigned
+ * heading the aircraft flies its flight plan and holds over the last fix.
  */
 @Injectable()
 export class AircraftKinematics {
@@ -34,6 +42,7 @@ export class AircraftKinematics {
       return;
     }
     this.flyApproach(a);
+    this.navigate(a);
     this.turn(a, dtS);
     this.climbOrDescend(a, dtS);
     this.changeSpeed(a, dtS);
@@ -68,7 +77,10 @@ export class AircraftKinematics {
     if (!a.locCaptured && Math.abs(crossTrack) < LOC_CAPTURE_NM && pointingInbound) {
       a.locCaptured = true;
     }
-    if (!a.locCaptured && a.target.headingDeg !== undefined) return; // keep flying the vector
+    if (!a.locCaptured) {
+      if (a.target.headingDeg !== undefined) return; // keep flying the vector
+      if (a.routeIndex < a.route.length) return; // still on its route: intercept from its end
+    }
 
     const correction = Math.max(
       -LOC_MAX_CORRECTION_DEG,
@@ -85,13 +97,42 @@ export class AircraftKinematics {
     }
   }
 
+  /** Own navigation: steer to the next fix of the route, or orbit right over the last one. */
+  private navigate(a: SimAircraft): void {
+    if (a.target.headingDeg !== undefined) {
+      a.navHeadingDeg = undefined;
+      a.nextWaypoint = undefined;
+      a.holding = false;
+      return;
+    }
+    const p = toXy(a);
+    let next = a.route[a.routeIndex];
+    while (next && distance(p, toXy(next)) < WAYPOINT_REACHED_NM) {
+      a.routeIndex++;
+      next = a.route[a.routeIndex];
+    }
+    if (next) {
+      const q = toXy(next);
+      a.navHeadingDeg = normalizeHeading((Math.atan2(q.x - p.x, q.y - p.y) * 180) / Math.PI);
+      a.nextWaypoint = next.name;
+      a.holding = false;
+    } else if (a.route.length > 0) {
+      a.navHeadingDeg = normalizeHeading(a.headingDeg + 90); // a continuous right turn
+      a.nextWaypoint = a.route[a.route.length - 1].name;
+      a.holding = true;
+    } else {
+      a.navHeadingDeg = undefined; // no plan: keep the present heading
+    }
+  }
+
   private turn(a: SimAircraft, dtS: number): void {
-    const target = a.target.headingDeg;
+    const assigned = a.target.headingDeg !== undefined;
+    const target = a.target.headingDeg ?? a.navHeadingDeg;
     if (target === undefined) {
       a.turnRateDegS = 0;
       return;
     }
-    const dir = a.target.turnDir ?? 'any';
+    const dir = assigned ? (a.target.turnDir ?? 'any') : 'any';
     let remaining: number; // degrees still to turn, in the direction we turn
     let sign: number;
     if (dir === 'left') {
@@ -109,7 +150,7 @@ export class AircraftKinematics {
     if (remaining < 0.5) {
       a.headingDeg = target % 360;
       a.turnRateDegS = 0;
-      a.target.turnDir = 'any'; // reached: later corrections take the short way
+      if (assigned) a.target.turnDir = 'any'; // reached: later corrections take the short way
       return;
     }
     const step = Math.min(TURN_RATE_DEG_S * dtS, remaining);
@@ -144,6 +185,10 @@ export class AircraftKinematics {
     const diff = target - a.speedKt;
     a.speedKt += Math.sign(diff) * Math.min(SPEED_CHANGE_KT_S * dtS, Math.abs(diff));
   }
+}
+
+function distance(a: { x: number; y: number }, b: { x: number; y: number }): number {
+  return Math.hypot(a.x - b.x, a.y - b.y);
 }
 
 /** A fixed climb/descent rate per aircraft in 1500-2000 ft/min, so traffic does not move in lockstep. */

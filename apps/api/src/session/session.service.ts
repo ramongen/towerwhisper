@@ -145,7 +145,8 @@ export class SessionService implements OnModuleInit {
     this.readbackChecker.reset();
     this.conformance.reset();
     this.faults.resetForNewSession();
-    this.simulation.load(this.scenarios.load(scenario).aircraft);
+    const loaded = this.scenarios.load(scenario);
+    this.simulation.load(loaded.aircraft, loaded.fixes);
     this.injections = [];
     this.sttLatencies = [];
 
@@ -241,8 +242,13 @@ export class SessionService implements OnModuleInit {
   private measureParser(): number | null {
     try {
       const phrases = JSON.parse(readFileSync(PHRASES_FILE, 'utf-8')) as PhraseCase[];
-      const candidates = this.scenarios.load(DEFAULT_SCENARIO).aircraft;
-      const report = measureParserAccuracy(this.parser, phrases, candidates);
+      const scenario = this.scenarios.load(DEFAULT_SCENARIO);
+      const report = measureParserAccuracy(
+        this.parser,
+        phrases,
+        scenario.aircraft,
+        scenario.fixes.map((f) => f.name),
+      );
       this.logger.log(
         `Parser accuracy on ${phrases.length} test phrases: ${(report.accuracy * 100).toFixed(1)}%`,
       );

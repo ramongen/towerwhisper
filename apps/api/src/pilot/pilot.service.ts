@@ -68,6 +68,7 @@ export class PilotService {
       speaker: 'pilot',
       candidates: aircraft,
       selectedCallsign: readback.callsign, // a cut-off readback has no callsign in it
+      fixes: this.simulation.getFixes().map((f) => f.name),
     });
     const heardFrom = parsed?.callsign ?? readback.callsign;
     const hasWords = /[a-z0-9]/i.test(readback.text);

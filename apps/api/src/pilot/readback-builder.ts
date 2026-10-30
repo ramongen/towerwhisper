@@ -73,6 +73,7 @@ export class ReadbackBuilder {
         else if (c.heading) delete c.heading;
         else if (c.speed) delete c.speed;
         else if (c.approach) delete c.approach;
+        else if (c.direct) delete c.direct;
         else delete c.frequency;
         faultApplied = true;
         break;
@@ -109,6 +110,7 @@ function phrases(c: Clearance): string[] {
   }
   if (c.speed) items.push(`speed ${c.speed.valueKt}`);
   if (c.approach) items.push(`cleared ILS runway ${c.approach.runway}`);
+  if (c.direct) items.push(`direct ${c.direct.fix}`);
   if (c.frequency) items.push(c.frequency.mhz);
   return items.map((item, i) => (i === 0 ? capitalize(item) : item));
 }

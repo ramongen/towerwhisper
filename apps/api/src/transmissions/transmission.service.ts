@@ -83,6 +83,7 @@ export class TransmissionService {
       speaker: 'atc',
       candidates: aircraft,
       selectedCallsign: selectedCallsign || null,
+      fixes: this.simulation.getFixes().map((f) => f.name),
     });
 
     this.realtime.broadcastTransmission({ id, speaker: 'atc', transcript: text, clearance });
@@ -106,7 +107,8 @@ export class TransmissionService {
   /** "TAROM 301, WIZZ 44, ..." + ATC vocabulary, so Whisper spells callsigns and terms right. */
   private vocabularyPrompt(): string {
     const callsigns = this.simulation.getAircraft().map((a) => a.telephony);
-    return `${callsigns.join(', ')}. ${STT_VOCABULARY}.`;
+    const fixes = this.simulation.getFixes().map((f) => f.name);
+    return `${callsigns.join(', ')}. ${STT_VOCABULARY}, direct ${fixes.join(', ')}.`;
   }
 
   private async saveAudio(id: string, audio: AudioUpload): Promise<string | null> {

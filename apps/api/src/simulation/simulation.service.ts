@@ -1,5 +1,5 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import type { Aircraft, FaultConfig, Targets } from '@towerwhisper/shared';
+import type { Aircraft, FaultConfig, FlightPlan, Targets, Waypoint } from '@towerwhisper/shared';
 import type { ScenarioAircraft } from '../session/scenario-loader';
 import { AircraftKinematics, type SimAircraft } from './aircraft-kinematics';
 import { LANDED_NM, TICK_MS } from './constants';
@@ -16,6 +16,8 @@ export type TickListener = (aircraft: Aircraft[], simNowMs: number) => void;
 export class SimulationService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(SimulationService.name);
   private aircraft = new Map<string, SimAircraft>();
+  private flightPlans = new Map<string, FlightPlan>();
+  private fixes = new Map<string, Waypoint>();
   private listeners: TickListener[] = [];
   private timer?: NodeJS.Timeout;
   private simNow = Date.now();
@@ -32,8 +34,10 @@ export class SimulationService implements OnModuleInit, OnModuleDestroy {
   }
 
   /** Replaces all traffic with the scenario's initial state; every comms timer starts at 0. */
-  load(initial: ScenarioAircraft[]): void {
+  load(initial: ScenarioAircraft[], fixes: Waypoint[] = []): void {
     this.simNow = Date.now();
+    this.fixes = new Map(fixes.map((f) => [f.name, f]));
+    this.flightPlans = new Map();
     this.aircraft = new Map(initial.map((a) => [a.callsign, this.fromScenario(a)]));
     this.logger.log(`Loaded ${initial.length} aircraft`);
   }
@@ -64,13 +68,49 @@ export class SimulationService implements OnModuleInit, OnModuleDestroy {
     return a ? this.toPublic(a) : undefined;
   }
 
-  /** Merges new targets (only the fields given) and records which clearance they come from. */
+  /** The filed flight plan (route as filed, not what is left of it). */
+  getFlightPlan(callsign: string): FlightPlan | undefined {
+    return this.flightPlans.get(callsign);
+  }
+
+  getFixes(): Waypoint[] {
+    return [...this.fixes.values()];
+  }
+
+  /**
+   * Applies a clearance: only the fields given change. A heading or a direct-to takes the
+   * aircraft off its approach (it now flies the vector); a heading also ends own navigation.
+   */
   setTargets(callsign: string, targets: Targets, clearanceId?: string): void {
     const a = this.aircraft.get(callsign);
     if (!a) return;
+    const lateral = 'headingDeg' in targets || 'directTo' in targets;
+    if (lateral && !targets.approach) {
+      a.target.approach = undefined;
+      a.locCaptured = false;
+    }
+    if (targets.altitudeFt !== undefined && a.locCaptured && targets.altitudeFt > a.altitudeFt) {
+      a.target.approach = undefined; // climbing off the glide slope: approach discontinued
+      a.locCaptured = false;
+    }
     a.target = { ...a.target, ...targets };
     if (targets.approach) a.locCaptured = false;
+    if (targets.directTo) this.directTo(a, targets.directTo);
     if (clearanceId) a.activeClearanceId = clearanceId;
+  }
+
+  /** Own navigation from a fix: the rest of the route if the fix is on it, else that fix alone. */
+  private directTo(a: SimAircraft, fixName: string): void {
+    const onRoute = a.route.findIndex((w) => w.name === fixName);
+    const fix = this.fixes.get(fixName);
+    if (onRoute >= 0) {
+      a.routeIndex = onRoute;
+    } else if (fix) {
+      a.route = [fix];
+      a.routeIndex = 0;
+    }
+    a.target.headingDeg = undefined;
+    a.target.turnDir = undefined;
   }
 
   /** Any transmission to or from the aircraft resets its comms timer. */
@@ -113,10 +153,13 @@ export class SimulationService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  private fromScenario(a: ScenarioAircraft): SimAircraft {
+  private fromScenario({ flightPlan, routeIndex, ...a }: ScenarioAircraft): SimAircraft {
+    if (flightPlan) this.flightPlans.set(a.callsign, flightPlan);
     return {
       ...a,
       target: { ...a.target },
+      route: flightPlan?.route ?? [],
+      routeIndex: Math.max(0, routeIndex ?? 0),
       lastContactAt: new Date(this.simNow).toISOString(),
       commsAgeS: 0,
     };
@@ -139,6 +182,8 @@ export class SimulationService implements OnModuleInit, OnModuleDestroy {
       activeClearanceId: a.activeClearanceId,
       lastContactAt: a.lastContactAt,
       commsAgeS: a.commsAgeS,
+      nextWaypoint: a.nextWaypoint,
+      holding: a.holding,
     };
   }
 }

@@ -9,7 +9,9 @@ import { RuleParser } from '../src/parser/rule-parser';
 import { ScenarioLoader } from '../src/session/scenario-loader';
 
 const phrases = JSON.parse(readFileSync(join(__dirname, 'phrases.json'), 'utf-8')) as PhraseCase[];
-const candidates = new ScenarioLoader().load('craiova-arrivals').aircraft;
+const scenario = new ScenarioLoader().load('craiova-arrivals');
+const candidates = scenario.aircraft;
+const fixes = scenario.fixes.map((f) => f.name);
 // The LLM fallback is never reached by parseWithRules.
 const parser = new ParserService(
   new PhraseNormalizer(),
@@ -29,7 +31,7 @@ describe('parser accuracy over test/phrases.json', () => {
   });
 
   it('parses every phrase into the expected Clearance', () => {
-    const report = measureParserAccuracy(parser, phrases, candidates);
+    const report = measureParserAccuracy(parser, phrases, candidates, fixes);
     const lines = Object.entries(report.perField).map(
       ([field, { correct, total }]) => `  ${field.padEnd(10)} ${correct}/${total}`,
     );
