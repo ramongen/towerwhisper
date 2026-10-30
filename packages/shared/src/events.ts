@@ -17,6 +17,9 @@ export const ServerEvent = {
   AlertCleared: 'alert:cleared',
   ProbeResult: 'probe:result',
   DemoFaults: 'demo:faults',
+  FrequencyBusy: 'frequency:busy',
+  SessionReset: 'session:reset',
+  StatsOverlay: 'stats:overlay',
 } as const;
 
 export type ReadbackCheck = 'ok' | 'mismatch' | 'incomplete';
@@ -59,6 +62,22 @@ export interface ProbeResultPayload {
   conflicts: ProbeConflict[];
 }
 
+/** frequency:busy — someone is holding PTT (relayed from ptt:start / ptt:end to every screen). */
+export interface FrequencyBusyPayload {
+  busy: boolean;
+}
+
+/** session:reset — the scenario restarted; screens clear comms and alerts. */
+export interface SessionResetPayload {
+  sessionId: string;
+  startedAt: string;
+}
+
+/** stats:overlay — the demo panel shows or hides the end-of-demo results on the big screen. */
+export interface StatsOverlayPayload {
+  visible: boolean;
+}
+
 export interface ServerToClientEvents {
   'traffic:update': (aircraft: Aircraft[]) => void;
   'comms:transmission': (payload: CommsTransmissionPayload) => void;
@@ -68,6 +87,9 @@ export interface ServerToClientEvents {
   'alert:cleared': (payload: AlertClearedPayload) => void;
   'probe:result': (payload: ProbeResultPayload) => void;
   'demo:faults': (config: FaultConfig) => void;
+  'frequency:busy': (payload: FrequencyBusyPayload) => void;
+  'session:reset': (payload: SessionResetPayload) => void;
+  'stats:overlay': (payload: StatsOverlayPayload) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -78,11 +100,14 @@ export interface ServerToClientEvents {
 export const ClientEvent = {
   PttStart: 'ptt:start',
   PttEnd: 'ptt:end',
+  RadarSelect: 'radar:select',
 } as const;
 
 export interface ClientToServerEvents {
   'ptt:start': () => void;
   'ptt:end': () => void;
+  /** The controller selected an aircraft; demo faults with target "selected" use it. */
+  'radar:select': (callsign: string | null) => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -103,6 +128,15 @@ export interface CreateSessionResponse {
   sessionId: string;
 }
 
+/** GET /sessions/current — the session every screen joins */
+export interface CurrentSessionResponse {
+  sessionId: string;
+  startedAt: string;
+  mode: AppMode;
+  /** Scripted demo phrases, offered as text input in no-keys mode. */
+  scriptedPhrases: string[];
+}
+
 /** POST /sessions/:id/reset — restarts the scenario from zero */
 export interface ResetSessionResponse {
   sessionId: string;
@@ -112,6 +146,8 @@ export interface ResetSessionResponse {
 export interface TransmissionUploadFields {
   sessionId: string;
   selectedCallsign?: string;
+  /** PTT hold time; recordings under 300 ms are discarded. */
+  durationMs?: string;
 }
 
 /** POST /transmissions/text — for tests and as a fallback when the microphone fails */
@@ -135,7 +171,17 @@ export type PutFaultsResponse = FaultConfig;
 
 /** POST /demo/triggers/:name */
 export type DemoTriggerName =
-  'conflict' | 'stepped-on' | 'no-response' | 'age-comms' | 'reset-comms';
+  | 'conflict'
+  | 'stepped-on'
+  | 'no-response'
+  | 'age-comms'
+  | 'reset-comms'
+  | 'stats-overlay';
+
+/** POST /demo/triggers/stats-overlay */
+export interface StatsOverlayRequest {
+  visible: boolean;
+}
 
 /** POST /demo/triggers/age-comms */
 export interface AgeCommsRequest {
@@ -160,4 +206,6 @@ export interface SessionStats {
   faultsDetected: number;
   meanDetectionS: number | null;
   meanSttLatencyMs: number | null;
+  /** Share of test/phrases.json fields the rule parser gets right (0-1), measured at startup. */
+  parserAccuracy: number | null;
 }
