@@ -66,7 +66,32 @@ docker compose up --build
 ```
 
 Open <http://localhost:8080> (controller screen) and `http://<laptop-ip>:8080/demo` on a phone
-(demo panel). The microphone only works on `localhost` or HTTPS.
+(demo panel). The microphone only works on `localhost` or HTTPS. If port 8080 is taken (Oracle XE
+listens there, for example), set `WEB_PORT=8081` in `.env`.
+
+### Demo flow
+
+1. Select an aircraft on the radar (optional), hold **Space** and say
+   _"TAROM 301, descend altitude 3000 feet, turn left heading 120"_.
+2. The transcript and the parsed chips appear; ~1.5 s later the pilot reads back over the radio
+   filter and the readback check shows **READBACK OK** or raises an alert.
+3. Arm a fault on the phone (`/demo`) or on the big screen and transmit again:
+
+| Key | Fault                                               | Expected alert        |
+| --- | --------------------------------------------------- | --------------------- |
+| 1–5 | wrong altitude / heading / turn / runway / callsign | `HEARBACK_MISMATCH`   |
+| 6   | incomplete readback                                 | `READBACK_INCOMPLETE` |
+| 7   | no response                                         | `NO_RESPONSE` at 8 s  |
+| 8   | turn wrong way                                      | `WRONG_TURN`          |
+| 9   | level bust                                          | `LEVEL_BUST`          |
+
+Other keys on the controller screen: **D** demo drawer, **S** results overlay, **R** reset scenario.
+The demo panel also ages comms timers (`NO_CONTACT` amber / red, 15/30 min or 15/30 s), spawns a
+conflicting BLUE AIR 12 (`CONFLICT_PREDICTED`), steps on the next readback, and sets radio noise and
+time speed.
+
+Pilot audio for the scripted phrases can be generated once into `apps/api/assets/tts-cache` (then
+committed) so the no-keys demo has a voice: `OPENAI_API_KEY=sk-... pnpm --filter api tts:cache`.
 
 ### Local development
 
@@ -91,7 +116,7 @@ the LLM parser is disabled. `GET /api/health` reports the active mode.
 ```text
 apps/web/          Vue 3 SPA — "/" controller screen, "/demo" demo panel
 apps/api/          NestJS — one folder per module (session, simulation, voice, parser,
-                   pilot, safety, demo, realtime), scenarios/, test/phrases.json
+                   pilot, safety, demo, realtime, transmissions), scenarios/, test/phrases.json
 packages/shared/   domain types, WebSocket events, REST bodies, FaultConfig
 ```
 

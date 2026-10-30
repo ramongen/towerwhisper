@@ -9,7 +9,8 @@
     "build": "nest build",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint .",
-    "test": "jest"
+    "test": "jest",
+    "tts:cache": "nest build && node dist/scripts/generate-tts-cache.js"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.0",
