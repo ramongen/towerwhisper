@@ -110,9 +110,11 @@ const route = computed(() => {
   if (!d?.flightPlan) return [];
   const ahead = new Set(d.remainingRoute.map((w) => w.name));
   const next = d.remainingRoute[0]?.name;
+  // On vectors nothing is "ahead" on own navigation, but nothing was flown past either.
+  const onOwnNav = d.remainingRoute.length > 0;
   return d.flightPlan.route.map((w) => ({
     name: w.name,
-    passed: !ahead.has(w.name),
+    passed: onOwnNav && !ahead.has(w.name),
     next: w.name === next,
   }));
 });
