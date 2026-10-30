@@ -36,6 +36,8 @@
   --color-warning-bg: rgba(255, 93, 93, 0.1);
   --color-warning-strong-bg: rgba(255, 93, 93, 0.18);
   --color-transmit: #c62828; /* PTT button while on air */
+  --color-on-transmit: #ffffff;
+  --shadow-transmit: 0 0 0 6px rgba(255, 93, 93, 0.22), 0 0 32px rgba(255, 93, 93, 0.45);
   --color-ok: #4cd486; /* green: confirmed readback only */
 
   /* Radar */

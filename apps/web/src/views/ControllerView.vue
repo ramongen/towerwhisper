@@ -1,14 +1,17 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia';
-import { computed, watch } from 'vue';
+import { computed, onMounted, watch } from 'vue';
 import AlertStack from '../components/AlertStack.vue';
 import CommsPanel from '../components/CommsPanel.vue';
 import FlightStrip from '../components/FlightStrip.vue';
 import PttBar from '../components/PttBar.vue';
 import RadarScope from '../components/RadarScope.vue';
 import TopBar from '../components/TopBar.vue';
+import { unlockAudioOnGesture } from '../composables/audioContext';
+import { useRadioVoice } from '../composables/useRadioVoice';
 import { useSocket } from '../composables/useSocket';
 import { useAlertStore } from '../stores/useAlertStore';
+import { useCommsStore } from '../stores/useCommsStore';
 import { useDemoStore } from '../stores/useDemoStore';
 import { useTrafficStore } from '../stores/useTrafficStore';
 
@@ -20,8 +23,30 @@ const { faults } = storeToRefs(useDemoStore());
 
 const limits = computed(() => faults.value?.commsLimits ?? { cautionS: 900, warningS: 1800 });
 
+/** Only readbacks that arrive live are spoken (not the history replayed on reconnect). */
+const LIVE_READBACK_MS = 3000;
+
 // Demo faults with target "selected" follow the radar selection.
 watch(selectedCallsign, (callsign) => emitSelect(callsign));
+
+// The big screen speaks every new pilot readback through the radio filter.
+const comms = useCommsStore();
+const voice = useRadioVoice();
+let spoken = 0;
+watch(
+  () => comms.entries.length,
+  (length) => {
+    if (length < spoken) spoken = 0; // session reset
+    for (const entry of comms.entries.slice(spoken)) {
+      if (entry.speaker === 'pilot' && Date.now() - entry.receivedAt < LIVE_READBACK_MS) {
+        void voice.play(entry.audioUrl, entry.transcript, faults.value?.radioNoise ?? 0.3);
+      }
+    }
+    spoken = length;
+  },
+);
+
+onMounted(unlockAudioOnGesture);
 
 function toggleSelect(callsign: string): void {
   traffic.select(selectedCallsign.value === callsign ? null : callsign);
