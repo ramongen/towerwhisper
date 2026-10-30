@@ -3,11 +3,14 @@ import { storeToRefs } from 'pinia';
 import { computed, onMounted, watch } from 'vue';
 import AlertStack from '../components/AlertStack.vue';
 import CommsPanel from '../components/CommsPanel.vue';
+import DemoPanel from '../components/DemoPanel.vue';
 import FlightStrip from '../components/FlightStrip.vue';
 import PttBar from '../components/PttBar.vue';
 import RadarScope from '../components/RadarScope.vue';
+import StatsOverlay from '../components/StatsOverlay.vue';
 import TopBar from '../components/TopBar.vue';
 import { unlockAudioOnGesture } from '../composables/audioContext';
+import { useDemoShortcuts } from '../composables/useDemoShortcuts';
 import { useRadioVoice } from '../composables/useRadioVoice';
 import { useSocket } from '../composables/useSocket';
 import { useAlertStore } from '../stores/useAlertStore';
@@ -19,7 +22,13 @@ const { connected, emitSelect } = useSocket();
 const traffic = useTrafficStore();
 const { aircraft, selectedCallsign } = storeToRefs(traffic);
 const { levelByCallsign } = storeToRefs(useAlertStore());
-const { faults } = storeToRefs(useDemoStore());
+const demo = useDemoStore();
+const { faults, overlayVisible } = storeToRefs(demo);
+const { drawerOpen } = useDemoShortcuts();
+
+function closeOverlay(): void {
+  void demo.trigger('stats-overlay', { visible: false }).catch(() => undefined);
+}
 
 const limits = computed(() => faults.value?.commsLimits ?? { cautionS: 900, warningS: 1800 });
 
@@ -80,6 +89,12 @@ function toggleSelect(callsign: string): void {
         @select="toggleSelect"
       />
     </section>
+
+    <aside v-if="drawerOpen" class="drawer" aria-label="Demo control (press D to close)">
+      <DemoPanel />
+    </aside>
+
+    <StatsOverlay v-if="overlayVisible" @close="closeOverlay" />
   </div>
 </template>
 
@@ -137,5 +152,17 @@ function toggleSelect(callsign: string): void {
   gap: var(--space-3);
   background: var(--color-strips-bg);
   border-top: var(--border-width) solid var(--color-border);
+}
+
+.drawer {
+  position: fixed;
+  top: var(--topbar-height);
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  width: 420px;
+  overflow-y: auto;
+  border-left: var(--border-width) solid var(--color-border-strong);
+  box-shadow: -16px 0 32px rgba(0, 0, 0, 0.45);
 }
 </style>
