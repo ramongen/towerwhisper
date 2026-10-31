@@ -64,11 +64,11 @@ describe('ReadbackBuilder', () => {
   });
 
   it('reads back the wrong runway', () => {
-    const { rb, result } = roundTrip('TAROM 301, cleared ILS approach runway zero niner', {
+    const { rb, result } = roundTrip('TAROM 301, cleared ILS approach runway two six', {
       kind: 'wrong_runway',
       once: true,
     });
-    expect(rb.text).toBe('Cleared ILS runway 27, TAROM 301');
+    expect(rb.text).toBe('Cleared ILS runway 08, TAROM 301');
     expect(result.check).toBe('mismatch');
   });
 

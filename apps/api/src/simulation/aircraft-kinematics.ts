@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
-import type { Aircraft, Waypoint } from '@towerwhisper/shared';
+import type { Aircraft, RunwayId, Waypoint } from '@towerwhisper/shared';
+import { runway } from '../airspace/airspace';
 import {
   GLIDE_SLOPE_FT_PER_NM,
   LEVEL_OFF_FPM_PER_FT,
@@ -7,7 +8,6 @@ import {
   LOC_CAPTURE_NM,
   LOC_GAIN_DEG_PER_NM,
   LOC_MAX_CORRECTION_DEG,
-  RUNWAY_HALF_LENGTH_NM,
   SPEED_CHANGE_KT_S,
   TURN_RATE_DEG_S,
   VERTICAL_RATE_MAX_FPM,
@@ -57,21 +57,17 @@ export class AircraftKinematics {
   /** Distance (NM) from the threshold of the cleared runway, or null without an approach. */
   distanceToThreshold(a: SimAircraft): number | null {
     if (!a.target.approach) return null;
-    const p = toXy(a);
-    const thresholdX =
-      a.target.approach.runway === '09' ? -RUNWAY_HALF_LENGTH_NM : RUNWAY_HALF_LENGTH_NM;
-    return Math.hypot(p.x - thresholdX, p.y);
+    const { alongTrack, crossTrack } = finalApproachPosition(a, a.target.approach.runway);
+    return Math.hypot(alongTrack, crossTrack);
   }
 
   private flyApproach(a: SimAircraft): void {
     const approach = a.target.approach;
     if (!approach) return;
-    const course = approach.runway === '09' ? 90 : 270;
-    const p = toXy(a);
-    // On the approach side of the field, i.e. west of it for runway 09.
-    const alongTrack = approach.runway === '09' ? -p.x : p.x;
-    const crossTrack = approach.runway === '09' ? p.y : -p.y; // + = left of the inbound course
-    if (alongTrack < 0) return;
+    const course = runway(approach.runway).trueBearingDeg;
+    // alongTrack: NM before the threshold; crossTrack: + = left of the inbound course
+    const { alongTrack, crossTrack } = finalApproachPosition(a, approach.runway);
+    if (alongTrack < 0) return; // past the threshold: not on this approach
 
     const pointingInbound = Math.abs(headingDelta(a.headingDeg, course)) < 100;
     if (!a.locCaptured && Math.abs(crossTrack) < LOC_CAPTURE_NM && pointingInbound) {
@@ -185,6 +181,26 @@ export class AircraftKinematics {
     const diff = target - a.speedKt;
     a.speedKt += Math.sign(diff) * Math.min(SPEED_CHANGE_KT_S * dtS, Math.abs(diff));
   }
+}
+
+/**
+ * Position relative to the final approach of a runway, from its real threshold and true
+ * course (AIP): NM still to fly to the threshold, and NM left (+) / right (-) of the course.
+ */
+export function finalApproachPosition(
+  a: { lat: number; lon: number },
+  id: RunwayId,
+): { alongTrack: number; crossTrack: number } {
+  const rwy = runway(id);
+  const t = toXy(rwy.threshold);
+  const p = toXy(a);
+  const rad = (rwy.trueBearingDeg * Math.PI) / 180;
+  const dx = p.x - t.x;
+  const dy = p.y - t.y;
+  // u = inbound direction (sin, cos); the aircraft is before the threshold when d.u < 0.
+  const alongTrack = -(dx * Math.sin(rad) + dy * Math.cos(rad));
+  const crossTrack = -(dx * Math.cos(rad) - dy * Math.sin(rad));
+  return { alongTrack, crossTrack };
 }
 
 function distance(a: { x: number; y: number }, b: { x: number; y: number }): number {

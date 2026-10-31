@@ -14,6 +14,9 @@ import { headingDelta } from '../src/simulation/geo';
 import { SimulationService } from '../src/simulation/simulation.service';
 
 const scenario = new ScenarioLoader().load('craiova-arrivals');
+/** WZZ44 comes from the east: a left turn onto a 30 degree intercept of the runway 26 localizer. */
+const ILS_26_VECTORS =
+  'WIZZ 44, descend altitude 4000 feet, turn left heading 240, cleared ILS approach runway 26';
 const parser = new ParserService(
   new PhraseNormalizer(),
   new RuleParser(),
@@ -56,20 +59,20 @@ describe('aircraft follow their instructions', () => {
     const sim = setup();
     run(sim, 30);
     const a = get(sim, 'ROT301');
-    expect(a.nextWaypoint).toBe('KOVAD');
-    const kovad = scenario.fixes.find((f) => f.name === 'KOVAD')!;
+    expect(a.nextWaypoint).toBe('TITEK');
+    const kovad = scenario.fixes.find((f) => f.name === 'TITEK')!;
     const bearing = (Math.atan2((kovad.lon - a.lon) * 0.716, kovad.lat - a.lat) * 180) / Math.PI;
     expect(Math.abs(headingDelta(a.headingDeg, bearing))).toBeLessThan(5);
   });
 
   it('turn the cleared way to the cleared heading, descend and slow down', () => {
     const sim = setup();
-    clear(sim, 'TAROM 301, descend altitude 3000 feet, turn left heading 120, reduce speed 180');
+    clear(sim, 'TAROM 301, descend altitude 3000 feet, turn left heading 060, reduce speed 180');
     run(sim, 1);
     expect(get(sim, 'ROT301').turnRateDegS).toBeLessThan(0);
     run(sim, 180);
     const a = get(sim, 'ROT301');
-    expect(a.headingDeg).toBe(120);
+    expect(a.headingDeg).toBe(60);
     expect(a.altitudeFt).toBe(3000);
     expect(a.speedKt).toBe(180);
     expect(a.nextWaypoint).toBeUndefined(); // on vectors now
@@ -77,45 +80,39 @@ describe('aircraft follow their instructions', () => {
 
   it('take the long way round when told to turn right', () => {
     const sim = setup();
-    clear(sim, 'TAROM 301, turn right heading 120');
+    clear(sim, 'TAROM 301, turn right heading 060');
     run(sim, 1);
     expect(get(sim, 'ROT301').turnRateDegS).toBeGreaterThan(0);
   });
 
   it('a new heading takes an aircraft off the ILS it had captured', () => {
     const sim = setup();
-    clear(
-      sim,
-      'TAROM 301, descend altitude 3000 feet, turn left heading 120, cleared ILS approach runway 09',
-    );
-    run(sim, 330);
-    const onLocalizer = get(sim, 'ROT301');
+    clear(sim, ILS_26_VECTORS);
+    run(sim, 200);
+    const onLocalizer = get(sim, 'WZZ44');
     expect(onLocalizer.target.approach).toBeDefined();
-    expect(Math.abs(headingDelta(onLocalizer.headingDeg, 90))).toBeLessThan(35);
-    clear(sim, 'TAROM 301, turn left heading 360');
+    expect(Math.abs(headingDelta(onLocalizer.headingDeg, 269))).toBeLessThan(35);
+    clear(sim, 'WIZZ 44, turn left heading 180');
     run(sim, 150);
-    const a = get(sim, 'ROT301');
+    const a = get(sim, 'WZZ44');
     expect(a.target.approach).toBeUndefined();
-    expect(a.headingDeg).toBe(0);
+    expect(a.headingDeg).toBe(180);
   });
 
   it('capture the ILS from vectors and land', () => {
     const sim = setup();
-    clear(
-      sim,
-      'TAROM 301, descend altitude 3000 feet, turn left heading 120, cleared ILS approach runway 09',
-    );
+    clear(sim, ILS_26_VECTORS);
     run(sim, 1200);
-    expect(sim.get('ROT301')).toBeUndefined(); // landed and left the scope
+    expect(sim.get('WZZ44')).toBeUndefined(); // landed and left the scope
   });
 
   it('proceed direct to a fix and hold over the end of the route', () => {
     const sim = setup();
     clear(sim, 'WIZZ 44, turn right heading 270');
     run(sim, 20);
-    clear(sim, 'WIZZ 44, proceed direct KOVAD');
+    clear(sim, 'WIZZ 44, proceed direct OZZET');
     run(sim, 5);
-    expect(get(sim, 'WZZ44').nextWaypoint).toBe('KOVAD');
+    expect(get(sim, 'WZZ44').nextWaypoint).toBe('OZZET');
     run(sim, 900);
     const a = get(sim, 'WZZ44');
     expect(a.holding).toBe(true);

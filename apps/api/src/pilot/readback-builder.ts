@@ -56,7 +56,7 @@ export class ReadbackBuilder {
         break;
       case 'wrong_runway':
         if (c.approach) {
-          c.approach.runway = c.approach.runway === '09' ? '27' : '09';
+          c.approach.runway = c.approach.runway === '26' ? '08' : '26'; // the other direction
           faultApplied = true;
         }
         break;
@@ -109,7 +109,7 @@ function phrases(c: Clearance): string[] {
     items.push(c.heading.turn === 'any' ? `heading ${hdg}` : `${c.heading.turn} heading ${hdg}`);
   }
   if (c.speed) items.push(`speed ${c.speed.valueKt}`);
-  if (c.approach) items.push(`cleared ILS runway ${c.approach.runway}`);
+  if (c.approach) items.push(`cleared ${c.approach.type} runway ${c.approach.runway}`);
   if (c.direct) items.push(`direct ${c.direct.fix}`);
   if (c.frequency) items.push(c.frequency.mhz);
   return items.map((item, i) => (i === 0 ? capitalize(item) : item));

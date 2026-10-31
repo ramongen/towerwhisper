@@ -1,12 +1,12 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import type { AirportWeather, FlightCategory, RunwayId, RunwayWind } from '@towerwhisper/shared';
+import { AIRSPACE, ILS_RUNWAY, runway } from '../airspace/airspace';
 import { LRCV } from '../session/constants';
 import {
   CATEGORY_LIMITS,
   METAR_URL,
   METRES_PER_STATUTE_MILE,
   OPEN_METEO_URL,
-  RUNWAY_HEADINGS,
   UNLIMITED_VISIBILITY_M,
   WEATHER_REFRESH_MS,
   WEATHER_TIMEOUT_MS,
@@ -184,14 +184,14 @@ export function decodeMetar(m: MetarJson): AirportWeather {
 function finish(
   w: Omit<AirportWeather, 'runwayWind' | 'preferredRunway' | 'wetRunway' | 'fetchedAt'>,
 ): AirportWeather {
-  const runwayWind = (Object.keys(RUNWAY_HEADINGS) as RunwayId[]).map((runway) =>
-    componentsFor(runway, w.windDirDeg, w.windSpeedKt),
+  const runwayWind = AIRSPACE.runways.map(({ id }) =>
+    componentsFor(id, w.windDirDeg, w.windSpeedKt),
   );
   const best = [...runwayWind].sort((a, b) => b.headwindKt - a.headwindKt)[0];
   return {
     ...w,
     runwayWind,
-    preferredRunway: best && best.headwindKt > 0 ? best.runway : '09',
+    preferredRunway: best && best.headwindKt > 0 ? best.runway : ILS_RUNWAY,
     wetRunway: /RA|DZ|SN|SG|PL|GR|GS|UP|SH|TS/.test(w.weather ?? ''),
     fetchedAt: new Date().toISOString(),
   };
@@ -199,14 +199,15 @@ function finish(
 
 /** Headwind / crosswind for one runway; a variable wind counts as a full tailwind and crosswind. */
 export function componentsFor(
-  runway: RunwayId,
+  id: RunwayId,
   windDirDeg: number | null,
   speedKt: number,
 ): RunwayWind {
-  if (windDirDeg === null) return { runway, headwindKt: -speedKt, crosswindKt: speedKt };
-  const angle = ((windDirDeg - RUNWAY_HEADINGS[runway]) * Math.PI) / 180;
+  if (windDirDeg === null) return { runway: id, headwindKt: -speedKt, crosswindKt: speedKt };
+  // METAR wind is true north; so is the runway bearing from the AIP.
+  const angle = ((windDirDeg - runway(id).trueBearingDeg) * Math.PI) / 180;
   return {
-    runway,
+    runway: id,
     headwindKt: Math.round(speedKt * Math.cos(angle)),
     crosswindKt: Math.abs(Math.round(speedKt * Math.sin(angle))),
   };

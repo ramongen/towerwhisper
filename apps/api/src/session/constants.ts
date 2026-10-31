@@ -1,11 +1,10 @@
 export const DEFAULT_SCENARIO = 'craiova-arrivals';
 
-/** Craiova airport (LRCV), runway 09/27 — the centre of the radar scope. */
+/** Craiova airport (LRCV) reference point (AIP AD 2.2) — the centre of the radar scope. */
 export const LRCV = {
   icao: 'LRCV',
-  lat: 44.3181,
-  lon: 23.8886,
-  runways: ['09', '27'] as const,
+  lat: 44.31806,
+  lon: 23.88861,
 };
 
 /**
@@ -13,14 +12,14 @@ export const LRCV = {
  * pilot audio for their readbacks can be pre-generated into assets/tts-cache.
  */
 export const SCRIPTED_PHRASES = [
-  'TAROM 301, descend altitude 3000 feet, turn left heading 120',
-  'WIZZ 44, descend flight level eight zero, turn right heading 270, reduce speed 220',
-  'TAROM 301, cleared ILS approach runway zero niner',
-  'TAROM 612, descend altitude 5000 feet',
-  'RYANAIR 8KQ, descend flight level 120, turn right heading 100',
-  'LOT 2RP, turn left heading 180',
-  'LUFTHANSA 9TC, contact Bucharest 121 decimal 3',
-  'TAROM 301, negative, descend 3000',
-  'WIZZ 44, proceed direct KOVAD',
+  'TAROM 301, descend altitude 4000 feet, turn left heading 080',
+  'WIZZ 44, descend altitude 5000 feet, turn left heading 240, reduce speed 220',
+  'WIZZ 44, cleared ILS approach runway two six',
+  'TAROM 612, descend altitude 6000 feet',
+  'RYANAIR 8KQ, descend flight level 120, turn left heading 140',
+  'LOT 2RP, turn left heading 200',
+  'LUFTHANSA 9TC, proceed direct PANZU',
+  'TAROM 301, proceed direct OZZET',
+  'TAROM 301, negative, descend 4000',
   'BLUE AIR 12, climb flight level 120',
 ];

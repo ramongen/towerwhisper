@@ -31,13 +31,13 @@
     }
   },
   {
-    "input": "TAROM 612, cleared ILS approach runway zero niner",
+    "input": "TAROM 612, cleared ILS approach runway two six",
     "speaker": "atc",
     "expected": {
       "callsign": "ROT612",
       "approach": {
         "type": "ILS",
-        "runway": "09"
+        "runway": "26"
       }
     }
   },
@@ -140,13 +140,13 @@
     }
   },
   {
-    "input": "TAROM 301, cleared ILS approach runway 09",
+    "input": "TAROM 301, cleared ILS approach runway 26",
     "speaker": "atc",
     "expected": {
       "callsign": "ROT301",
       "approach": {
         "type": "ILS",
-        "runway": "09"
+        "runway": "26"
       }
     }
   },
@@ -188,7 +188,7 @@
     }
   },
   {
-    "input": "TAROM 301, turn left heading 120, descend 3000 feet, cleared ILS approach runway zero niner",
+    "input": "TAROM 301, turn left heading 120, descend 3000 feet, cleared ILS approach runway two six",
     "speaker": "atc",
     "expected": {
       "callsign": "ROT301",
@@ -203,7 +203,7 @@
       },
       "approach": {
         "type": "ILS",
-        "runway": "09"
+        "runway": "26"
       }
     }
   },
@@ -279,13 +279,13 @@
     }
   },
   {
-    "input": "WIZZ 44, cleared ILS approach runway 09",
+    "input": "WIZZ 44, cleared ILS approach runway 26",
     "speaker": "atc",
     "expected": {
       "callsign": "WZZ44",
       "approach": {
         "type": "ILS",
-        "runway": "09"
+        "runway": "26"
       }
     }
   },
@@ -562,7 +562,7 @@
     }
   },
   {
-    "input": "Descend 3000, left heading 120, cleared ILS runway 09, TAROM 301",
+    "input": "Descend 3000, left heading 120, cleared ILS runway 26, TAROM 301",
     "speaker": "pilot",
     "expected": {
       "callsign": "ROT301",
@@ -577,7 +577,7 @@
       },
       "approach": {
         "type": "ILS",
-        "runway": "09"
+        "runway": "26"
       }
     }
   },
@@ -678,24 +678,24 @@
     }
   },
   {
-    "input": "Cleared ILS runway 27, TAROM 612",
+    "input": "Cleared ILS runway 08, TAROM 612",
     "speaker": "pilot",
     "expected": {
       "callsign": "ROT612",
       "approach": {
         "type": "ILS",
-        "runway": "27"
+        "runway": "08"
       }
     }
   },
   {
-    "input": "Cleared ILS approach runway zero niner, Tarom six one two",
+    "input": "Cleared ILS approach runway two six, Tarom six one two",
     "speaker": "pilot",
     "expected": {
       "callsign": "ROT612",
       "approach": {
         "type": "ILS",
-        "runway": "09"
+        "runway": "26"
       }
     }
   },
@@ -793,7 +793,7 @@
     }
   },
   {
-    "input": "Descend 3000, left heading 120, cleared ILS runway 27, TAROM 301",
+    "input": "Descend 3000, left heading 120, cleared ILS runway 08, TAROM 301",
     "speaker": "pilot",
     "expected": {
       "callsign": "ROT301",
@@ -808,22 +808,22 @@
       },
       "approach": {
         "type": "ILS",
-        "runway": "27"
+        "runway": "08"
       }
     }
   },
   {
-    "input": "TAROM 301, proceed direct KOVAD",
+    "input": "TAROM 301, proceed direct OZZET",
     "speaker": "atc",
     "expected": {
       "callsign": "ROT301",
       "direct": {
-        "fix": "KOVAD"
+        "fix": "OZZET"
       }
     }
   },
   {
-    "input": "Wizz 44, direct to Renot, descend flight level 100",
+    "input": "Wizz 44, direct to Pemok, descend flight level 100",
     "speaker": "atc",
     "expected": {
       "callsign": "WZZ44",
@@ -833,42 +833,42 @@
         "flightLevel": true
       },
       "direct": {
-        "fix": "RENOT"
+        "fix": "PEMOK"
       }
     }
   },
   {
-    "input": "Lufthansa 9TC, proceed direct Tubil",
+    "input": "Lufthansa 9TC, proceed direct Panzu",
     "speaker": "atc",
     "expected": {
       "callsign": "DLH9TC",
       "direct": {
-        "fix": "TUBIL"
+        "fix": "PANZU"
       }
     }
   },
   {
-    "input": "Ryanair 8KQ, proceed direct Covad",
+    "input": "Ryanair 8KQ, proceed direct Ozet",
     "speaker": "atc",
     "expected": {
       "callsign": "RYR8KQ",
       "direct": {
-        "fix": "KOVAD"
+        "fix": "OZZET"
       }
     }
   },
   {
-    "input": "Direct KOVAD, TAROM 301",
+    "input": "Direct OZZET, TAROM 301",
     "speaker": "pilot",
     "expected": {
       "callsign": "ROT301",
       "direct": {
-        "fix": "KOVAD"
+        "fix": "OZZET"
       }
     }
   },
   {
-    "input": "Direct Renot, descend flight level 100, WIZZ 44",
+    "input": "Direct Pemok, descend flight level 100, WIZZ 44",
     "speaker": "pilot",
     "expected": {
       "callsign": "WZZ44",
@@ -878,7 +878,29 @@
         "flightLevel": true
       },
       "direct": {
-        "fix": "RENOT"
+        "fix": "PEMOK"
+      }
+    }
+  },
+  {
+    "input": "TAROM 612, cleared RNP approach runway zero eight",
+    "speaker": "atc",
+    "expected": {
+      "callsign": "ROT612",
+      "approach": {
+        "type": "RNP",
+        "runway": "08"
+      }
+    }
+  },
+  {
+    "input": "Cleared RNP runway 08, TAROM 612",
+    "speaker": "pilot",
+    "expected": {
+      "callsign": "ROT612",
+      "approach": {
+        "type": "RNP",
+        "runway": "08"
       }
     }
   }

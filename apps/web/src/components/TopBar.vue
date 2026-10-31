@@ -4,6 +4,7 @@ import { computed } from 'vue';
 import { useNow } from '../composables/useNow';
 import { useCommsStore } from '../stores/useCommsStore';
 import { useDemoStore } from '../stores/useDemoStore';
+import { useWeatherStore } from '../stores/useWeatherStore';
 import { formatAge, utcTime } from '../utils/format';
 
 defineProps<{ connected: boolean }>();
@@ -11,6 +12,10 @@ defineProps<{ connected: boolean }>();
 const now = useNow();
 const { frequencyBusy } = storeToRefs(useCommsStore());
 const { session } = storeToRefs(useDemoStore());
+const { current: weather } = storeToRefs(useWeatherStore());
+
+/** Into the wind, from the live METAR; 26 (the ILS runway) until the first observation. */
+const runwayInUse = computed(() => weather.value?.preferredRunway ?? '26');
 
 /** Where PTT audio is transcribed. */
 const sttLabel = computed(() => {
@@ -37,7 +42,7 @@ const sessionClock = computed(() => {
   <header class="topbar">
     <div class="position">
       <span class="name">CRAIOVA APPROACH</span>
-      <span class="mono sub">LRCV · RWY 09 IN USE</span>
+      <span class="mono sub">LRCV · RWY {{ runwayInUse }} IN USE</span>
     </div>
     <div class="spacer" />
     <div class="mono frequency" :class="{ busy: frequencyBusy }" role="status">

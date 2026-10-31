@@ -162,10 +162,10 @@ export function compare(
     }
   }
   if (i.approach) {
-    if (!r.approach) missing.push(`ILS ${i.approach.runway}`);
+    if (!r.approach) missing.push(`${i.approach.type} ${i.approach.runway}`);
     else if (r.approach.runway !== i.approach.runway) {
       mismatches.push(
-        `cleared ILS runway ${i.approach.runway}, read back runway ${r.approach.runway}`,
+        `cleared ${i.approach.type} runway ${i.approach.runway}, read back runway ${r.approach.runway}`,
       );
     }
   }
@@ -198,7 +198,7 @@ export function describe(c: Clearance | null): string[] {
   if (c.altitude) items.push(altitudeText(c.altitude));
   if (c.heading) items.push(`heading ${hdg(c.heading.valueDeg)}`);
   if (c.speed) items.push(`speed ${c.speed.valueKt} kt`);
-  if (c.approach) items.push(`ILS ${c.approach.runway}`);
+  if (c.approach) items.push(`${c.approach.type} ${c.approach.runway}`);
   if (c.frequency) items.push(`frequency ${c.frequency.mhz}`);
   if (c.direct) items.push(`direct ${c.direct.fix}`);
   return items;

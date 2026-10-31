@@ -37,7 +37,7 @@ const EMIT_CLEARANCE_TOOL = {
       speed: { type: 'object', properties: { valueKt: { type: 'number' } }, required: ['valueKt'] },
       approach: {
         type: 'object',
-        properties: { type: { const: 'ILS' }, runway: { type: 'string' } },
+        properties: { type: { enum: ['ILS', 'RNP', 'VOR'] }, runway: { type: 'string' } },
         required: ['type', 'runway'],
       },
       frequency: { type: 'object', properties: { mhz: { type: 'string' } }, required: ['mhz'] },
@@ -164,7 +164,8 @@ export function validate(input: unknown, callsigns: string[]): LlmResult | null 
     typeof app.runway === 'string' &&
     /^\d{2}$/.test(app.runway)
   ) {
-    fields.approach = { type: 'ILS', runway: app.runway };
+    const type = app.type === 'RNP' || app.type === 'VOR' ? app.type : 'ILS';
+    fields.approach = { type, runway: app.runway };
   }
 
   const freq = raw.frequency;

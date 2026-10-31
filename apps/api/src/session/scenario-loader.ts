@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { Aircraft, FlightPlan, Waypoint } from '@towerwhisper/shared';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { AIRSPACE } from '../airspace/airspace';
 
 /** Flight plan as written in the scenario file: fixes by name. */
 interface FiledPlan extends Omit<FlightPlan, 'route'> {
@@ -23,7 +24,8 @@ export interface Scenario {
   aircraft: ScenarioAircraft[];
 }
 
-interface ScenarioFile extends Omit<Scenario, 'aircraft'> {
+/** Fixes come from the real airspace (lrcv-airspace.json); a scenario names them. */
+interface ScenarioFile extends Omit<Scenario, 'aircraft' | 'fixes'> {
   aircraft: (Omit<ScenarioAircraft, 'flightPlan' | 'routeIndex'> & { flightPlan: FiledPlan })[];
 }
 
@@ -36,7 +38,9 @@ export class ScenarioLoader {
     const file = JSON.parse(
       readFileSync(join(SCENARIOS_DIR, `${name}.json`), 'utf-8'),
     ) as ScenarioFile;
-    const fixes = new Map(file.fixes.map((f) => [f.name, f]));
+    const fixes = new Map<string, Waypoint>(
+      AIRSPACE.fixes.map((f) => [f.name, { name: f.name, lat: f.lat, lon: f.lon }]),
+    );
     const fix = (fixName: string): Waypoint => {
       const found = fixes.get(fixName);
       if (!found) throw new Error(`Scenario ${name}: unknown fix ${fixName}`);
@@ -46,7 +50,7 @@ export class ScenarioLoader {
     return {
       name: file.name,
       airport: file.airport,
-      fixes: file.fixes,
+      fixes: [...fixes.values()],
       aircraft: file.aircraft.map(({ flightPlan, ...a }) => {
         const { nextWaypoint, route, ...plan } = flightPlan;
         return {

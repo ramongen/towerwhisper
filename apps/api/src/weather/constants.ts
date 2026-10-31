@@ -7,8 +7,6 @@ export const OPEN_METEO_URL = 'https://api.open-meteo.com/v1/forecast';
 export const WEATHER_REFRESH_MS = 5 * 60 * 1000;
 export const WEATHER_TIMEOUT_MS = 6000;
 
-/** Runway directions of LRCV (magnetic headings rounded to the runway numbers). */
-export const RUNWAY_HEADINGS = { '09': 90, '27': 270 } as const;
 
 /** Flight category limits (ceiling ft, visibility m), FAA convention as used by aviationweather.gov. */
 export const CATEGORY_LIMITS = {

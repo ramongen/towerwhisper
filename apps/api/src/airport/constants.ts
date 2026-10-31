@@ -1,22 +1,17 @@
 import type { AircraftTypeInfo, AirspaceResponse } from '@towerwhisper/shared';
-import { LRCV } from '../session/constants';
+import { AIRSPACE } from '../airspace/airspace';
 
-/**
- * Craiova International (LRCV): one runway, 09/27. Length and width from public AIP data,
- * rounded; good enough for planning advice in a simulation, not for operations.
- */
-export const AIRPORT: AirspaceResponse['airport'] = {
-  icao: LRCV.icao,
-  name: 'Craiova International',
-  lat: LRCV.lat,
-  lon: LRCV.lon,
-  elevationFt: 626,
-};
+/** Craiova International (LRCV), from AIP Romania AD 2 LRCV: runway 08/26, 2500 x 45 m, ILS 26. */
+export const AIRPORT: AirspaceResponse['airport'] = AIRSPACE.airport;
 
-export const RUNWAYS: AirspaceResponse['runways'] = [
-  { id: '09', headingDeg: 90, lengthM: 2500, widthM: 45, ils: true },
-  { id: '27', headingDeg: 270, lengthM: 2500, widthM: 45, ils: true },
-];
+export const RUNWAYS: AirspaceResponse['runways'] = AIRSPACE.runways.map((r) => ({
+  id: r.id,
+  headingDeg: r.trueBearingDeg,
+  threshold: r.threshold,
+  lengthM: r.lengthM,
+  widthM: r.widthM,
+  ils: r.ils ? { ident: r.ils.ident, frequencyMhz: r.ils.frequencyMhz } : null,
+}));
 
 /** Landing distance factors of the simplified planning model. */
 export const WET_RUNWAY_FACTOR = 1.15;

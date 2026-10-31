@@ -1,5 +1,6 @@
 import { Controller, Get, NotFoundException, Param } from '@nestjs/common';
 import type { AircraftDetails, AirspaceResponse } from '@towerwhisper/shared';
+import { AIRSPACE } from '../airspace/airspace';
 import { SimulationService } from '../simulation/simulation.service';
 import { WeatherService } from '../weather/weather.service';
 import { AIRCRAFT_TYPES, AIRPORT, RUNWAYS } from './constants';
@@ -15,7 +16,13 @@ export class AirportController {
   /** GET /api/airspace — airport, runways and fixes for the scope. */
   @Get('airspace')
   airspace(): AirspaceResponse {
-    return { airport: AIRPORT, runways: RUNWAYS, fixes: this.simulation.getFixes() };
+    return {
+      airport: AIRPORT,
+      runways: RUNWAYS,
+      navaids: AIRSPACE.navaids,
+      fixes: AIRSPACE.fixes,
+      source: AIRSPACE.source,
+    };
   }
 
   /** GET /api/aircraft/:callsign — type data, flight plan and runway compatibility. */

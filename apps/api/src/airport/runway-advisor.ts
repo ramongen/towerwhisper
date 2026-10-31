@@ -1,4 +1,5 @@
 import type { AircraftTypeInfo, AirportWeather, RunwayAssessment } from '@towerwhisper/shared';
+import { ILS_RUNWAY } from '../airspace/airspace';
 import { componentsFor } from '../weather/weather.service';
 import { MAX_TAILWIND_KT, RUNWAYS, TAILWIND_FACTOR_PER_KT, WET_RUNWAY_FACTOR } from './constants';
 
@@ -62,7 +63,7 @@ export function assessRunways(
     } else {
       notes.push('wind unknown');
     }
-    if (rwy.ils) notes.push('ILS');
+    notes.push(rwy.ils ? `ILS ${rwy.ils.ident} ${rwy.ils.frequencyMhz}` : 'no ILS (RNP / VOR)');
 
     return {
       runway: rwy.id,
@@ -78,7 +79,7 @@ export function assessRunways(
 
   const best = assessments
     .filter((a) => a.compatible)
-    .sort((a, b) => (b.headwindKt ?? 0) - (a.headwindKt ?? 0) || (a.runway === '09' ? -1 : 1))[0];
+    .sort((a, b) => (b.headwindKt ?? 0) - (a.headwindKt ?? 0) || (a.runway === ILS_RUNWAY ? -1 : 1))[0];
   if (best) best.recommended = true;
   return assessments;
 }

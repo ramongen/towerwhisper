@@ -30,20 +30,20 @@ describe('weather decoding', () => {
       qnhHpa: 1021,
       flightCategory: 'LIFR',
       wetRunway: true,
-      preferredRunway: '27',
+      preferredRunway: '26',
     });
   });
 
   it('splits the wind along each runway', () => {
-    expect(componentsFor('27', 250, 20)).toEqual({ runway: '27', headwindKt: 19, crosswindKt: 7 });
-    expect(componentsFor('09', 250, 20)).toEqual({ runway: '09', headwindKt: -19, crosswindKt: 7 });
+    expect(componentsFor('26', 250, 20)).toEqual({ runway: '26', headwindKt: 19, crosswindKt: 6 });
+    expect(componentsFor('08', 250, 20)).toEqual({ runway: '08', headwindKt: -19, crosswindKt: 6 });
   });
 
   it('treats a variable wind as tailwind and crosswind', () => {
-    expect(componentsFor('09', null, 4)).toEqual({ runway: '09', headwindKt: -4, crosswindKt: 4 });
+    expect(componentsFor('08', null, 4)).toEqual({ runway: '08', headwindKt: -4, crosswindKt: 4 });
   });
 
-  it('prefers 09 (ILS) when calm', () => {
-    expect(decodeMetar({ ...metar, wdir: 0, wspd: 0, wxString: null }).preferredRunway).toBe('09');
+  it('prefers 26 (the ILS runway) when calm', () => {
+    expect(decodeMetar({ ...metar, wdir: 0, wspd: 0, wxString: null }).preferredRunway).toBe('26');
   });
 });

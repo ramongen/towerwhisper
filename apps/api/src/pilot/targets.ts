@@ -1,4 +1,5 @@
 import type { Aircraft, Clearance, FaultConfig, Targets } from '@towerwhisper/shared';
+import { isRunwayId } from '../airspace/airspace';
 import { DEFAULT_OVERSHOOT_FT, WRONG_VERTICAL_FT } from '../demo/constants';
 import { MIN_TARGET_ALTITUDE_FT } from './constants';
 
@@ -13,11 +14,8 @@ export function targetsFor(clearance: Clearance): Targets {
     targets.turnDir = clearance.heading.turn;
   }
   if (clearance.speed) targets.speedKt = clearance.speed.valueKt;
-  if (
-    clearance.approach &&
-    (clearance.approach.runway === '09' || clearance.approach.runway === '27')
-  ) {
-    targets.approach = { type: 'ILS', runway: clearance.approach.runway };
+  if (clearance.approach && isRunwayId(clearance.approach.runway)) {
+    targets.approach = { type: clearance.approach.type, runway: clearance.approach.runway };
   }
   // Direct-to: back to own navigation (the simulator clears the assigned heading).
   if (clearance.direct && !clearance.heading) targets.directTo = clearance.direct.fix;

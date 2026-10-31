@@ -1,0 +1,1159 @@
+{
+  "source": "AIP Romania (ROMATSA), AIRAC effective 29 OCT 2026",
+  "airport": {
+    "icao": "LRCV",
+    "name": "Craiova International",
+    "lat": 44.31806,
+    "lon": 23.88861,
+    "elevationFt": 628
+  },
+  "runways": [
+    {
+      "id": "08",
+      "trueBearingDeg": 88.93,
+      "threshold": {
+        "lat": 44.31794,
+        "lon": 23.87287
+      },
+      "lengthM": 2500,
+      "widthM": 45,
+      "ils": null
+    },
+    {
+      "id": "26",
+      "trueBearingDeg": 268.95,
+      "threshold": {
+        "lat": 44.31836,
+        "lon": 23.9042
+      },
+      "lengthM": 2500,
+      "widthM": 45,
+      "ils": {
+        "ident": "ICV",
+        "frequencyMhz": "108.700",
+        "category": "II",
+        "glideSlopeDeg": 3
+      }
+    }
+  ],
+  "navaids": [
+    {
+      "ident": "CRV",
+      "name": "CRAIOVA",
+      "type": "DVOR/DME",
+      "frequencyMhz": "110.200",
+      "lat": 44.31861,
+      "lon": 23.92275
+    }
+  ],
+  "fixes": [
+    {
+      "name": "ABATU",
+      "lat": 44.54472,
+      "lon": 25.67472,
+      "routes": "STAR, IAC LROP"
+    },
+    {
+      "name": "ABNEK",
+      "lat": 44.88306,
+      "lon": 25.41528,
+      "routes": "SID LROP"
+    },
+    {
+      "name": "ABORA",
+      "lat": 44.55222,
+      "lon": 26.34083,
+      "routes": "STAR, IAC LRBS"
+    },
+    {
+      "name": "ABRUT",
+      "lat": 44.45028,
+      "lon": 25.18306,
+      "routes": "T285, STAR LRBS"
+    },
+    {
+      "name": "ADULI",
+      "lat": 44.45528,
+      "lon": 25.86972,
+      "routes": "STAR, IAC LRBS"
+    },
+    {
+      "name": "AGASU",
+      "lat": 45.88111,
+      "lon": 21.80806,
+      "routes": "STAR LRAR, STAR LRTR"
+    },
+    {
+      "name": "AGNEP",
+      "lat": 45.45,
+      "lon": 22.95972
+    },
+    {
+      "name": "ALOXU",
+      "lat": 45.78139,
+      "lon": 24.34139,
+      "routes": "STAR LRSB"
+    },
+    {
+      "name": "AMODA",
+      "lat": 44.53167,
+      "lon": 26.50111,
+      "routes": "STAR LRBS/LROP"
+    },
+    {
+      "name": "AMSIT",
+      "lat": 44.5475,
+      "lon": 26.59083,
+      "routes": "STAR LRBS/LROP"
+    },
+    {
+      "name": "ANASA",
+      "lat": 44.31194,
+      "lon": 22.55528,
+      "routes": "Y88"
+    },
+    {
+      "name": "APROB",
+      "lat": 43.97333,
+      "lon": 25.0025
+    },
+    {
+      "name": "ARGES",
+      "lat": 44.08222,
+      "lon": 26.82667,
+      "routes": "Z946"
+    },
+    {
+      "name": "ARHOP",
+      "lat": 44.455,
+      "lon": 25.87,
+      "routes": "IAC LRBS"
+    },
+    {
+      "name": "ARMOX",
+      "lat": 44.68056,
+      "lon": 26.37583,
+      "routes": "ENTRY/EXIT POINT CTR LROP"
+    },
+    {
+      "name": "ARNAX",
+      "lat": 44.37861,
+      "lon": 25.82944,
+      "routes": "STAR LRBS"
+    },
+    {
+      "name": "ASECA",
+      "lat": 45.54111,
+      "lon": 25.54139,
+      "routes": "IAC LRBV"
+    },
+    {
+      "name": "ASNEL",
+      "lat": 44.53667,
+      "lon": 26.33
+    },
+    {
+      "name": "BABAK",
+      "lat": 44.44944,
+      "lon": 25.77472,
+      "routes": "ENTRY/EXIT POINT CTR LRBS"
+    },
+    {
+      "name": "BACAM",
+      "lat": 44.46861,
+      "lon": 23.47389,
+      "routes": "T226, SID LRCV"
+    },
+    {
+      "name": "BALBI",
+      "lat": 44.905,
+      "lon": 25.75417
+    },
+    {
+      "name": "BEGAL",
+      "lat": 44.60056,
+      "lon": 25.77194,
+      "routes": "STAR LROP"
+    },
+    {
+      "name": "BEKLU",
+      "lat": 44.29667,
+      "lon": 26.125,
+      "routes": "SID LRBS"
+    },
+    {
+      "name": "BILRO",
+      "lat": 46.11833,
+      "lon": 24.22972,
+      "routes": "SID LRSB"
+    },
+    {
+      "name": "BIVBU",
+      "lat": 44.92056,
+      "lon": 24.33167
+    },
+    {
+      "name": "BOGVI",
+      "lat": 44.70083,
+      "lon": 26.63556,
+      "routes": "STAR LRBS, LROP"
+    },
+    {
+      "name": "BUKEL",
+      "lat": 45.07778,
+      "lon": 25.72583,
+      "routes": "SID LRBS/LROP"
+    },
+    {
+      "name": "BULEN",
+      "lat": 43.75,
+      "lon": 25.81667
+    },
+    {
+      "name": "BUNIR",
+      "lat": 44.71306,
+      "lon": 25.84417,
+      "routes": "STAR LROP"
+    },
+    {
+      "name": "BUSOK",
+      "lat": 44.5325,
+      "lon": 26.60083,
+      "routes": "STAR LROP/LRBS"
+    },
+    {
+      "name": "DACXU",
+      "lat": 45.07611,
+      "lon": 25.25806
+    },
+    {
+      "name": "DENAK",
+      "lat": 45.00222,
+      "lon": 26.43556,
+      "routes": "T74, SID/STAR LRBS/LROP"
+    },
+    {
+      "name": "DESUX",
+      "lat": 44.93972,
+      "lon": 25.83472,
+      "routes": "SID LRBS, LROP"
+    },
+    {
+      "name": "DEXIM",
+      "lat": 44.70917,
+      "lon": 26.75389,
+      "routes": "STAR LROP"
+    },
+    {
+      "name": "DEXUD",
+      "lat": 44.54028,
+      "lon": 25.62361,
+      "routes": "STAR LROP"
+    },
+    {
+      "name": "DIKER",
+      "lat": 44.50278,
+      "lon": 25.82444,
+      "routes": "STAR LROP"
+    },
+    {
+      "name": "DILAS",
+      "lat": 44.55611,
+      "lon": 25.82083,
+      "routes": "STAR, IAC LROP"
+    },
+    {
+      "name": "DILIM",
+      "lat": 44.62028,
+      "lon": 26.84389,
+      "routes": "STAR LROP, LRBS"
+    },
+    {
+      "name": "DIPUX",
+      "lat": 45.88833,
+      "lon": 21.86722,
+      "routes": "STAR LRAR, STAR LRTR"
+    },
+    {
+      "name": "DIRER",
+      "lat": 44.98833,
+      "lon": 21.40972
+    },
+    {
+      "name": "DITAX",
+      "lat": 45.46889,
+      "lon": 22.33722,
+      "routes": "SID LRAR, SID LRTR"
+    },
+    {
+      "name": "DOGUV",
+      "lat": 44.55639,
+      "lon": 25.82139,
+      "routes": "STAR, IAC LROP"
+    },
+    {
+      "name": "DONOX",
+      "lat": 44.18472,
+      "lon": 25.90667,
+      "routes": "STAR LROP, LRBS"
+    },
+    {
+      "name": "DOTEV",
+      "lat": 46.39083,
+      "lon": 24.02333,
+      "routes": "STAR LRSB, SID LRTM"
+    },
+    {
+      "name": "EKNAB",
+      "lat": 45.72778,
+      "lon": 22.50083
+    },
+    {
+      "name": "EKRAT",
+      "lat": 46.44056,
+      "lon": 24.13861,
+      "routes": "SID LRCL, STAR LRTM"
+    },
+    {
+      "name": "EKSUN",
+      "lat": 44.92056,
+      "lon": 26.28556,
+      "routes": "SID LRBS, LROP"
+    },
+    {
+      "name": "ELDET",
+      "lat": 44.28611,
+      "lon": 23.75583,
+      "routes": "T226, Y88"
+    },
+    {
+      "name": "ELSEK",
+      "lat": 46.13194,
+      "lon": 24.11889,
+      "routes": "SID LRSB"
+    },
+    {
+      "name": "ELTIX",
+      "lat": 45.67167,
+      "lon": 25.31389,
+      "routes": "IAC LRBV"
+    },
+    {
+      "name": "ELVAB",
+      "lat": 44.16444,
+      "lon": 25.09083
+    },
+    {
+      "name": "EMBIB",
+      "lat": 45.89222,
+      "lon": 23.63722,
+      "routes": "STAR LRCL, STAR LRTM"
+    },
+    {
+      "name": "EMPOS",
+      "lat": 45.79111,
+      "lon": 23.73,
+      "routes": "STAR LRSB"
+    },
+    {
+      "name": "ENIMA",
+      "lat": 45.07944,
+      "lon": 24.9025
+    },
+    {
+      "name": "EPUPO",
+      "lat": 45.83,
+      "lon": 24.51528,
+      "routes": "STAR LRSB"
+    },
+    {
+      "name": "EPURA",
+      "lat": 45.77833,
+      "lon": 24.505,
+      "routes": "STAR LRCL"
+    },
+    {
+      "name": "ERUKO",
+      "lat": 45.83083,
+      "lon": 22.09111,
+      "routes": "STAR LRAR, STAR LRTR"
+    },
+    {
+      "name": "ESUXU",
+      "lat": 44.45861,
+      "lon": 26.435,
+      "routes": "STAR LRBS, LROP"
+    },
+    {
+      "name": "ETOGO",
+      "lat": 44.80333,
+      "lon": 26.66361,
+      "routes": "SID LRBS, LROP"
+    },
+    {
+      "name": "ETUXA",
+      "lat": 44.82639,
+      "lon": 26.29917,
+      "routes": "SID LRBS, LROP"
+    },
+    {
+      "name": "GIKUN",
+      "lat": 44.67028,
+      "lon": 23.63639,
+      "routes": "Z943"
+    },
+    {
+      "name": "GOMDI",
+      "lat": 44.865,
+      "lon": 25.94444,
+      "routes": "SID LRBS, LROP"
+    },
+    {
+      "name": "GORER",
+      "lat": 44.78083,
+      "lon": 26.08,
+      "routes": "ENTRY/EXIT POINT CTR LROP"
+    },
+    {
+      "name": "GOTOB",
+      "lat": 44.59861,
+      "lon": 26.2675,
+      "routes": "Otopeni CTR, VFR route"
+    },
+    {
+      "name": "GUDIV",
+      "lat": 44.53083,
+      "lon": 25.64389,
+      "routes": "STAR LROP"
+    },
+    {
+      "name": "GUPRO",
+      "lat": 45.45528,
+      "lon": 21.89472,
+      "routes": "SID LRAR, SID LRTR"
+    },
+    {
+      "name": "GURSA",
+      "lat": 44.50722,
+      "lon": 26.12111,
+      "routes": "STAR LROP"
+    },
+    {
+      "name": "IBAVA",
+      "lat": 46.03806,
+      "lon": 24.25083,
+      "routes": "STAR LRCL, STAR LRTM"
+    },
+    {
+      "name": "IBINU",
+      "lat": 45.91806,
+      "lon": 23.27889,
+      "routes": "STAR LRCL, STAR LRSB, STAR"
+    },
+    {
+      "name": "IDOMO",
+      "lat": 43.80444,
+      "lon": 24.81389
+    },
+    {
+      "name": "INDOR",
+      "lat": 44.6625,
+      "lon": 26.11222,
+      "routes": "STAR LROP"
+    },
+    {
+      "name": "IPDIS",
+      "lat": 46.16139,
+      "lon": 24.23972,
+      "routes": "STAR LRCL, STAR LRTM"
+    },
+    {
+      "name": "IPRAS",
+      "lat": 44.68972,
+      "lon": 26.48028,
+      "routes": "STAR LRBS, LROP"
+    },
+    {
+      "name": "IPTOL",
+      "lat": 46.29111,
+      "lon": 24.04472,
+      "routes": "STAR LRSB, SID LRTM"
+    },
+    {
+      "name": "IRLOX",
+      "lat": 45.63556,
+      "lon": 24.18389,
+      "routes": "SID LRCL, SID LRSB, SID LRTM"
+    },
+    {
+      "name": "ITVAX",
+      "lat": 45.82389,
+      "lon": 24.47389,
+      "routes": "STAR LRCL, STAR LRTM"
+    },
+    {
+      "name": "ITVUK",
+      "lat": 44.46694,
+      "lon": 26.55083,
+      "routes": "STAR LRBS, LROP"
+    },
+    {
+      "name": "IVDEK",
+      "lat": 44.47528,
+      "lon": 26.66667,
+      "routes": "STAR LRBS, LROP"
+    },
+    {
+      "name": "KAJNA",
+      "lat": 44.45417,
+      "lon": 25.95833,
+      "routes": "Bneasa CTR, VFR route"
+    },
+    {
+      "name": "KOMAN",
+      "lat": 43.98333,
+      "lon": 26.21667,
+      "routes": "L622"
+    },
+    {
+      "name": "KOZBO",
+      "lat": 45.60167,
+      "lon": 25.36972,
+      "routes": "IAC LRBV"
+    },
+    {
+      "name": "LAMIT",
+      "lat": 45.10389,
+      "lon": 23.37472,
+      "routes": "Z938"
+    },
+    {
+      "name": "LAPKA",
+      "lat": 45.29278,
+      "lon": 26.50917,
+      "routes": "T74"
+    },
+    {
+      "name": "LEBAT",
+      "lat": 45.36972,
+      "lon": 25.56194,
+      "routes": "SID/STAR LRBV"
+    },
+    {
+      "name": "LEHID",
+      "lat": 44.58944,
+      "lon": 26.40972,
+      "routes": "STAR, IAC LROP"
+    },
+    {
+      "name": "LELTI",
+      "lat": 44.29444,
+      "lon": 23.42556,
+      "routes": "Y88, SID LRCV"
+    },
+    {
+      "name": "LEVTA",
+      "lat": 44.58944,
+      "lon": 26.40972,
+      "routes": "STAR, IAC LROP"
+    },
+    {
+      "name": "LILGU",
+      "lat": 44.54583,
+      "lon": 26.37778,
+      "routes": "ENTRY/EXIT POINT CTR LRBS"
+    },
+    {
+      "name": "LIVGA",
+      "lat": 44.61194,
+      "lon": 26.41111,
+      "routes": "SID LROP"
+    },
+    {
+      "name": "LOMOS",
+      "lat": 43.83333,
+      "lon": 23.25
+    },
+    {
+      "name": "LOVIS",
+      "lat": 44.61944,
+      "lon": 26.66944,
+      "routes": "STAR LROP"
+    },
+    {
+      "name": "LUROD",
+      "lat": 44.64139,
+      "lon": 26.54528,
+      "routes": "STAR LRBS/LROP"
+    },
+    {
+      "name": "LUSOM",
+      "lat": 45.41361,
+      "lon": 21.44944,
+      "routes": "SID LRAR, SID LRTR"
+    },
+    {
+      "name": "LUTUP",
+      "lat": 44.43611,
+      "lon": 26.51611,
+      "routes": "STAR LRBS"
+    },
+    {
+      "name": "MASEB",
+      "lat": 44.53583,
+      "lon": 25.75833,
+      "routes": "STAR LRBS"
+    },
+    {
+      "name": "MASTE",
+      "lat": 45.79056,
+      "lon": 25.80722,
+      "routes": "IAC LRBV"
+    },
+    {
+      "name": "MAVIT",
+      "lat": 45.24,
+      "lon": 21.30833,
+      "routes": "SID/STAR LRAR, SID/STAR LRTR"
+    },
+    {
+      "name": "MORAX",
+      "lat": 44.50583,
+      "lon": 26.23944,
+      "routes": "Bneasa CTR, VFR route"
+    },
+    {
+      "name": "NAVOD",
+      "lat": 43.75583,
+      "lon": 24.55972,
+      "routes": "T226"
+    },
+    {
+      "name": "NECCO",
+      "lat": 44.31444,
+      "lon": 23.62389,
+      "routes": "IAC LRCV"
+    },
+    {
+      "name": "NEKUL",
+      "lat": 45.51667,
+      "lon": 22.58667,
+      "routes": "STAR LRAR, STAR LRTR"
+    },
+    {
+      "name": "NEPOT",
+      "lat": 45.96028,
+      "lon": 23.08806
+    },
+    {
+      "name": "NERDI",
+      "lat": 45.31278,
+      "lon": 23.70306
+    },
+    {
+      "name": "NIGAB",
+      "lat": 44.54333,
+      "lon": 26.49333,
+      "routes": "SID LRBS"
+    },
+    {
+      "name": "NIGEV",
+      "lat": 43.97806,
+      "lon": 24.75389
+    },
+    {
+      "name": "NOZOZ",
+      "lat": 44.46083,
+      "lon": 26.67333,
+      "routes": "SID LRBS / LROP"
+    },
+    {
+      "name": "NULGO",
+      "lat": 44.045,
+      "lon": 23.71722
+    },
+    {
+      "name": "OBCAS",
+      "lat": 45.58194,
+      "lon": 25.84028,
+      "routes": "SID/STAR LRBV"
+    },
+    {
+      "name": "OBELA",
+      "lat": 44.54556,
+      "lon": 25.82722,
+      "routes": "STAR, IAC LROP"
+    },
+    {
+      "name": "OBUDO",
+      "lat": 44.63444,
+      "lon": 26.18667,
+      "routes": "Otopeni CTR"
+    },
+    {
+      "name": "OBUGA",
+      "lat": 44.10889,
+      "lon": 26.09417,
+      "routes": "L622, STAR LRBS/LROP"
+    },
+    {
+      "name": "OGUPI",
+      "lat": 44.60889,
+      "lon": 26.07222,
+      "routes": "Otopeni CTR, VFR route"
+    },
+    {
+      "name": "OKAGO",
+      "lat": 44.79694,
+      "lon": 26.57222,
+      "routes": "STAR LRBS, LROP"
+    },
+    {
+      "name": "OLMIP",
+      "lat": 46.04528,
+      "lon": 22.37
+    },
+    {
+      "name": "OLNOR",
+      "lat": 44.38833,
+      "lon": 26.32167,
+      "routes": "SID LRBS/LROP"
+    },
+    {
+      "name": "OMABU",
+      "lat": 44.54528,
+      "lon": 25.82611,
+      "routes": "STAR, IAC LROP"
+    },
+    {
+      "name": "ORBUF",
+      "lat": 45.57972,
+      "lon": 25.40917,
+      "routes": "IAC LRBV"
+    },
+    {
+      "name": "ORSUT",
+      "lat": 44.17611,
+      "lon": 26.07583,
+      "routes": "SID LRBS/LROP"
+    },
+    {
+      "name": "ORTIP",
+      "lat": 43.97778,
+      "lon": 25.33306
+    },
+    {
+      "name": "ORVET",
+      "lat": 44.41194,
+      "lon": 25.65722,
+      "routes": "STAR LRBS"
+    },
+    {
+      "name": "ORVIH",
+      "lat": 44.7775,
+      "lon": 26.30639,
+      "routes": "SID LRBS / LROP"
+    },
+    {
+      "name": "OSTAL",
+      "lat": 44.27806,
+      "lon": 26.77278,
+      "routes": "Z946, STAR LRBS/LROP"
+    },
+    {
+      "name": "OSTOV",
+      "lat": 43.78333,
+      "lon": 23.8
+    },
+    {
+      "name": "OVDOT",
+      "lat": 44.53889,
+      "lon": 22.97694,
+      "routes": "T139"
+    },
+    {
+      "name": "OXDOC",
+      "lat": 45.03,
+      "lon": 25.18722
+    },
+    {
+      "name": "OZZET",
+      "lat": 44.32167,
+      "lon": 24.17694,
+      "role": "IF",
+      "routes": "IAC LRCV"
+    },
+    {
+      "name": "PADGU",
+      "lat": 44.77861,
+      "lon": 22.61056
+    },
+    {
+      "name": "PANZU",
+      "lat": 44.03667,
+      "lon": 24.13694,
+      "role": "IAF",
+      "routes": "T139, T226, IAC LRCV"
+    },
+    {
+      "name": "PATWA",
+      "lat": 44.47778,
+      "lon": 26.07278,
+      "routes": "Bneasa CTR, VFR route"
+    },
+    {
+      "name": "PELUR",
+      "lat": 45.28667,
+      "lon": 25.48833
+    },
+    {
+      "name": "PEMOK",
+      "lat": 44.36472,
+      "lon": 24.34833,
+      "role": "IAF",
+      "routes": "T285, T899, IAC LRCV, SID LRCV"
+    },
+    {
+      "name": "PETAV",
+      "lat": 44.56917,
+      "lon": 26.41167,
+      "routes": "ENTRY/EXIT POINT CTR LROP"
+    },
+    {
+      "name": "PETOS",
+      "lat": 44.47667,
+      "lon": 25.45417,
+      "routes": "STAR LRBS"
+    },
+    {
+      "name": "PEXAL",
+      "lat": 44.71667,
+      "lon": 26.09139,
+      "routes": "SID LROP"
+    },
+    {
+      "name": "PIKUV",
+      "lat": 46.05833,
+      "lon": 24.09472,
+      "routes": "STAR LRSB"
+    },
+    {
+      "name": "PINUB",
+      "lat": 46.32028,
+      "lon": 24.19111,
+      "routes": "SID LRSB, STAR LRTM"
+    },
+    {
+      "name": "POLUN",
+      "lat": 44.2375,
+      "lon": 25.22333,
+      "routes": "Y88, Z944, SID LRBS/LROP"
+    },
+    {
+      "name": "RARIT",
+      "lat": 44.60111,
+      "lon": 26.41472,
+      "routes": "STAR, IAC LROP"
+    },
+    {
+      "name": "RASAR",
+      "lat": 44.62389,
+      "lon": 25.74528,
+      "routes": "ENTRY/EXIT POINT CTR LROP"
+    },
+    {
+      "name": "RASUB",
+      "lat": 43.97889,
+      "lon": 25.41833
+    },
+    {
+      "name": "RIDPA",
+      "lat": 44.62194,
+      "lon": 26.48722,
+      "routes": "SID LROP"
+    },
+    {
+      "name": "RIRUX",
+      "lat": 44.53389,
+      "lon": 26.06833,
+      "routes": "Otopeni CTR, VFR route"
+    },
+    {
+      "name": "RISUC",
+      "lat": 45.88083,
+      "lon": 25.70667,
+      "routes": "IAC LRBV"
+    },
+    {
+      "name": "RONBU",
+      "lat": 44.05167,
+      "lon": 26.49833
+    },
+    {
+      "name": "ROTBI",
+      "lat": 44.50139,
+      "lon": 25.94306,
+      "routes": "Otopeni CTR, VFR route"
+    },
+    {
+      "name": "RUFID",
+      "lat": 44.60111,
+      "lon": 26.41417,
+      "routes": "STAR, IAC LROP"
+    },
+    {
+      "name": "RUKAT",
+      "lat": 44.64306,
+      "lon": 26.16111,
+      "routes": "SID LROP"
+    },
+    {
+      "name": "RUSAG",
+      "lat": 45.97333,
+      "lon": 24.26444,
+      "routes": "SID LRSB"
+    },
+    {
+      "name": "RUTUV",
+      "lat": 46.40694,
+      "lon": 24.10361,
+      "routes": "STAR LRTM"
+    },
+    {
+      "name": "SISGU",
+      "lat": 44.36944,
+      "lon": 25.46472,
+      "routes": "SID LRBS, LROP"
+    },
+    {
+      "name": "SOBSA",
+      "lat": 46.04806,
+      "lon": 25.08722
+    },
+    {
+      "name": "SODGO",
+      "lat": 44.86722,
+      "lon": 22.8475,
+      "routes": "T226"
+    },
+    {
+      "name": "SOKRU",
+      "lat": 44.99278,
+      "lon": 25.33028,
+      "routes": "SID LRBS, LROP"
+    },
+    {
+      "name": "SOMOV",
+      "lat": 43.7,
+      "lon": 24.85,
+      "routes": "Z937"
+    },
+    {
+      "name": "SONOB",
+      "lat": 44.52306,
+      "lon": 25.76611,
+      "routes": "ENTRY/EXIT POINT CTR LROP"
+    },
+    {
+      "name": "SORDU",
+      "lat": 44.0425,
+      "lon": 25.44667,
+      "routes": "Z937, STAR LRBS/LROP"
+    },
+    {
+      "name": "SORUR",
+      "lat": 44.57944,
+      "lon": 25.89917,
+      "routes": "Otopeni CTR, VFR route"
+    },
+    {
+      "name": "SOSIL",
+      "lat": 45.35139,
+      "lon": 21.30778,
+      "routes": "SID/STAR LRTR"
+    },
+    {
+      "name": "SUSUR",
+      "lat": 44.61306,
+      "lon": 26.74306,
+      "routes": "STAR LROP"
+    },
+    {
+      "name": "TESTU",
+      "lat": 44.75167,
+      "lon": 26.06972,
+      "routes": "STAR LROP"
+    },
+    {
+      "name": "TEVRO",
+      "lat": 44.34639,
+      "lon": 25.50194,
+      "routes": "STAR LRBS, LROP"
+    },
+    {
+      "name": "TIDGA",
+      "lat": 46.39417,
+      "lon": 23.06306,
+      "routes": "Y559, Z945"
+    },
+    {
+      "name": "TIMUR",
+      "lat": 43.68889,
+      "lon": 24.23917,
+      "routes": "Z944"
+    },
+    {
+      "name": "TITEK",
+      "lat": 44.49333,
+      "lon": 23.57389,
+      "role": "IAF",
+      "routes": "T139, Z938, IAC LRCV, SID LRCV"
+    },
+    {
+      "name": "TIXIP",
+      "lat": 45.8375,
+      "lon": 22.64667,
+      "routes": "Y574"
+    },
+    {
+      "name": "TOBAG",
+      "lat": 44.37722,
+      "lon": 26.70278,
+      "routes": "STAR LRBS, LROP"
+    },
+    {
+      "name": "TOSVI",
+      "lat": 44.75389,
+      "lon": 25.16139,
+      "routes": "T899, STAR LROP"
+    },
+    {
+      "name": "TUMOP",
+      "lat": 44.31778,
+      "lon": 26.29722,
+      "routes": "STAR LRBS, LROP"
+    },
+    {
+      "name": "TUTIX",
+      "lat": 44.24,
+      "lon": 25.51889,
+      "routes": "STAR LRBS, LROP"
+    },
+    {
+      "name": "UBAXI",
+      "lat": 45.51167,
+      "lon": 22.21306,
+      "routes": "SID LRTR"
+    },
+    {
+      "name": "UBOGU",
+      "lat": 44.76306,
+      "lon": 24.66833
+    },
+    {
+      "name": "UDRIB",
+      "lat": 44.57972,
+      "lon": 25.92528,
+      "routes": "Otopeni CTR"
+    },
+    {
+      "name": "ULMIN",
+      "lat": 45.81389,
+      "lon": 23.39806,
+      "routes": "Y574, SID LRSB"
+    },
+    {
+      "name": "UNUSU",
+      "lat": 44.53639,
+      "lon": 26.24583,
+      "routes": "Otopeni CTR, VFR route"
+    },
+    {
+      "name": "UPAMA",
+      "lat": 43.62639,
+      "lon": 25.41833
+    },
+    {
+      "name": "UPOLI",
+      "lat": 45.885,
+      "lon": 24.13139,
+      "routes": "STAR LRSB"
+    },
+    {
+      "name": "USIRO",
+      "lat": 44.24167,
+      "lon": 25.76472,
+      "routes": "SID LRBS/LROP"
+    },
+    {
+      "name": "UTIDI",
+      "lat": 44.25278,
+      "lon": 26.23389,
+      "routes": "STAR LRBS, LROP"
+    },
+    {
+      "name": "UTOKI",
+      "lat": 44.74417,
+      "lon": 25.86472,
+      "routes": "SID LRBS, LROP"
+    },
+    {
+      "name": "UVALU",
+      "lat": 44.71083,
+      "lon": 25.44417,
+      "routes": "STAR LROP"
+    },
+    {
+      "name": "UXULA",
+      "lat": 46.03333,
+      "lon": 24.21,
+      "routes": "STAR LRCL, STAR LRTM"
+    },
+    {
+      "name": "VAMON",
+      "lat": 44.39944,
+      "lon": 24.67972,
+      "routes": "T285, Z943"
+    },
+    {
+      "name": "VASIS",
+      "lat": 45.95333,
+      "lon": 22.40806,
+      "routes": "Y574, STAR LRAR, STAR LRTR"
+    },
+    {
+      "name": "VEDAP",
+      "lat": 44.83778,
+      "lon": 25.71833,
+      "routes": "SID LRBS/LROP"
+    },
+    {
+      "name": "VELIP",
+      "lat": 44.77167,
+      "lon": 21.53333
+    },
+    {
+      "name": "VEVIN",
+      "lat": 44.71306,
+      "lon": 26.65194
+    },
+    {
+      "name": "VIKBI",
+      "lat": 44.25861,
+      "lon": 24.65583,
+      "routes": "Y88"
+    },
+    {
+      "name": "XANAN",
+      "lat": 46.1175,
+      "lon": 24.23417,
+      "routes": "SID LRSB"
+    },
+    {
+      "name": "XEBUN",
+      "lat": 45.77972,
+      "lon": 24.4375,
+      "routes": "STAR LRSB"
+    }
+  ]
+}

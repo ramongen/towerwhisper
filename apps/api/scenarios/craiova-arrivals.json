@@ -1,72 +1,16 @@
 {
   "name": "craiova-arrivals",
   "airport": "LRCV",
-  "fixes": [
-    {
-      "name": "KOVAD",
-      "lat": 44.3181,
-      "lon": 23.276
-    },
-    {
-      "name": "TIDRA",
-      "lat": 44.3181,
-      "lon": 24.4943
-    },
-    {
-      "name": "RENOT",
-      "lat": 44.6264,
-      "lon": 24.1681
-    },
-    {
-      "name": "PASIX",
-      "lat": 43.9464,
-      "lon": 24.4011
-    },
-    {
-      "name": "TUBIL",
-      "lat": 43.8631,
-      "lon": 23.5089
-    },
-    {
-      "name": "LUGEB",
-      "lat": 44.8181,
-      "lon": 23.0034
-    },
-    {
-      "name": "ARVOS",
-      "lat": 44.7848,
-      "lon": 25.0999
-    },
-    {
-      "name": "DUNAR",
-      "lat": 43.4848,
-      "lon": 24.0051
-    },
-    {
-      "name": "OLTEN",
-      "lat": 45.1848,
-      "lon": 23.7721
-    },
-    {
-      "name": "MIBOS",
-      "lat": 44.2348,
-      "lon": 22.6074
-    },
-    {
-      "name": "ROSEL",
-      "lat": 43.7348,
-      "lon": 24.8204
-    }
-  ],
+  "note": "Arrivals for ILS RWY 26 along real ATS routes (AIP Romania): T139, T226, T285, Z938, Z944 to the IAFs TITEK, PEMOK, PANZU, then the IF OZZET (holding).",
   "aircraft": [
     {
       "callsign": "ROT301",
       "telephony": "TAROM 301",
       "type": "AT76",
-      "lat": 44.4498,
-      "lon": 23.3295,
+      "lat": 44.5116,
+      "lon": 23.3351,
       "altitudeFt": 7000,
-      "headingDeg": 170,
+      "headingDeg": 96,
       "speedKt": 210,
       "verticalSpeedFpm": 0,
       "turnRateDegS": 0,
@@ -76,19 +20,23 @@
       },
       "flightPlan": {
         "departure": "LRTR",
-        "destination": "LRCV",
-        "route": ["LUGEB", "KOVAD"],
-        "nextWaypoint": "KOVAD",
         "cruiseLevel": 170,
-        "declaredLandingWeightKg": 21500
+        "declaredLandingWeightKg": 21500,
+        "destination": "LRCV",
+        "route": [
+          "OVDOT",
+          "TITEK",
+          "OZZET"
+        ],
+        "nextWaypoint": "TITEK"
       }
     },
     {
       "callsign": "WZZ44",
       "telephony": "WIZZ 44",
       "type": "A21N",
-      "lat": 44.6848,
-      "lon": 24.7272,
+      "lat": 44.4249,
+      "lon": 24.9314,
       "altitudeFt": 12000,
       "headingDeg": 262,
       "speedKt": 280,
@@ -100,21 +48,26 @@
       },
       "flightPlan": {
         "departure": "LROP",
-        "destination": "LRCV",
-        "route": ["ARVOS", "RENOT", "KOVAD"],
-        "nextWaypoint": "RENOT",
         "cruiseLevel": 330,
-        "declaredLandingWeightKg": 75800
+        "declaredLandingWeightKg": 75800,
+        "destination": "LRCV",
+        "route": [
+          "ABRUT",
+          "VAMON",
+          "PEMOK",
+          "OZZET"
+        ],
+        "nextWaypoint": "VAMON"
       }
     },
     {
       "callsign": "ROT612",
       "telephony": "TAROM 612",
       "type": "B738",
-      "lat": 43.8998,
-      "lon": 23.9492,
+      "lat": 43.7758,
+      "lon": 24.2136,
       "altitudeFt": 10000,
-      "headingDeg": 300,
+      "headingDeg": 348,
       "speedKt": 260,
       "verticalSpeedFpm": 0,
       "turnRateDegS": 0,
@@ -124,21 +77,25 @@
       },
       "flightPlan": {
         "departure": "LGAV",
-        "destination": "LRCV",
-        "route": ["DUNAR", "TUBIL", "KOVAD"],
-        "nextWaypoint": "TUBIL",
         "cruiseLevel": 360,
-        "declaredLandingWeightKg": 63200
+        "declaredLandingWeightKg": 63200,
+        "destination": "LRCV",
+        "route": [
+          "TIMUR",
+          "PANZU",
+          "OZZET"
+        ],
+        "nextWaypoint": "PANZU"
       }
     },
     {
       "callsign": "LOT2RP",
       "telephony": "LOT 2RP",
       "type": "E195",
-      "lat": 44.7798,
-      "lon": 23.8001,
+      "lat": 45.0079,
+      "lon": 24.6456,
       "altitudeFt": 14000,
-      "headingDeg": 250,
+      "headingDeg": 249,
       "speedKt": 290,
       "verticalSpeedFpm": 0,
       "turnRateDegS": 0,
@@ -148,21 +105,26 @@
       },
       "flightPlan": {
         "departure": "EPWA",
-        "destination": "LRCV",
-        "route": ["OLTEN", "LUGEB", "KOVAD"],
-        "nextWaypoint": "LUGEB",
         "cruiseLevel": 370,
-        "declaredLandingWeightKg": 43100
+        "declaredLandingWeightKg": 43100,
+        "destination": "LRCV",
+        "route": [
+          "ENIMA",
+          "BIVBU",
+          "PEMOK",
+          "OZZET"
+        ],
+        "nextWaypoint": "BIVBU"
       }
     },
     {
       "callsign": "RYR8KQ",
       "telephony": "RYANAIR 8KQ",
       "type": "B38M",
-      "lat": 44.2498,
-      "lon": 23.0803,
+      "lat": 44.9207,
+      "lon": 23.4345,
       "altitudeFt": 16000,
-      "headingDeg": 70,
+      "headingDeg": 167,
       "speedKt": 300,
       "verticalSpeedFpm": 0,
       "turnRateDegS": 0,
@@ -172,21 +134,25 @@
       },
       "flightPlan": {
         "departure": "LIME",
-        "destination": "LRCV",
-        "route": ["MIBOS", "KOVAD"],
-        "nextWaypoint": "KOVAD",
         "cruiseLevel": 390,
-        "declaredLandingWeightKg": 66900
+        "declaredLandingWeightKg": 66900,
+        "destination": "LRCV",
+        "route": [
+          "LAMIT",
+          "TITEK",
+          "OZZET"
+        ],
+        "nextWaypoint": "TITEK"
       }
     },
     {
       "callsign": "DLH9TC",
       "telephony": "LUFTHANSA 9TC",
       "type": "CRJ9",
-      "lat": 44.0498,
-      "lon": 24.2497,
+      "lat": 43.8401,
+      "lon": 24.4329,
       "altitudeFt": 9000,
-      "headingDeg": 270,
+      "headingDeg": 313,
       "speedKt": 240,
       "verticalSpeedFpm": 0,
       "turnRateDegS": 0,
@@ -196,11 +162,15 @@
       },
       "flightPlan": {
         "departure": "LBSF",
-        "destination": "LRCV",
-        "route": ["ROSEL", "TUBIL", "KOVAD"],
-        "nextWaypoint": "TUBIL",
         "cruiseLevel": 290,
-        "declaredLandingWeightKg": 33200
+        "declaredLandingWeightKg": 33200,
+        "destination": "LRCV",
+        "route": [
+          "NAVOD",
+          "PANZU",
+          "OZZET"
+        ],
+        "nextWaypoint": "PANZU"
       }
     }
   ]

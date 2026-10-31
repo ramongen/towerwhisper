@@ -15,7 +15,9 @@ plays a simulated pilot readback, and raises alerts when:
 - there has been no communication with an aircraft for too long (`NO_CONTACT`: amber at 15 min, red at 30 min);
 - (bonus) the instruction would create a conflict with another aircraft (`CONFLICT_PREDICTED`).
 
-Traffic is **simulated** around Craiova airport (ICAO `LRCV`, runway 09/27), not live data.
+Traffic is **simulated** around Craiova airport (ICAO `LRCV`, runway 08/26, ILS on runway 26), not live data.
+Runway, ILS, navaids and fixes are the real ones from AIP Romania (`apps/api/scenarios/lrcv-airspace.json`,
+built by `scripts/airspace/build-airspace.mjs`); the spec PDF still says 09/27, the AIP wins.
 A hidden demo panel (`/demo`, opened on a phone) injects pilot errors on demand so the
 demo is repeatable in front of the jury.
 
@@ -133,9 +135,10 @@ Keep these in one `constants.ts` per module, not inline:
 - Callsigns: ICAO code in data (`ROT301`), telephony in speech (`TAROM 301`). Scenario aircraft:
   ROT301 (AT76), WZZ44 (A21N), ROT612 (B738), LOT2RP (E195), RYR8KQ (B38M), DLH9TC (CRJ9).
 - Normalise ICAO number pronunciation before parsing: `niner`→9, `tree`→3, `fife`→5,
-  `flight level six zero`→`FL060`, `runway zero niner`→`RWY09`.
+  `flight level six zero`→`FL060`, `runway two six`→`RWY26`.
 - Altitudes below the transition level are in feet (`altitude 3000 feet`); above it, flight levels.
-- Runway 09 means a heading of about 090°; keep example instructions geometrically plausible.
+- Runway 26 means a true heading of about 269° (ILS 26 from the east, IF OZZET, IAFs TITEK / PEMOK / PANZU);
+  keep example instructions geometrically plausible.
 - `CallsignResolver` matches fuzzily (Levenshtein ≤ 2 on the name, digits exact) **only** against
   aircraft currently in the session; fall back to the aircraft selected on the radar.
 

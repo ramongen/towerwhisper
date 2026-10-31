@@ -7,7 +7,7 @@ Hackathon v2. The controller speaks into a microphone (push-to-talk); the app tr
 instruction, parses it into structured data, plays a simulated pilot readback over a radio-filtered
 voice, and raises alerts when the readback does not match, when the aircraft does not do what it was
 told, or when nobody has talked to an aircraft for too long. Traffic is simulated around Craiova
-airport (LRCV, runway 09/27). AI is only used to understand speech; every safety check is
+airport (LRCV, runway 08/26 with the ILS on 26, real fixes and navaids from AIP Romania). AI is only used to understand speech; every safety check is
 deterministic TypeScript.
 
 ## Architecture

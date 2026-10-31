@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Aircraft, AirspaceResponse, Waypoint } from '@towerwhisper/shared';
+import type { Aircraft, AirspaceResponse } from '@towerwhisper/shared';
 import { storeToRefs } from 'pinia';
 import { onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
 import { useAlertStore, type AlertLevel } from '../stores/useAlertStore';
@@ -11,14 +11,19 @@ import { loadTerrain, type TerrainLevel } from '../utils/terrain';
 import { readTokens } from '../utils/tokens';
 
 /** Craiova (LRCV): the centre of the scope. */
-const LRCV = { lat: 44.3181, lon: 23.8886 };
+const LRCV = { lat: 44.31806, lon: 23.88861 };
 const COS_LAT0 = Math.cos((LRCV.lat * Math.PI) / 180);
 const RANGE_NM = 40;
 const RING_NM = 10;
 /** Margin (NM) around the outer ring at zoom 1, so the compass labels fit. */
 const FIT_MARGIN_NM = 4;
-const RUNWAY_HALF_NM = 1.5;
-const CENTRELINE_NM = 20;
+/** Extended centreline drawn for an ILS runway (NM from the threshold). */
+const CENTRELINE_NM = 15;
+/** Fixes farther than this from the airport are labelled only when zoomed in. */
+const FIX_LABEL_NM = 45;
+const FIX_LABEL_ZOOM = 1.6;
+/** The runway is drawn at least this long on screen, so it stays visible zoomed out. */
+const RUNWAY_MIN_PX = 30;
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 8;
 const ZOOM_STEP = 1.25;
@@ -82,7 +87,7 @@ let height = 0;
 let pxPerNm = 10;
 let frame = 0;
 let resizeObserver: ResizeObserver | null = null;
-let fixes: Waypoint[] = [];
+let airspace: AirspaceResponse | null = null;
 let terrain: TerrainLevel[] = [];
 /** Screen positions of the last frame, for click hit-testing. */
 let hitTargets: { callsign: string; x: number; y: number; box: DOMRect }[] = [];
@@ -216,53 +221,112 @@ function drawCompass(ctx: CanvasRenderingContext2D): void {
   ctx.textBaseline = 'alphabetic';
 }
 
+/** Runway 08/26 between its real thresholds, the ILS 26 extended centreline, the CRV VOR. */
 function drawAirport(ctx: CanvasRenderingContext2D): void {
-  const west = nmToScreen(-RUNWAY_HALF_NM, 0);
-  const east = nmToScreen(RUNWAY_HALF_NM, 0);
-  const ils = nmToScreen(-RUNWAY_HALF_NM - CENTRELINE_NM, 0);
-  ctx.strokeStyle = colors.centreline;
-  ctx.lineWidth = 1.5;
-  ctx.setLineDash([6, 6]);
-  ctx.beginPath();
-  ctx.moveTo(west.x, west.y);
-  ctx.lineTo(ils.x, ils.y);
-  ctx.stroke();
-  ctx.setLineDash([]);
+  if (!airspace) return;
+  const [a, b] = airspace.runways.map((r) => toScreen(r.threshold.lat, r.threshold.lon));
+  if (!a || !b) return;
+
+  // ILS: dashed extended centreline from the threshold, out along the approach.
+  for (const rwy of airspace.runways) {
+    if (!rwy.ils) continue;
+    const t = toScreen(rwy.threshold.lat, rwy.threshold.lon);
+    const back = ((rwy.headingDeg + 180) * Math.PI) / 180; // towards where aircraft come from
+    const out = (nm: number) => ({
+      x: t.x + Math.sin(back) * nm * pxPerNm,
+      y: t.y - Math.cos(back) * nm * pxPerNm,
+    });
+    const end = out(CENTRELINE_NM);
+    ctx.strokeStyle = colors.centreline;
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.moveTo(t.x, t.y);
+    ctx.lineTo(end.x, end.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = `12px ${colors.font}`;
+    ctx.fillStyle = colors.muted;
+    const label = out(CENTRELINE_NM - 3);
+    ctx.fillText(
+      `ILS ${rwy.id} · ${rwy.ils.ident} ${rwy.ils.frequencyMhz}`,
+      label.x - 40,
+      label.y - 8,
+    );
+  }
+
+  // The runway itself, stretched around its middle so it stays visible zoomed out.
+  const mx = (a.x + b.x) / 2;
+  const my = (a.y + b.y) / 2;
+  const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+  const scale = Math.max(1, RUNWAY_MIN_PX / len);
+  const p = { x: mx + (a.x - mx) * scale, y: my + (a.y - my) * scale };
+  const q = { x: mx + (b.x - mx) * scale, y: my + (b.y - my) * scale };
   ctx.strokeStyle = colors.runway;
   ctx.lineWidth = 5;
   ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.moveTo(west.x, west.y);
-  ctx.lineTo(east.x, east.y);
+  ctx.moveTo(p.x, p.y);
+  ctx.lineTo(q.x, q.y);
   ctx.stroke();
   ctx.lineCap = 'butt';
 
   ctx.font = `12px ${colors.font}`;
   ctx.fillStyle = colors.muted;
-  ctx.fillText('09', west.x - 20, west.y - 12);
-  ctx.fillText('27', east.x + 4, east.y - 12);
-  const ilsLabel = nmToScreen(-CENTRELINE_NM, 0);
-  ctx.fillText('ILS 09', ilsLabel.x, ilsLabel.y - 8);
+  const [first, second] = airspace.runways;
+  ctx.fillText(first.id, p.x - 22, p.y - 10); // the threshold of runway 08 is its west end
+  ctx.fillText(second.id, q.x + 6, q.y - 10);
   ctx.fillStyle = colors.labelStrong;
   ctx.font = `700 12px ${colors.font}`;
-  const c = nmToScreen(0, 0);
-  ctx.fillText('LRCV', c.x - 16, c.y + 24);
-}
+  ctx.fillText(airspace.airport.icao, mx - 16, my + 24);
 
-function drawFixes(ctx: CanvasRenderingContext2D): void {
-  ctx.font = `12px ${colors.font}`;
-  ctx.strokeStyle = colors.label;
-  ctx.fillStyle = colors.label;
-  ctx.lineWidth = 1.25;
-  for (const fix of fixes) {
-    const { x, y } = toScreen(fix.lat, fix.lon);
+  // VOR/DME: a hexagon with its ident and frequency.
+  for (const nav of airspace.navaids) {
+    const v = toScreen(nav.lat, nav.lon);
+    ctx.strokeStyle = colors.label;
+    ctx.lineWidth = 1.25;
     ctx.beginPath();
-    ctx.moveTo(x, y - 6);
-    ctx.lineTo(x + 7, y + 6);
-    ctx.lineTo(x - 7, y + 6);
+    for (let i = 0; i < 6; i++) {
+      const ang = (Math.PI / 3) * i;
+      const px = v.x + Math.cos(ang) * 6;
+      const py = v.y + Math.sin(ang) * 6;
+      if (i === 0) ctx.moveTo(px, py);
+      else ctx.lineTo(px, py);
+    }
     ctx.closePath();
     ctx.stroke();
-    ctx.fillText(fix.name, x + 10, y + 18);
+    ctx.font = `11px ${colors.font}`;
+    ctx.fillStyle = colors.label;
+    ctx.fillText(`${nav.ident} ${nav.frequencyMhz.replace(/0+$/, '')}`, v.x + 9, v.y + 16);
+  }
+}
+
+/** Published points: approach fixes (IAF / IF) stand out; far ones are labelled when zoomed in. */
+function drawFixes(ctx: CanvasRenderingContext2D): void {
+  if (!airspace) return;
+  const origin = { lat: airspace.airport.lat, lon: airspace.airport.lon };
+  for (const fix of airspace.fixes) {
+    const { x, y } = toScreen(fix.lat, fix.lon);
+    if (x < -40 || y < -40 || x > width + 40 || y > height + 40) continue;
+    const distanceNm = Math.hypot(
+      (fix.lon - origin.lon) * 60 * COS_LAT0,
+      (fix.lat - origin.lat) * 60,
+    );
+    const approach = !!fix.role;
+    const size = approach ? 7 : 5;
+    ctx.strokeStyle = approach ? colors.labelStrong : colors.label;
+    ctx.lineWidth = approach ? 1.5 : 1;
+    ctx.beginPath();
+    ctx.moveTo(x, y - size);
+    ctx.lineTo(x + size, y + size * 0.8);
+    ctx.lineTo(x - size, y + size * 0.8);
+    ctx.closePath();
+    ctx.stroke();
+    if (approach || distanceNm <= FIX_LABEL_NM || view.zoom >= FIX_LABEL_ZOOM) {
+      ctx.font = `${approach ? '700 ' : ''}11px ${colors.font}`;
+      ctx.fillStyle = approach ? colors.labelStrong : colors.label;
+      ctx.fillText(approach ? `${fix.name} ${fix.role}` : fix.name, x + 9, y + 15);
+    }
   }
 }
 
@@ -597,7 +661,7 @@ function resetView(): void {
 
 async function loadMap(): Promise<void> {
   try {
-    fixes = (await api<AirspaceResponse>('GET', '/airspace')).fixes;
+    airspace = await api<AirspaceResponse>('GET', '/airspace');
   } catch {
     // The scope works without fixes; they come back on the next load.
   }

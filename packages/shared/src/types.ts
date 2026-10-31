@@ -29,7 +29,7 @@ export interface Targets {
   headingDeg?: number;
   turnDir?: TurnDir;
   speedKt?: number;
-  approach?: { type: 'ILS'; runway: '09' | '27' };
+  approach?: { type: ApproachType; runway: RunwayId };
   /** "Proceed direct <fix>": back to own navigation from that fix. */
   directTo?: string;
 }
@@ -39,6 +39,12 @@ export interface Waypoint {
   name: string;
   lat: number;
   lon: number;
+}
+
+/** A published significant point, with its role in the LRCV approach when it has one. */
+export interface AirspaceFix extends Waypoint {
+  role?: 'IAF' | 'IF';
+  routes?: string;
 }
 
 /** The plan the aircraft filed. */
@@ -58,7 +64,7 @@ export interface Clearance {
   altitude?: { valueFt: number; action: 'climb' | 'descend' | 'maintain'; flightLevel: boolean };
   heading?: { valueDeg: number; turn: TurnDir };
   speed?: { valueKt: number };
-  approach?: { type: 'ILS'; runway: string };
+  approach?: { type: ApproachType; runway: string };
   frequency?: { mhz: string };
   direct?: { fix: string };
   rawText: string;
@@ -97,7 +103,9 @@ export interface LatLon {
   lon: number;
 }
 
-export type RunwayId = '09' | '27';
+/** LRCV runway 08/26 (AIP Romania AD 2 LRCV); the ILS serves runway 26 only. */
+export type RunwayId = '08' | '26';
+export type ApproachType = 'ILS' | 'RNP' | 'VOR';
 export type FlightCategory = 'VFR' | 'MVFR' | 'IFR' | 'LIFR';
 
 /** Wind along one runway direction (negative headwind = tailwind). */
@@ -177,8 +185,19 @@ export interface AircraftDetails {
 /** GET /airspace — static map data for the scope. */
 export interface AirspaceResponse {
   airport: { icao: string; name: string; lat: number; lon: number; elevationFt: number };
-  runways: { id: RunwayId; headingDeg: number; lengthM: number; widthM: number; ils: boolean }[];
-  fixes: Waypoint[];
+  runways: {
+    id: RunwayId;
+    /** True bearing of the runway direction. */
+    headingDeg: number;
+    threshold: LatLon;
+    lengthM: number;
+    widthM: number;
+    ils: { ident: string; frequencyMhz: string } | null;
+  }[];
+  navaids: { ident: string; type: string; frequencyMhz: string; lat: number; lon: number }[];
+  fixes: AirspaceFix[];
+  /** Where the data comes from (AIP edition). */
+  source: string;
 }
 
 /** 'full' when speech-to-text is available (local Whisper or OpenAI); 'no-keys' runs on text input. */

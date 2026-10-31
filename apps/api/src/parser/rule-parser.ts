@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import type { Clearance, TurnDir } from '@towerwhisper/shared';
+import type { ApproachType, Clearance, TurnDir } from '@towerwhisper/shared';
 
 /** The instruction fields a phrase can carry (everything in Clearance except identity/metadata). */
 export type ClearanceFields = Pick<
@@ -20,8 +20,8 @@ const RULES = {
   heading: /\b(?:turn\s+)?(?:(left|right)\s+)?(?:fly\s+)?heading\s+(\d{3})\b/,
   // 'reduce speed 220', 'speed 220 knots', 'reduce 220 knots'
   speed: /\b(?:(?:reduce|increase|maintain)\s+(?:speed\s+)?(?:to\s+)?|speed\s+)(\d{3})\b/,
-  // 'cleared ils approach rwy09', 'cleared ils rwy09', 'ils 09'
-  approach: /\bils(?:\s+approach)?\s+(?:rwy)?(\d{2})\b/,
+  // 'cleared ils approach rwy26', 'cleared ils rwy26', 'ils 26', 'cleared rnp approach rwy08'
+  approach: /\b(ils|rnp|vor)(?:\s+approach)?\s+(?:rwy)?(\d{2})\b/,
   // 'contact bucharest 121.3', '121.3' (VHF airband 118.000-136.975)
   frequency: /\b(1[1-3]\d\.\d{1,3})\b/,
   // 'proceed direct kovad', 'direct to kovad' (the fix name is checked by ParserService)
@@ -56,7 +56,7 @@ export class RuleParser {
     if (spd) fields.speed = { valueKt: Number(spd[1]) };
 
     const app = RULES.approach.exec(normalized);
-    if (app) fields.approach = { type: 'ILS', runway: app[1] };
+    if (app) fields.approach = { type: app[1].toUpperCase() as ApproachType, runway: app[2] };
 
     const freq = RULES.frequency.exec(normalized);
     if (freq) fields.frequency = { mhz: freq[1] };

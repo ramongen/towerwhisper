@@ -50,7 +50,7 @@ export interface ChipData {
   text: string;
 }
 
-/** Parsed instruction as compact chips: 'ALT 3000 ↓', 'FL120 =', 'HDG 120 L', 'SPD 220', 'ILS 09'. */
+/** Parsed instruction as compact chips: 'ALT 3000 ↓', 'FL120 =', 'HDG 120 L', 'SPD 220', 'ILS 26'. */
 export function chips(c: Clearance | null): ChipData[] {
   if (!c) return [];
   const out: ChipData[] = [];
@@ -66,7 +66,7 @@ export function chips(c: Clearance | null): ChipData[] {
     out.push({ key: 'heading', text: `HDG ${heading(c.heading.valueDeg)}${turn}` });
   }
   if (c.speed) out.push({ key: 'speed', text: `SPD ${c.speed.valueKt}` });
-  if (c.approach) out.push({ key: 'approach', text: `ILS ${c.approach.runway}` });
+  if (c.approach) out.push({ key: 'approach', text: `${c.approach.type} ${c.approach.runway}` });
   if (c.direct) out.push({ key: 'direct', text: `DCT ${c.direct.fix}` });
   if (c.frequency) out.push({ key: 'frequency', text: `FREQ ${c.frequency.mhz}` });
   return out;

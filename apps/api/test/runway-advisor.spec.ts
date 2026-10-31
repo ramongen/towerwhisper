@@ -9,16 +9,16 @@ function weather(wdir: number, wspd: number, wx: string | null = null): AirportW
 
 describe('runway advisor', () => {
   it('recommends the runway into the wind', () => {
-    const [r09, r27] = assessRunways(AIRCRAFT_TYPES.B738, 63_200, weather(250, 10));
-    expect(r27).toMatchObject({ compatible: true, recommended: true, headwindKt: 9 });
-    expect(r09).toMatchObject({ compatible: true, recommended: false, headwindKt: -9 });
-    expect(r09.requiredLandingM).toBeGreaterThan(r27.requiredLandingM);
+    const [r08, r26] = assessRunways(AIRCRAFT_TYPES.B738, 63_200, weather(250, 10));
+    expect(r26).toMatchObject({ compatible: true, recommended: true, headwindKt: 9 });
+    expect(r08).toMatchObject({ compatible: true, recommended: false, headwindKt: -9 });
+    expect(r08.requiredLandingM).toBeGreaterThan(r26.requiredLandingM);
   });
 
   it('rejects a direction with too much tailwind', () => {
-    const [r09] = assessRunways(AIRCRAFT_TYPES.A21N, 75_800, weather(270, 15));
-    expect(r09.compatible).toBe(false);
-    expect(r09.notes).toContain('tailwind 15 kt > 10 kt');
+    const [r08] = assessRunways(AIRCRAFT_TYPES.A21N, 75_800, weather(270, 15));
+    expect(r08.compatible).toBe(false);
+    expect(r08.notes).toContain('tailwind 15 kt > 10 kt');
   });
 
   it('rejects a crosswind above the type limit', () => {
@@ -35,8 +35,8 @@ describe('runway advisor', () => {
   });
 
   it('works without weather, saying the wind is unknown', () => {
-    const [r09] = assessRunways(AIRCRAFT_TYPES.AT76, 21_500, null);
-    expect(r09).toMatchObject({ compatible: true, headwindKt: null });
-    expect(r09.notes).toContain('wind unknown');
+    const [r08] = assessRunways(AIRCRAFT_TYPES.AT76, 21_500, null);
+    expect(r08).toMatchObject({ compatible: true, headwindKt: null });
+    expect(r08.notes).toContain('wind unknown');
   });
 });

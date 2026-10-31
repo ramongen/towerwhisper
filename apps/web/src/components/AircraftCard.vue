@@ -99,7 +99,7 @@ const state = computed(() => {
 const navigation = computed(() => {
   const a = live.value;
   if (!a) return '';
-  if (a.target.approach) return `ILS ${a.target.approach.runway}`;
+  if (a.target.approach) return `${a.target.approach.type} ${a.target.approach.runway}`;
   if (a.holding) return `HOLDING ${a.nextWaypoint}`;
   if (a.nextWaypoint) return `OWN NAV → ${a.nextWaypoint}`;
   return 'ON VECTORS';
