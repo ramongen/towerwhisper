@@ -49,6 +49,13 @@ const DEFINITIONS: SectorDefinition[] = [
     towerCallsign: 'Cluj Tower',
     airportIcao: 'LRCL',
   },
+  {
+    id: 'oradea-app',
+    name: 'Oradea Approach',
+    shortName: 'ORADEA APP',
+    towerCallsign: 'Oradea Tower',
+    airportIcao: 'LROD',
+  },
 ];
 
 export const DEFAULT_SECTOR_ID = 'craiova-app';

@@ -27,6 +27,11 @@ interface AirportSpec {
     offsetM?: number;
     ils: string[];
   }[];
+  /**
+   * Arrival entry points where our AIP extract has none for this airport (it covers 130 NM
+   * around Craiova): simulated, by true bearing and distance from the airport.
+   */
+  simulatedEntries?: { name: string; bearingDeg: number; distanceNm: number }[];
 }
 
 const SPECS: AirportSpec[] = [
@@ -83,6 +88,23 @@ const SPECS: AirportSpec[] = [
     defaultRunway: '25',
     runways: [{ ids: ['07', '25'], trueBearingDeg: 75, lengthM: 3500, widthM: 45, ils: ['25'] }],
   },
+  {
+    icao: 'LROD',
+    name: 'Oradea International',
+    lat: 47.0253,
+    lon: 21.9025,
+    elevationFt: 465,
+    defaultRunway: '01',
+    runways: [{ ids: ['01', '19'], trueBearingDeg: 8, lengthM: 2100, widthM: 45, ils: ['01'] }],
+    simulatedEntries: [
+      { name: 'ODSOU', bearingDeg: 180, distanceNm: 34 },
+      { name: 'ODSEA', bearingDeg: 135, distanceNm: 38 },
+      { name: 'ODEAS', bearingDeg: 80, distanceNm: 36 },
+      { name: 'ODNOR', bearingDeg: 20, distanceNm: 40 },
+      { name: 'ODNWE', bearingDeg: 320, distanceNm: 37 },
+      { name: 'ODWES', bearingDeg: 250, distanceNm: 35 },
+    ],
+  },
 ];
 
 /** The airspace data of an airport: runways, the real fixes around it, simulated approach points. */
@@ -128,6 +150,17 @@ export function airspaceFor(icao: string): AirspaceData {
       runways.find((r) => r.id === spec.defaultRunway)!,
     ),
   );
+  for (const entry of spec.simulatedEntries ?? []) {
+    const rad = (entry.bearingDeg * Math.PI) / 180;
+    fixes.push({
+      name: entry.name,
+      ...round(
+        geo.toLatLon({ x: Math.sin(rad) * entry.distanceNm, y: Math.cos(rad) * entry.distanceNm }),
+      ),
+      // Read by the arrivals generator like a real STAR point of this airport.
+      routes: `STAR ${spec.icao} (simulated entry point)`,
+    });
+  }
 
   return {
     source:
