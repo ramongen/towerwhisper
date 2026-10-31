@@ -195,14 +195,11 @@ onBeforeUnmount(() => {
         <input
           id="typed-transmission"
           v-model="typed"
-          list="scripted-phrases"
           class="mono"
-          placeholder="Type or pick an instruction…"
+          placeholder="Type an instruction…"
           autocomplete="off"
+          spellcheck="false"
         />
-        <datalist id="scripted-phrases">
-          <option v-for="p in session?.scriptedPhrases ?? []" :key="p" :value="p" />
-        </datalist>
         <button type="submit" class="send" :disabled="!typed.trim() || pttState === 'transcribing'">
           TRANSMIT
         </button>
