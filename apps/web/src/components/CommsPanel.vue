@@ -39,7 +39,10 @@ const pending = computed(() => {
   const out: { id: string; telephony: string }[] = [];
   entries.value.forEach((e, i) => {
     if (e.speaker !== 'atc' || !e.clearance || now.value - e.receivedAt > PENDING_SHOW_MS) return;
-    const answered = entries.value.slice(i + 1).some((later) => later.speaker === 'pilot');
+    // A readback answers it; a call the pilot starts (landing request) does not.
+    const answered = entries.value
+      .slice(i + 1)
+      .some((later) => later.speaker === 'pilot' && later.check !== null);
     if (answered) return;
     const cs = e.clearance.callsign;
     out.push({

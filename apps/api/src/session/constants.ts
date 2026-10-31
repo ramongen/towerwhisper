@@ -15,6 +15,8 @@ export const SCRIPTED_PHRASES = [
   'TAROM 301, descend altitude 4000 feet, turn left heading 080',
   'WIZZ 44, descend altitude 5000 feet, turn left heading 240, reduce speed 220',
   'WIZZ 44, cleared ILS approach runway two six',
+  'WIZZ 44, cleared to land runway two six',
+  'WIZZ 44, go around, climb altitude 4000 feet',
   'TAROM 612, descend altitude 6000 feet',
   'RYANAIR 8KQ, descend flight level 120, turn left heading 140',
   'LOT 2RP, turn left heading 200',

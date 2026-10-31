@@ -79,7 +79,9 @@ export function assessRunways(
 
   const best = assessments
     .filter((a) => a.compatible)
-    .sort((a, b) => (b.headwindKt ?? 0) - (a.headwindKt ?? 0) || (a.runway === ILS_RUNWAY ? -1 : 1))[0];
+    .sort(
+      (a, b) => (b.headwindKt ?? 0) - (a.headwindKt ?? 0) || (a.runway === ILS_RUNWAY ? -1 : 1),
+    )[0];
   if (best) best.recommended = true;
   return assessments;
 }

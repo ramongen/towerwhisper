@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import type { Clearance } from '@towerwhisper/shared';
 import { randomUUID } from 'node:crypto';
 import { FaultService } from '../demo/fault.service';
@@ -6,7 +6,7 @@ import { ParserService } from '../parser/parser.service';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { ConformanceMonitor } from '../safety/conformance-monitor';
 import { ReadbackChecker, compare } from '../safety/readback-checker';
-import { SimulationService } from '../simulation/simulation.service';
+import { SimulationService, type SimEvent } from '../simulation/simulation.service';
 import { TtsService } from '../voice/tts.service';
 import {
   EXECUTION_DELAY_MAX_MS,
@@ -20,9 +20,11 @@ import { executionFaultApplies, faultyTargets, targetsFor } from './targets';
  * The simulated pilot. ~1.5 s after an instruction it reads back (template text + TTS),
  * the readback goes through the same parser and the ReadbackChecker, then 2-3 s later
  * the aircraft starts the manoeuvre. Demo faults change what is said or flown.
+ * On the final approach the pilot also calls unprompted: to ask for landing clearance, and
+ * when going around because it did not come.
  */
 @Injectable()
-export class PilotService {
+export class PilotService implements OnModuleInit {
   private readonly logger = new Logger(PilotService.name);
   private readonly timers = new Set<NodeJS.Timeout>();
 
@@ -36,6 +38,10 @@ export class PilotService {
     private readonly conformance: ConformanceMonitor,
     private readonly realtime: RealtimeGateway,
   ) {}
+
+  onModuleInit(): void {
+    this.simulation.onEvent((event) => void this.onSimEvent(event));
+  }
 
   handleInstruction(instruction: Clearance): void {
     this.later(PILOT_RESPONSE_DELAY_MS, () => this.readBack(instruction));
@@ -110,7 +116,34 @@ export class PilotService {
       if (targets) this.simulation.setTargets(callsign, targets, instruction.id);
       return;
     }
+    if (instruction.goAround) this.simulation.goAround(callsign, 'instructed');
     this.simulation.setTargets(callsign, targetsFor(instruction), instruction.id);
+  }
+
+  /** Calls the pilot makes without being asked (no readback check). */
+  private async onSimEvent(event: SimEvent): Promise<void> {
+    const aircraft = this.simulation.get(event.callsign);
+    const telephony = aircraft?.telephony ?? event.callsign;
+    let text: string | null = null;
+    if (event.type === 'landing-request') {
+      text = callText(telephony, event.runway, event.distanceNm);
+    } else if (event.type === 'go-around' && event.reason === 'no landing clearance') {
+      text = 'Going around, no landing clearance, ' + telephony;
+    }
+    if (!text) return;
+
+    const audioUrl = await this.tts.synthesize(text, event.callsign);
+    this.simulation.touchContact(event.callsign);
+    this.realtime.broadcastReadback({
+      id: randomUUID(),
+      at: new Date().toISOString(),
+      speaker: 'pilot',
+      callsign: event.callsign,
+      transcript: text,
+      clearance: null,
+      audioUrl,
+      check: null,
+    });
   }
 
   private later(ms: number, fn: () => void | Promise<void>): void {
@@ -122,4 +155,17 @@ export class PilotService {
     }, ms);
     this.timers.add(timer);
   }
+}
+
+/** 'Craiova Tower, WIZZ 44, established ILS runway 26, 8 miles, request landing clearance' */
+function callText(telephony: string, runway: string, distanceNm: number): string {
+  return (
+    'Craiova Tower, ' +
+    telephony +
+    ', established runway ' +
+    runway +
+    ', ' +
+    distanceNm +
+    ' miles, request landing clearance'
+  );
 }

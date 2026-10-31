@@ -903,5 +903,61 @@
         "runway": "08"
       }
     }
+  },
+  {
+    "input": "WIZZ 44, runway two six, cleared to land, wind two five zero degrees five knots",
+    "speaker": "atc",
+    "expected": {
+      "callsign": "WZZ44",
+      "landing": {
+        "runway": null
+      }
+    }
+  },
+  {
+    "input": "WIZZ 44, cleared to land runway two six",
+    "speaker": "atc",
+    "expected": {
+      "callsign": "WZZ44",
+      "landing": {
+        "runway": "26"
+      }
+    }
+  },
+  {
+    "input": "Cleared to land runway 26, WIZZ 44",
+    "speaker": "pilot",
+    "expected": {
+      "callsign": "WZZ44",
+      "landing": {
+        "runway": "26"
+      }
+    }
+  },
+  {
+    "input": "TAROM 612, go around, climb altitude 4000 feet",
+    "speaker": "atc",
+    "expected": {
+      "callsign": "ROT612",
+      "goAround": true,
+      "altitude": {
+        "valueFt": 4000,
+        "action": "climb",
+        "flightLevel": false
+      }
+    }
+  },
+  {
+    "input": "Going around, climb 4000, TAROM 612",
+    "speaker": "pilot",
+    "expected": {
+      "callsign": "ROT612",
+      "goAround": true,
+      "altitude": {
+        "valueFt": 4000,
+        "action": "climb",
+        "flightLevel": false
+      }
+    }
   }
 ]

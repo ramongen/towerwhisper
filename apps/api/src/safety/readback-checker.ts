@@ -182,6 +182,15 @@ export function compare(
       mismatches.push(`cleared direct ${i.direct.fix}, read back ${r.direct.fix}`);
     }
   }
+  if (i.landing) {
+    if (!r.landing) missing.push(landingText(i.landing));
+    else if (i.landing.runway && r.landing.runway && r.landing.runway !== i.landing.runway) {
+      mismatches.push(
+        `cleared to land runway ${i.landing.runway}, read back runway ${r.landing.runway}`,
+      );
+    }
+  }
+  if (i.goAround && !r.goAround) missing.push('go around');
 
   const check: ReadbackCheck = mismatches.length
     ? 'mismatch'
@@ -201,11 +210,17 @@ export function describe(c: Clearance | null): string[] {
   if (c.approach) items.push(`${c.approach.type} ${c.approach.runway}`);
   if (c.frequency) items.push(`frequency ${c.frequency.mhz}`);
   if (c.direct) items.push(`direct ${c.direct.fix}`);
+  if (c.landing) items.push(landingText(c.landing));
+  if (c.goAround) items.push('go around');
   return items;
 }
 
 function altitudeText(alt: NonNullable<Clearance['altitude']>): string {
   return alt.flightLevel ? `FL${String(alt.valueFt / 100).padStart(3, '0')}` : `${alt.valueFt} ft`;
+}
+
+function landingText(landing: NonNullable<Clearance['landing']>): string {
+  return landing.runway ? `cleared to land runway ${landing.runway}` : 'cleared to land';
 }
 
 function hdg(deg: number): string {

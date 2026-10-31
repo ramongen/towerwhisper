@@ -1,10 +1,33 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import type { Aircraft, FaultConfig, FlightPlan, Targets, Waypoint } from '@towerwhisper/shared';
+import type {
+  Aircraft,
+  FaultConfig,
+  FlightPlan,
+  RunwayId,
+  Targets,
+  Waypoint,
+} from '@towerwhisper/shared';
+import { runway } from '../airspace/airspace';
 import type { ScenarioAircraft } from '../session/scenario-loader';
-import { AircraftKinematics, type SimAircraft } from './aircraft-kinematics';
-import { LANDED_NM, TICK_MS } from './constants';
+import { AircraftKinematics, finalApproachPosition, type SimAircraft } from './aircraft-kinematics';
+import {
+  GO_AROUND_ALTITUDE_FT,
+  GO_AROUND_NM,
+  GO_AROUND_SPEED_KT,
+  LANDED_NM,
+  LANDING_REQUEST_NM,
+  TICK_MS,
+} from './constants';
 
 export type TickListener = (aircraft: Aircraft[], simNowMs: number) => void;
+
+export type GoAroundReason = 'no landing clearance' | 'instructed';
+
+/** What an aircraft does by itself that the pilot says on the frequency, or that ends a flight. */
+export type SimEvent =
+  | { type: 'landing-request'; callsign: string; runway: RunwayId; distanceNm: number }
+  | { type: 'go-around'; callsign: string; runway: RunwayId; reason: GoAroundReason }
+  | { type: 'landed'; callsign: string; runway: RunwayId };
 
 /**
  * The 250 ms tick loop: updates position, heading, altitude and speed of every aircraft.
@@ -19,6 +42,7 @@ export class SimulationService implements OnModuleInit, OnModuleDestroy {
   private flightPlans = new Map<string, FlightPlan>();
   private fixes = new Map<string, Waypoint>();
   private listeners: TickListener[] = [];
+  private readonly eventListeners: ((event: SimEvent) => void)[] = [];
   private timer?: NodeJS.Timeout;
   private simNow = Date.now();
   private timeScale: FaultConfig['timeScale'] = 1;
@@ -45,6 +69,33 @@ export class SimulationService implements OnModuleInit, OnModuleDestroy {
   /** Adds one aircraft (demo "spawn conflict"). */
   spawn(initial: ScenarioAircraft): void {
     this.aircraft.set(initial.callsign, this.fromScenario(initial));
+  }
+
+  onEvent(listener: (event: SimEvent) => void): void {
+    this.eventListeners.push(listener);
+  }
+
+  /**
+   * Missed approach: runway heading, climb to the go-around altitude, approach and landing
+   * clearance cancelled. The aircraft then waits for vectors.
+   */
+  goAround(callsign: string, reason: GoAroundReason): void {
+    const a = this.aircraft.get(callsign);
+    const rwy = a?.target.approach?.runway;
+    if (!a || !rwy) return;
+    a.target = {
+      ...a.target,
+      approach: undefined,
+      landingCleared: false,
+      headingDeg: Math.round(runway(rwy).trueBearingDeg) % 360,
+      turnDir: 'any',
+      altitudeFt: Math.max(GO_AROUND_ALTITUDE_FT, Math.round(a.altitudeFt / 100) * 100),
+      speedKt: GO_AROUND_SPEED_KT,
+    };
+    a.locCaptured = false;
+    a.landingRequested = false;
+    this.logger.log(`${callsign} going around runway ${rwy} (${reason})`);
+    this.emit({ type: 'go-around', callsign, runway: rwy, reason });
   }
 
   onTick(listener: TickListener): void {
@@ -94,7 +145,9 @@ export class SimulationService implements OnModuleInit, OnModuleDestroy {
     const lateral = 'headingDeg' in targets || 'directTo' in targets;
     if (lateral && !targets.approach) {
       a.target.approach = undefined;
+      a.target.landingCleared = false;
       a.locCaptured = false;
+      a.landingRequested = false;
     }
     if (targets.altitudeFt !== undefined && a.locCaptured && targets.altitudeFt > a.altitudeFt) {
       a.target.approach = undefined; // climbing off the glide slope: approach discontinued
@@ -143,11 +196,7 @@ export class SimulationService implements OnModuleInit, OnModuleDestroy {
     for (const a of this.aircraft.values()) {
       this.kinematics.step(a, dtS);
       a.commsAgeS = Math.max(0, Math.floor((this.simNow - Date.parse(a.lastContactAt)) / 1000));
-      const toThreshold = this.kinematics.distanceToThreshold(a);
-      if (a.locCaptured && toThreshold !== null && toThreshold < LANDED_NM) {
-        this.logger.log(`${a.callsign} landed runway ${a.target.approach?.runway}`);
-        this.aircraft.delete(a.callsign);
-      }
+      this.landingPhase(a);
     }
 
     const snapshot = this.getAircraft();
@@ -156,6 +205,41 @@ export class SimulationService implements OnModuleInit, OnModuleDestroy {
         listener(snapshot, this.simNow);
       } catch (error) {
         this.logger.error(`Tick listener failed: ${(error as Error).stack}`);
+      }
+    }
+  }
+
+  /** On the final approach: ask for landing clearance, go around without it, or land. */
+  private landingPhase(a: SimAircraft): void {
+    const rwy = a.target.approach?.runway;
+    if (!rwy || !a.locCaptured) return;
+    const { alongTrack } = finalApproachPosition(a, rwy);
+    if (a.target.landingCleared) {
+      if (alongTrack < LANDED_NM) {
+        this.logger.log(`${a.callsign} landed runway ${rwy}`);
+        this.aircraft.delete(a.callsign);
+        this.emit({ type: 'landed', callsign: a.callsign, runway: rwy });
+      }
+      return;
+    }
+    if (!a.landingRequested && alongTrack < LANDING_REQUEST_NM) {
+      a.landingRequested = true;
+      this.emit({
+        type: 'landing-request',
+        callsign: a.callsign,
+        runway: rwy,
+        distanceNm: Math.round(alongTrack),
+      });
+    }
+    if (alongTrack < GO_AROUND_NM) this.goAround(a.callsign, 'no landing clearance');
+  }
+
+  private emit(event: SimEvent): void {
+    for (const l of this.eventListeners) {
+      try {
+        l(event);
+      } catch (error) {
+        this.logger.error(`Event listener failed: ${(error as Error).stack}`);
       }
     }
   }

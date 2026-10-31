@@ -1,5 +1,5 @@
 import type { Aircraft, Clearance, FaultConfig, Targets } from '@towerwhisper/shared';
-import { isRunwayId } from '../airspace/airspace';
+import { isRunwayId, runway } from '../airspace/airspace';
 import { DEFAULT_OVERSHOOT_FT, WRONG_VERTICAL_FT } from '../demo/constants';
 import { MIN_TARGET_ALTITUDE_FT } from './constants';
 
@@ -19,6 +19,14 @@ export function targetsFor(clearance: Clearance): Targets {
   }
   // Direct-to: back to own navigation (the simulator clears the assigned heading).
   if (clearance.direct && !clearance.heading) targets.directTo = clearance.direct.fix;
+  // Cleared to land: the approach to that runway, flown to the ground.
+  if (clearance.landing) {
+    targets.landingCleared = true;
+    const rwy = clearance.landing.runway;
+    if (rwy && isRunwayId(rwy) && !targets.approach) {
+      targets.approach = { type: runway(rwy).ils ? 'ILS' : 'RNP', runway: rwy };
+    }
+  }
   return targets;
 }
 

@@ -7,7 +7,6 @@ export const OPEN_METEO_URL = 'https://api.open-meteo.com/v1/forecast';
 export const WEATHER_REFRESH_MS = 5 * 60 * 1000;
 export const WEATHER_TIMEOUT_MS = 6000;
 
-
 /** Flight category limits (ceiling ft, visibility m), FAA convention as used by aviationweather.gov. */
 export const CATEGORY_LIMITS = {
   LIFR: { ceilingFt: 500, visibilityM: 1600 },

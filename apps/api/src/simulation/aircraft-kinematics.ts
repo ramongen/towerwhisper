@@ -1,7 +1,14 @@
 import { Injectable } from '@nestjs/common';
 import type { Aircraft, RunwayId, Waypoint } from '@towerwhisper/shared';
-import { runway } from '../airspace/airspace';
+import { AIRCRAFT_TYPES } from '../airport/constants';
+import { AIRSPACE, runway } from '../airspace/airspace';
 import {
+  ALIGNED_CROSS_TRACK_NM,
+  ALIGNED_HEADING_DEG,
+  ALIGNED_MAX_NM,
+  ALIGNED_MIN_NM,
+  APPROACH_SPEEDS,
+  DEFAULT_APPROACH_SPEED_KT,
   GLIDE_SLOPE_FT_PER_NM,
   LEVEL_OFF_FPM_PER_FT,
   LEVEL_OFF_MIN_FPM,
@@ -26,6 +33,8 @@ export interface SimAircraft extends Aircraft {
   routeIndex: number;
   /** Heading own navigation steers to while no heading is assigned. */
   navHeadingDeg?: number;
+  /** The pilot has asked for landing clearance on this approach. */
+  landingRequested?: boolean;
 }
 
 /**
@@ -73,6 +82,13 @@ export class AircraftKinematics {
     if (!a.locCaptured && Math.abs(crossTrack) < LOC_CAPTURE_NM && pointingInbound) {
       a.locCaptured = true;
     }
+    // Cleared to land and roughly lined up with the runway: join the final approach now.
+    const linedUp =
+      Math.abs(crossTrack) < ALIGNED_CROSS_TRACK_NM &&
+      Math.abs(headingDelta(a.headingDeg, course)) < ALIGNED_HEADING_DEG &&
+      alongTrack > ALIGNED_MIN_NM &&
+      alongTrack < ALIGNED_MAX_NM;
+    if (!a.locCaptured && a.target.landingCleared && linedUp) a.locCaptured = true;
     if (!a.locCaptured) {
       if (a.target.headingDeg !== undefined) return; // keep flying the vector
       if (a.routeIndex < a.route.length) return; // still on its route: intercept from its end
@@ -86,10 +102,18 @@ export class AircraftKinematics {
     a.target.turnDir = 'any';
 
     if (a.locCaptured) {
+      // 3 degree glide path above the threshold, and slowing down for landing.
       const distance = this.distanceToThreshold(a) ?? 0;
-      const glideFt = Math.round((distance * GLIDE_SLOPE_FT_PER_NM) / 100) * 100;
+      const glideFt =
+        AIRSPACE.airport.elevationFt + Math.round((distance * GLIDE_SLOPE_FT_PER_NM) / 100) * 100;
       if (a.target.altitudeFt === undefined || glideFt < a.target.altitudeFt)
         a.target.altitudeFt = glideFt;
+      const scheduled =
+        APPROACH_SPEEDS.find((s) => alongTrack > s.beyondNm)?.speedKt ??
+        AIRCRAFT_TYPES[a.type]?.approachSpeedKt ??
+        DEFAULT_APPROACH_SPEED_KT;
+      if (a.target.speedKt === undefined || scheduled < a.target.speedKt)
+        a.target.speedKt = scheduled;
     }
   }
 

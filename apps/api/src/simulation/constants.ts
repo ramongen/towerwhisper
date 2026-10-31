@@ -26,3 +26,22 @@ export const LANDED_NM = 0.6;
 
 /** Own navigation: a fix counts as passed within this distance (turn anticipation). */
 export const WAYPOINT_REACHED_NM = 1.5;
+
+/** Landing: the pilot asks for landing clearance this far from the threshold (NM)... */
+export const LANDING_REQUEST_NM = 8;
+/** ...and goes around this close to it if the clearance has not come. */
+export const GO_AROUND_NM = 1.5;
+/** Go-around: runway heading, climb to this altitude, this speed; then vectors. */
+export const GO_AROUND_ALTITUDE_FT = 4000;
+export const GO_AROUND_SPEED_KT = 220;
+/** Speed on the localizer: 210 kt beyond 12 NM, 170 kt beyond 6 NM, then the type's Vapp. */
+export const APPROACH_SPEEDS: { beyondNm: number; speedKt: number }[] = [
+  { beyondNm: 12, speedKt: 210 },
+  { beyondNm: 6, speedKt: 170 },
+];
+export const DEFAULT_APPROACH_SPEED_KT = 140;
+/** Cleared to land and roughly lined up: capture the final approach straight away. */
+export const ALIGNED_CROSS_TRACK_NM = 4;
+export const ALIGNED_HEADING_DEG = 45;
+export const ALIGNED_MIN_NM = 2;
+export const ALIGNED_MAX_NM = 25;

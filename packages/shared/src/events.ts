@@ -46,7 +46,10 @@ export interface CommsTransmissionPayload {
   clearance: Clearance | null;
 }
 
-/** comms:readback — after every readback. `audioUrl` is null when no audio exists (text only). */
+/**
+ * comms:readback — every pilot transmission: readbacks, and calls the pilot starts (a landing
+ * request, a go-around), which have check null. `audioUrl` is null when no audio exists.
+ */
 export interface CommsReadbackPayload {
   id: string;
   /** Server time of the readback (ISO). */
@@ -56,7 +59,7 @@ export interface CommsReadbackPayload {
   transcript: string;
   clearance: Clearance | null;
   audioUrl: string | null;
-  check: ReadbackCheck;
+  check: ReadbackCheck | null;
 }
 
 /** alert:cleared — the alert ended; the screens move it to the history. */

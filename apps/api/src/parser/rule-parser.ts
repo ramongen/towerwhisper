@@ -4,7 +4,7 @@ import type { ApproachType, Clearance, TurnDir } from '@towerwhisper/shared';
 /** The instruction fields a phrase can carry (everything in Clearance except identity/metadata). */
 export type ClearanceFields = Pick<
   Clearance,
-  'altitude' | 'heading' | 'speed' | 'approach' | 'frequency' | 'direct'
+  'altitude' | 'heading' | 'speed' | 'approach' | 'frequency' | 'direct' | 'landing' | 'goAround'
 >;
 
 /**
@@ -26,6 +26,10 @@ const RULES = {
   frequency: /\b(1[1-3]\d\.\d{1,3})\b/,
   // 'proceed direct kovad', 'direct to kovad' (the fix name is checked by ParserService)
   direct: /\bdirect(?:\s+to)?\s+([a-z]{4,6})\b/,
+  // 'cleared to land rwy26', 'cleared to land'
+  landing: /\bcleared\s+to\s+land(?:\s+rwy(\d{2}))?\b/,
+  // 'go around', 'going around'
+  goAround: /\bgo(?:ing)?\s+around\b/,
 };
 
 @Injectable()
@@ -63,6 +67,11 @@ export class RuleParser {
 
     const direct = RULES.direct.exec(normalized);
     if (direct) fields.direct = { fix: direct[1].toUpperCase() };
+
+    const landing = RULES.landing.exec(normalized);
+    if (landing) fields.landing = { runway: landing[1] ?? null };
+
+    if (RULES.goAround.test(normalized)) fields.goAround = true;
 
     return Object.keys(fields).length > 0 ? fields : null;
   }

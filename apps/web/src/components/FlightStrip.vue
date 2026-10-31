@@ -31,7 +31,8 @@ const headingText = computed(() => {
 
 const approach = computed(() => {
   const app = props.aircraft.target.approach;
-  return app ? `${app.type} ${app.runway}` : '—';
+  if (!app) return '—';
+  return props.aircraft.target.landingCleared ? `${app.runway} LAND` : `${app.type} ${app.runway}`;
 });
 
 const commsLevel = computed(() => {

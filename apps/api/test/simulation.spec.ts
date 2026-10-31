@@ -11,7 +11,7 @@ import { ScenarioLoader } from '../src/session/scenario-loader';
 import { AircraftKinematics } from '../src/simulation/aircraft-kinematics';
 import { TICK_MS } from '../src/simulation/constants';
 import { headingDelta } from '../src/simulation/geo';
-import { SimulationService } from '../src/simulation/simulation.service';
+import { SimulationService, type SimEvent } from '../src/simulation/simulation.service';
 
 const scenario = new ScenarioLoader().load('craiova-arrivals');
 /** WZZ44 comes from the east: a left turn onto a 30 degree intercept of the runway 26 localizer. */
@@ -99,11 +99,53 @@ describe('aircraft follow their instructions', () => {
     expect(a.headingDeg).toBe(180);
   });
 
-  it('capture the ILS from vectors and land', () => {
+  it('capture the ILS from vectors, slow down, land when cleared and leave the scope', () => {
     const sim = setup();
+    const events: SimEvent[] = [];
+    sim.onEvent((e) => events.push(e));
+    clear(sim, ILS_26_VECTORS);
+    clear(sim, 'WIZZ 44, cleared to land runway 26');
+    let slowest = Infinity;
+    for (let t = 0; t < 1200 && sim.get('WZZ44'); t += 5) {
+      run(sim, 5);
+      slowest = Math.min(slowest, sim.get('WZZ44')?.speedKt ?? slowest);
+    }
+    expect(sim.get('WZZ44')).toBeUndefined(); // landed and left the scope
+    expect(slowest).toBeLessThanOrEqual(150); // approach speed of an A321neo
+    expect(events.map((e) => e.type)).toEqual(['landed']);
+  });
+
+  it('asks for landing clearance on final and goes around without it', () => {
+    const sim = setup();
+    const events: SimEvent[] = [];
+    sim.onEvent((e) => events.push(e));
     clear(sim, ILS_26_VECTORS);
     run(sim, 1200);
-    expect(sim.get('WZZ44')).toBeUndefined(); // landed and left the scope
+    expect(events.map((e) => e.type)).toEqual(['landing-request', 'go-around']);
+    const a = get(sim, 'WZZ44');
+    expect(a.target.approach).toBeUndefined();
+    expect(a.target.altitudeFt).toBe(4000);
+    expect(Math.abs(headingDelta(a.headingDeg, 269))).toBeLessThan(5); // runway heading
+  });
+
+  it('cleared to land while lined up: joins the final approach and lands', () => {
+    const sim = setup();
+    clear(sim, 'WIZZ 44, descend altitude 3000 feet, turn left heading 260');
+    run(sim, 60);
+    clear(sim, 'WIZZ 44, cleared to land runway 26');
+    run(sim, 900);
+    expect(sim.get('WZZ44')).toBeUndefined();
+  });
+
+  it('goes around when the controller says so', () => {
+    const sim = setup();
+    const events: SimEvent[] = [];
+    sim.onEvent((e) => events.push(e));
+    clear(sim, ILS_26_VECTORS);
+    run(sim, 200);
+    sim.goAround('WZZ44', 'instructed');
+    expect(events.map((e) => e.type)).toEqual(['go-around']);
+    expect(get(sim, 'WZZ44').target.approach).toBeUndefined();
   });
 
   it('proceed direct to a fix and hold over the end of the route', () => {

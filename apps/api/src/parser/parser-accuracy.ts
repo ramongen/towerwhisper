@@ -18,6 +18,8 @@ const FIELDS = [
   'approach',
   'frequency',
   'direct',
+  'landing',
+  'goAround',
 ] as const;
 
 export interface AccuracyReport {

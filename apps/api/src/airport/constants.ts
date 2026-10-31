@@ -35,6 +35,7 @@ export const AIRCRAFT_TYPES: Record<string, AircraftTypeInfo> = {
     wingspanM: 27.05,
     landingFieldLengthM: 915,
     maxCrosswindKt: 35,
+    approachSpeedKt: 115,
     minRunwayWidthM: 30,
   },
   A21N: {
@@ -47,6 +48,7 @@ export const AIRCRAFT_TYPES: Record<string, AircraftTypeInfo> = {
     wingspanM: 35.8,
     landingFieldLengthM: 1745,
     maxCrosswindKt: 33,
+    approachSpeedKt: 140,
     minRunwayWidthM: 45,
   },
   B738: {
@@ -59,6 +61,7 @@ export const AIRCRAFT_TYPES: Record<string, AircraftTypeInfo> = {
     wingspanM: 35.79,
     landingFieldLengthM: 1634,
     maxCrosswindKt: 33,
+    approachSpeedKt: 145,
     minRunwayWidthM: 45,
   },
   E195: {
@@ -71,6 +74,7 @@ export const AIRCRAFT_TYPES: Record<string, AircraftTypeInfo> = {
     wingspanM: 28.72,
     landingFieldLengthM: 1275,
     maxCrosswindKt: 30,
+    approachSpeedKt: 135,
     minRunwayWidthM: 45,
   },
   B38M: {
@@ -83,6 +87,7 @@ export const AIRCRAFT_TYPES: Record<string, AircraftTypeInfo> = {
     wingspanM: 35.92,
     landingFieldLengthM: 1600,
     maxCrosswindKt: 33,
+    approachSpeedKt: 145,
     minRunwayWidthM: 45,
   },
   CRJ9: {
@@ -95,6 +100,7 @@ export const AIRCRAFT_TYPES: Record<string, AircraftTypeInfo> = {
     wingspanM: 24.85,
     landingFieldLengthM: 1596,
     maxCrosswindKt: 27,
+    approachSpeedKt: 140,
     minRunwayWidthM: 45,
   },
   B737: {
@@ -107,6 +113,7 @@ export const AIRCRAFT_TYPES: Record<string, AircraftTypeInfo> = {
     wingspanM: 35.79,
     landingFieldLengthM: 1415,
     maxCrosswindKt: 33,
+    approachSpeedKt: 135,
     minRunwayWidthM: 45,
   },
 };

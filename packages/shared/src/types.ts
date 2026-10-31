@@ -32,6 +32,8 @@ export interface Targets {
   approach?: { type: ApproachType; runway: RunwayId };
   /** "Proceed direct <fix>": back to own navigation from that fix. */
   directTo?: string;
+  /** "Cleared to land": the aircraft lands at the end of its approach instead of going around. */
+  landingCleared?: boolean;
 }
 
 /** A named point on the scope (reporting point / approach fix). */
@@ -67,6 +69,10 @@ export interface Clearance {
   approach?: { type: ApproachType; runway: string };
   frequency?: { mhz: string };
   direct?: { fix: string };
+  /** "Cleared to land runway 26" (runway null when it was not said). */
+  landing?: { runway: string | null };
+  /** "Go around" / "going around". */
+  goAround?: boolean;
   rawText: string;
   confidence: number; // 0-1
   parsePath: 'rules' | 'llm';
@@ -152,6 +158,8 @@ export interface AircraftTypeInfo {
   /** Certified landing field length at MLW, dry, sea level. */
   landingFieldLengthM: number;
   maxCrosswindKt: number; // demonstrated
+  /** Typical final approach speed (Vapp) at a normal landing weight. */
+  approachSpeedKt: number;
   minRunwayWidthM: number;
 }
 

@@ -55,8 +55,13 @@ export class ReadbackBuilder {
         }
         break;
       case 'wrong_runway':
+        // The other runway direction, in the approach or the landing clearance.
         if (c.approach) {
-          c.approach.runway = c.approach.runway === '26' ? '08' : '26'; // the other direction
+          c.approach.runway = c.approach.runway === '26' ? '08' : '26';
+          faultApplied = true;
+        }
+        if (c.landing?.runway) {
+          c.landing.runway = c.landing.runway === '26' ? '08' : '26';
           faultApplied = true;
         }
         break;
@@ -97,6 +102,7 @@ export class ReadbackBuilder {
 /** Template phrases in readback order: altitude, heading, speed, approach, frequency. */
 function phrases(c: Clearance): string[] {
   const items: string[] = [];
+  if (c.goAround) items.push('going around');
   if (c.altitude) {
     const verb = { climb: 'climb', descend: 'descend', maintain: 'maintain' }[c.altitude.action];
     const level = c.altitude.flightLevel
@@ -111,6 +117,9 @@ function phrases(c: Clearance): string[] {
   if (c.speed) items.push(`speed ${c.speed.valueKt}`);
   if (c.approach) items.push(`cleared ${c.approach.type} runway ${c.approach.runway}`);
   if (c.direct) items.push(`direct ${c.direct.fix}`);
+  if (c.landing) {
+    items.push(c.landing.runway ? `cleared to land runway ${c.landing.runway}` : 'cleared to land');
+  }
   if (c.frequency) items.push(c.frequency.mhz);
   return items.map((item, i) => (i === 0 ? capitalize(item) : item));
 }
