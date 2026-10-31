@@ -195,7 +195,11 @@ The `whisper` container (faster-whisper) is part of the stack, so push-to-talk w
 key and nothing in `.env`. The start scripts check whether Docker can use an NVIDIA GPU (driver
 present and a test container with `--gpus all` runs): if so they add `docker-compose.gpu.yml`
 (`large-v3`, float16 on CUDA), otherwise Whisper runs on the CPU (`small.en`, int8, 2-3 s per
-call); if the GPU start fails they fall back to the CPU by themselves. `-Cpu` / `--cpu` forces the
+call); if the GPU start fails they fall back to the CPU by themselves. The GPU image is big (13 GB
+to download, ~30 GB unpacked; the CPU one about 3 GB / 8 GB): the scripts use it only when it is
+already there or Docker's disk has ~45 GB free, download it first with retries (an interrupted
+download resumes), and take the CPU otherwise. If Docker itself stops during the start (a full
+disk does that), they wait for it and try again, and say how much space the disk has left. `-Cpu` / `--cpu` forces the
 CPU. Plain `docker compose up` uses the CPU; for the GPU by hand:
 `docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build`.
 

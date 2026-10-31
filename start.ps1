@@ -25,6 +25,11 @@ $DockerWaitS = 180
 $AppWaitS = 240
 # How long to wait for Whisper's model before printing the links anyway (s).
 $WhisperWaitS = 60
+# Free space Docker's disk needs for the GPU Whisper image (13 GB download, ~30 GB unpacked),
+# and below which a failure is probably the disk (GB).
+$GpuImageNeedsGb = 45
+$LowDiskGb = 10
+$PullAttempts = 3
 
 function Say([string]$text, [string]$color = 'Gray') { Write-Host $text -ForegroundColor $color }
 function Fail([string]$text) { Say ''; Say "  x $text" 'Red'; Say ''; exit 1 }
@@ -79,6 +84,75 @@ function Test-Gpu {
   return $LASTEXITCODE -eq 0
 }
 
+# Docker up, starting Docker Desktop when it is installed but not running.
+function Wait-Docker {
+  if (Test-Docker) { return }
+  $desktop = Join-Path $env:ProgramFiles 'Docker\Docker\Docker Desktop.exe'
+  if ((Test-Path $desktop) -and -not (Get-Process 'Docker Desktop' -ErrorAction SilentlyContinue)) {
+    Say '  · Docker is not running: starting Docker Desktop...'
+    Start-Process $desktop
+  }
+  $waited = 0
+  while (-not (Test-Docker)) {
+    if ($waited -ge $DockerWaitS) {
+      $free = Get-DockerDiskFreeGb
+      $disk = if ($null -ne $free -and $free -lt $LowDiskGb) { " Its disk ($(Get-DockerDiskName)) has only $free GB free: free some space, then restart Docker Desktop." } else { '' }
+      Fail "Docker is not answering.$disk Open Docker Desktop, wait for 'Engine running', then run this again."
+    }
+    Start-Sleep -Seconds 3
+    $waited += 3
+  }
+}
+
+# Where Docker Desktop keeps its disk: the folder chosen in its settings, else LOCALAPPDATA.
+function Get-DockerDiskName {
+  $dir = $null
+  try {
+    $settings = Get-Content "$env:APPDATA\Docker\settings-store.json" -Raw -ErrorAction Stop | ConvertFrom-Json
+    $dir = $settings.CustomWslDistroDir
+  } catch {}
+  if (-not $dir) { $dir = $env:LOCALAPPDATA }
+  return ([System.IO.Path]::GetPathRoot($dir)).TrimEnd('\')
+}
+
+function Get-DockerDiskFreeGb {
+  try {
+    $drive = Get-PSDrive -Name (Get-DockerDiskName).TrimEnd(':') -ErrorAction Stop
+    return [math]::Floor($drive.Free / 1GB)
+  } catch { return $null }
+}
+
+# The image the whisper service runs with these compose files.
+function Get-WhisperImage([string[]]$files) {
+  $config = docker @files config --format json 2> $null | Out-String | ConvertFrom-Json
+  return $config.services.whisper.image
+}
+
+function Test-ImagePresent([string]$image) {
+  docker image inspect $image *> $null
+  return $LASTEXITCODE -eq 0
+}
+
+# docker pull with retries: an interrupted download resumes from the layers it already has,
+# and a Docker that went down meanwhile is waited for.
+function Get-Image([string]$image) {
+  for ($attempt = 1; $attempt -le $PullAttempts; $attempt++) {
+    docker pull $image
+    if ($LASTEXITCODE -eq 0) { return $true }
+    if (-not (Test-Docker)) {
+      Say '  · Docker stopped during the download: waiting for it to come back...' 'DarkYellow'
+      Wait-Docker
+    }
+    $free = Get-DockerDiskFreeGb
+    if ($null -ne $free -and $free -lt $LowDiskGb) {
+      Say "  · Docker's disk ($(Get-DockerDiskName)) has only $free GB free: not retrying" 'DarkYellow'
+      return $false
+    }
+    if ($attempt -lt $PullAttempts) { Say "  · download interrupted, retrying ($($attempt + 1)/$PullAttempts)..." 'DarkYellow' }
+  }
+  return $false
+}
+
 # The Whisper container has loaded its model and answers.
 function Test-WhisperReady {
   $log = docker @composeArgs logs whisper 2> $null | Out-String
@@ -104,33 +178,48 @@ Say ''
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
   Fail 'Docker is not installed: get Docker Desktop from https://www.docker.com/products/docker-desktop/'
 }
-if (-not (Test-Docker)) {
-  $desktop = Join-Path $env:ProgramFiles 'Docker\Docker\Docker Desktop.exe'
-  if (Test-Path $desktop) {
-    Say '  · Docker is not running: starting Docker Desktop...'
-    Start-Process $desktop
-  }
-  $waited = 0
-  while (-not (Test-Docker)) {
-    if ($waited -ge $DockerWaitS) { Fail 'Docker did not start. Open Docker Desktop, wait for "Engine running", then run this again.' }
-    Start-Sleep -Seconds 3
-    $waited += 3
-  }
-}
+Wait-Docker
 Say '  · Docker is running'
 
 # Speech-to-text: Whisper on the GPU when Docker can use one (an NVIDIA driver and Docker GPU
-# support), else on the CPU. Nothing to configure; -Cpu forces the CPU.
+# support), else on the CPU. Nothing to configure; -Cpu forces the CPU. The GPU image is big
+# (13 GB to download, ~30 GB unpacked): it is only used when it is already there or fits on
+# Docker's disk, and it is downloaded on its own, with retries, before anything starts.
+$cpuArgs = @('compose', '-f', 'docker-compose.yml')
+$gpuArgs = $cpuArgs + @('-f', 'docker-compose.gpu.yml')
 $gpu = $false
-if (-not $Cpu) {
-  $gpu = Test-Gpu
+$gpuFound = (-not $Cpu) -and (Test-Gpu)
+if ($gpuFound) {
+  $gpuImage = Get-WhisperImage $gpuArgs
+  $free = Get-DockerDiskFreeGb
+  if (Test-ImagePresent $gpuImage) {
+    $gpu = $true
+  } elseif ($null -ne $free -and $free -lt $GpuImageNeedsGb) {
+    Say "  · NVIDIA GPU found, but the GPU Whisper image needs ~$GpuImageNeedsGb GB free on Docker's disk" 'DarkYellow'
+    Say "    ($(Get-DockerDiskName) has $free GB): speech-to-text on the CPU this time" 'DarkYellow'
+  } else {
+    Say '  · NVIDIA GPU available to Docker: downloading the GPU Whisper image (13 GB, only once)...'
+    if (Get-Image $gpuImage) {
+      $gpu = $true
+    } else {
+      Say '  · the GPU Whisper image could not be downloaded: speech-to-text on the CPU' 'DarkYellow'
+    }
+  }
 }
-$composeArgs = @('compose', '-f', 'docker-compose.yml')
+$composeArgs = if ($gpu) { $gpuArgs } else { $cpuArgs }
 if ($gpu) {
-  $composeArgs += @('-f', 'docker-compose.gpu.yml')
-  Say '  · NVIDIA GPU available to Docker: speech-to-text on the GPU'
+  Say '  · speech-to-text on the GPU'
 } else {
-  Say '  · no GPU available to Docker: speech-to-text on the CPU'
+  if ($Cpu) { Say '  · speech-to-text on the CPU (-Cpu)' }
+  elseif ($gpuFound) { Say '  · speech-to-text on the CPU' }
+  else { Say '  · no GPU available to Docker: speech-to-text on the CPU' }
+  $cpuImage = Get-WhisperImage $cpuArgs
+  if (-not (Test-ImagePresent $cpuImage)) {
+    Say '  · downloading the Whisper image (about 3 GB, only once)...'
+    if (-not (Get-Image $cpuImage)) {
+      Say '  · the Whisper image could not be downloaded now; docker compose will try again' 'DarkYellow'
+    }
+  }
 }
 
 # 2. The port: the one the stack already uses, else the first free one.
@@ -154,15 +243,26 @@ $env:WEB_PORT = "$chosen"
 Say '  · building and starting the containers (the first build takes a few minutes)...'
 Say ''
 docker @composeArgs up --build -d
+if ($LASTEXITCODE -ne 0 -and -not (Test-Docker)) {
+  # Docker itself went down (out of disk space, typically): bring it back and try once more.
+  Say ''
+  Say '  · Docker stopped while starting the stack: waiting for it to come back...' 'DarkYellow'
+  Wait-Docker
+  docker @composeArgs up --build -d
+}
 if ($LASTEXITCODE -ne 0 -and $gpu) {
   # The GPU looked usable but the container could not get it: same stack, Whisper on the CPU.
   Say ''
   Say '  · Whisper could not start on the GPU: starting it on the CPU instead' 'DarkYellow'
   $gpu = $false
-  $composeArgs = @('compose', '-f', 'docker-compose.yml')
+  $composeArgs = $cpuArgs
   docker @composeArgs up --build -d
 }
-if ($LASTEXITCODE -ne 0) { Fail 'docker compose up failed: see the messages above.' }
+if ($LASTEXITCODE -ne 0) {
+  $free = Get-DockerDiskFreeGb
+  $hint = if ($null -ne $free -and $free -lt $LowDiskGb) { " Docker's disk ($(Get-DockerDiskName)) has only $free GB free: free some space first." } else { '' }
+  Fail "docker compose up failed: see the messages above.$hint"
+}
 
 # 4. Wait until the app answers through nginx.
 $url = "http://localhost:$chosen"

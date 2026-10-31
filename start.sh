@@ -16,6 +16,11 @@ DOCKER_WAIT_S=180
 APP_WAIT_S=240
 # How long to wait for Whisper's model before printing the links anyway (s).
 WHISPER_WAIT_S=60
+# Free space Docker's disk needs for the GPU Whisper image (13 GB download, ~30 GB unpacked),
+# and below which a failure is probably the disk (GB).
+GPU_IMAGE_NEEDS_GB=45
+LOW_DISK_GB=10
+PULL_ATTEMPTS=3
 
 port_arg=""; logs=0; force_cpu=0
 for arg in "$@"; do
@@ -44,6 +49,50 @@ gpu_usable() {
   say "  · NVIDIA driver found: checking that Docker can use the GPU..."
   docker run --rm --gpus all alpine:3.20 true >/dev/null 2>&1
 }
+# Docker up, opening Docker Desktop on macOS when it is installed but not running.
+wait_docker() {
+  docker_up && return 0
+  if [ "$(uname)" = "Darwin" ] && [ -d "/Applications/Docker.app" ] && ! pgrep -x Docker >/dev/null; then
+    say "  · Docker is not running: starting Docker Desktop..."
+    open -a Docker
+  fi
+  local waited=0 free
+  until docker_up; do
+    if [ "$waited" -ge "$DOCKER_WAIT_S" ]; then
+      free=$(docker_disk_free_gb)
+      if [ -n "$free" ] && [ "$free" -lt "$LOW_DISK_GB" ]; then
+        fail "Docker is not answering. Its disk has only $free GB free: free some space, restart Docker, then run this again."
+      fi
+      fail "Docker is not answering. Start it, wait until it is running, then run this again."
+    fi
+    sleep 3; waited=$((waited + 3))
+  done
+}
+# Free GB where Docker keeps its data (Linux: its data root; Docker Desktop: the home disk).
+docker_disk_free_gb() {
+  local dir
+  dir=$(docker info --format '{{.DockerRootDir}}' 2>/dev/null)
+  [ -d "$dir" ] || dir=$HOME
+  df -Pk "$dir" 2>/dev/null | awk 'NR == 2 { print int($4 / 1048576) }'
+}
+# The image the whisper service runs with these compose arguments.
+whisper_image() { docker "$@" config 2>/dev/null | awk '/^  whisper:/ { w = 1 } w && /^    image:/ { print $2; exit }'; }
+image_present() { docker image inspect "$1" >/dev/null 2>&1; }
+# docker pull with retries: an interrupted download resumes from the layers it already has,
+# and a Docker that went down meanwhile is waited for.
+pull_image() {
+  local attempt free
+  for ((attempt = 1; attempt <= PULL_ATTEMPTS; attempt++)); do
+    docker pull "$1" && return 0
+    docker_up || { say "  ${yellow}· Docker stopped during the download: waiting for it to come back...${off}"; wait_docker; }
+    free=$(docker_disk_free_gb)
+    if [ -n "$free" ] && [ "$free" -lt "$LOW_DISK_GB" ]; then
+      say "  ${yellow}· Docker's disk has only $free GB free: not retrying${off}"; return 1
+    fi
+    [ "$attempt" -lt "$PULL_ATTEMPTS" ] && say "  ${yellow}· download interrupted, retrying ($((attempt + 1))/$PULL_ATTEMPTS)...${off}"
+  done
+  return 1
+}
 whisper_ready() { docker "${compose[@]}" logs whisper 2>/dev/null | grep -q 'Application startup complete'; }
 # Something already listens on the port (any interface reachable on localhost).
 port_busy() { (exec 3<>"/dev/tcp/127.0.0.1/$1") 2>/dev/null; }
@@ -54,28 +103,43 @@ say ""
 
 # 1. Docker running (open Docker Desktop on macOS if it is installed but not up).
 command -v docker >/dev/null 2>&1 || fail "Docker is not installed: https://www.docker.com/products/docker-desktop/"
-if ! docker_up; then
-  if [ "$(uname)" = "Darwin" ] && [ -d "/Applications/Docker.app" ]; then
-    say "  · Docker is not running: starting Docker Desktop..."
-    open -a Docker
-  fi
-  waited=0
-  until docker_up; do
-    [ "$waited" -ge "$DOCKER_WAIT_S" ] && fail "Docker did not start. Start it, wait until it is running, then run this again."
-    sleep 3; waited=$((waited + 3))
-  done
-fi
+wait_docker
 say "  · Docker is running"
 
-# Speech-to-text: Whisper on the GPU when Docker can use one, else on the CPU.
-gpu=0
-[ "$force_cpu" = 1 ] || { gpu_usable && gpu=1; }
-compose=(compose -f docker-compose.yml)
+# Speech-to-text: Whisper on the GPU when Docker can use one, else on the CPU. The GPU image
+# is big (13 GB to download, ~30 GB unpacked): it is only used when it is already there or
+# fits on Docker's disk, and it is downloaded on its own, with retries, before anything starts.
+cpu_args=(compose -f docker-compose.yml)
+gpu_args=(compose -f docker-compose.yml -f docker-compose.gpu.yml)
+gpu=0; gpu_found=0
+[ "$force_cpu" = 1 ] || { gpu_usable && gpu_found=1; }
+if [ "$gpu_found" = 1 ]; then
+  gpu_image=$(whisper_image "${gpu_args[@]}")
+  free=$(docker_disk_free_gb)
+  if image_present "$gpu_image"; then
+    gpu=1
+  elif [ -n "$free" ] && [ "$free" -lt "$GPU_IMAGE_NEEDS_GB" ]; then
+    say "  ${yellow}· NVIDIA GPU found, but the GPU Whisper image needs ~$GPU_IMAGE_NEEDS_GB GB free on Docker's disk${off}"
+    say "  ${yellow}  (it has $free GB): speech-to-text on the CPU this time${off}"
+  else
+    say "  · NVIDIA GPU available to Docker: downloading the GPU Whisper image (13 GB, only once)..."
+    if pull_image "$gpu_image"; then gpu=1
+    else say "  ${yellow}· the GPU Whisper image could not be downloaded: speech-to-text on the CPU${off}"; fi
+  fi
+fi
 if [ "$gpu" = 1 ]; then
-  compose+=(-f docker-compose.gpu.yml)
-  say "  · NVIDIA GPU available to Docker: speech-to-text on the GPU"
+  compose=("${gpu_args[@]}")
+  say "  · speech-to-text on the GPU"
 else
-  say "  · no GPU available to Docker: speech-to-text on the CPU"
+  compose=("${cpu_args[@]}")
+  if [ "$force_cpu" = 1 ]; then say "  · speech-to-text on the CPU (--cpu)"
+  elif [ "$gpu_found" = 1 ]; then say "  · speech-to-text on the CPU"
+  else say "  · no GPU available to Docker: speech-to-text on the CPU"; fi
+  cpu_image=$(whisper_image "${cpu_args[@]}")
+  if [ -n "$cpu_image" ] && ! image_present "$cpu_image"; then
+    say "  · downloading the Whisper image (about 3 GB, only once)..."
+    pull_image "$cpu_image" || say "  ${yellow}· the Whisper image could not be downloaded now; docker compose will try again${off}"
+  fi
 fi
 
 # 2. The port: the one the stack already uses, else the first free one.
@@ -98,14 +162,29 @@ fi
 export WEB_PORT=$chosen
 say "  · building and starting the containers (the first build takes a few minutes)..."
 say ""
-if ! docker "${compose[@]}" up --build -d; then
-  [ "$gpu" = 1 ] || fail "docker compose up failed: see the messages above."
+up_ok=1
+docker "${compose[@]}" up --build -d || up_ok=0
+if [ "$up_ok" = 0 ] && ! docker_up; then
+  # Docker itself went down (out of disk space, typically): bring it back and try once more.
+  say ""
+  say "  ${yellow}· Docker stopped while starting the stack: waiting for it to come back...${off}"
+  wait_docker
+  up_ok=1; docker "${compose[@]}" up --build -d || up_ok=0
+fi
+if [ "$up_ok" = 0 ] && [ "$gpu" = 1 ]; then
   # The GPU looked usable but the container could not get it: same stack, Whisper on the CPU.
   say ""
   say "  ${yellow}· Whisper could not start on the GPU: starting it on the CPU instead${off}"
   gpu=0
-  compose=(compose -f docker-compose.yml)
-  docker "${compose[@]}" up --build -d || fail "docker compose up failed: see the messages above."
+  compose=("${cpu_args[@]}")
+  up_ok=1; docker "${compose[@]}" up --build -d || up_ok=0
+fi
+if [ "$up_ok" = 0 ]; then
+  free=$(docker_disk_free_gb)
+  if [ -n "$free" ] && [ "$free" -lt "$LOW_DISK_GB" ]; then
+    fail "docker compose up failed: see the messages above. Docker's disk has only $free GB free: free some space first."
+  fi
+  fail "docker compose up failed: see the messages above."
 fi
 
 # 4. Wait until the app answers through nginx.
@@ -128,8 +207,8 @@ else lan=$(hostname -I 2>/dev/null | awk '{print $1}'); fi
 demo="${lan:+http://$lan:$chosen/demo}"; demo=${demo:-$url/demo}
 case "$health" in
   *local-whisper*)
-    if [ "$gpu" = 1 ]; then voice="Whisper on GPU ($(env_value WHISPER_MODEL large-v3)) · $state"
-    else voice="Whisper on CPU ($(env_value WHISPER_CPU_MODEL small.en)) · $state"; fi ;;
+    if [ "$gpu" = 1 ]; then voice="Whisper on GPU ($(env_value WHISPER_MODEL large-v3)), $state"
+    else voice="Whisper on CPU ($(env_value WHISPER_CPU_MODEL small.en)), $state"; fi ;;
   *'"openai"'*) voice="OpenAI Whisper" ;;
   *) voice="typed instructions (no speech-to-text)" ;;
 esac
