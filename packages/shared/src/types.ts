@@ -21,6 +21,34 @@ export interface Aircraft {
   nextWaypoint?: string;
   /** Orbiting at the end of its route, waiting for vectors or an approach clearance. */
   holding?: boolean;
+  /** The call the controller should probably make next to this aircraft, if any. */
+  advisory?: Advisory;
+}
+
+export type AdvisoryKind =
+  | 'landing-clearance' // on final without a landing clearance
+  | 'approach-clearance' // inbound to the start of the approach, not cleared for it yet
+  | 'direct-to' // on vectors: the best fix back to the approach
+  | 'vectors'; // after a go-around or close in: the next heading of the circuit
+
+/**
+ * A suggested next instruction (advisor/, deterministic rules over the flight plan, the
+ * approach geometry and the weather). Advice only: the controller decides and transmits.
+ */
+export interface Advisory {
+  /** Stable while the same advice stands, so the screen can tell new advice from old. */
+  id: string;
+  kind: AdvisoryKind;
+  /** Short label for the card title, e.g. 'Clear to land'. */
+  title: string;
+  /** The instruction in standard phraseology, ready to say: 'WIZZ 44, cleared to land runway 26'. */
+  phrase: string;
+  /** Why, in plain English with the values. */
+  reason: string;
+  /** The facts it is based on: flight plan, next fix, distances, wind. */
+  basis: string[];
+  /** 'urgent': something happens soon without it (e.g. a go-around in under a minute). */
+  urgency: 'normal' | 'urgent';
 }
 
 export interface Targets {
