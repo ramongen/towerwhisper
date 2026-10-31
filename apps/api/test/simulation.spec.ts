@@ -113,17 +113,45 @@ describe('aircraft follow their instructions', () => {
     expect(events.map((e) => e.type)).toEqual(['landed']);
   });
 
-  it('asks for landing clearance on final and goes around without it', () => {
+  it('asks for landing clearance on final and goes around without it, not on vectors', () => {
     const sim = setup();
     const events: SimEvent[] = [];
     sim.onEvent((e) => e.callsign === 'WZZ44' && events.push(e));
     clear(sim, ILS_26_VECTORS);
-    run(sim, 1200);
+    let a = get(sim, 'WZZ44');
+    for (let t = 0; t < 1200 && !events.some((e) => e.type === 'go-around'); t += 1) {
+      run(sim, 1);
+      a = get(sim, 'WZZ44');
+    }
     expect(events.map((e) => e.type)).toEqual(['landing-request', 'go-around']);
-    const a = get(sim, 'WZZ44');
     expect(a.target.approach).toBeUndefined();
+    expect(a.target.headingDeg).toBeUndefined(); // own navigation, not vectors
     expect(a.target.altitudeFt).toBe(4000);
-    expect(Math.abs(headingDelta(a.headingDeg, 269))).toBeLessThan(5); // runway heading
+    expect(a.nextWaypoint).toBe('GA CLIMB');
+  });
+
+  it('after a go-around with no instruction: missed-approach pattern back to OZZET and a new approach', () => {
+    const sim = setup();
+    const events: SimEvent[] = [];
+    sim.onEvent((e) => e.callsign === 'WZZ44' && events.push(e));
+    clear(sim, ILS_26_VECTORS);
+    const seen = new Set<string>();
+    for (
+      let t = 0;
+      t < 2400 && events.filter((e) => e.type === 'landing-request').length < 2;
+      t += 1
+    ) {
+      run(sim, 1);
+      const a = sim.get('WZZ44');
+      if (a?.nextWaypoint) seen.add(a.nextWaypoint);
+      if (events.some((e) => e.type === 'go-around')) {
+        expect(a?.target.headingDeg).toBeUndefined(); // never "on vectors" by itself
+      }
+    }
+    expect(events.map((e) => e.type)).toEqual(['landing-request', 'go-around', 'landing-request']);
+    expect([...seen]).toEqual(
+      expect.arrayContaining(['GA CLIMB', 'CROSSWIND', 'DOWNWIND', 'OZZET']),
+    );
   });
 
   it('cleared to land while lined up: joins the final approach and lands', () => {

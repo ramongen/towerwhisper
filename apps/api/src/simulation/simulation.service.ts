@@ -7,7 +7,7 @@ import type {
   Targets,
   Waypoint,
 } from '@towerwhisper/shared';
-import { runway } from '../airspace/airspace';
+import { AIRSPACE, runway } from '../airspace/airspace';
 import type { ScenarioAircraft } from '../session/scenario-loader';
 import { AircraftKinematics, finalApproachPosition, type SimAircraft } from './aircraft-kinematics';
 import {
@@ -16,8 +16,10 @@ import {
   GO_AROUND_SPEED_KT,
   LANDED_NM,
   LANDING_REQUEST_NM,
+  MISSED_APPROACH,
   TICK_MS,
 } from './constants';
+import { toLatLon, toXy } from './geo';
 
 export type TickListener = (aircraft: Aircraft[], simNowMs: number) => void;
 
@@ -83,18 +85,23 @@ export class SimulationService implements OnModuleInit, OnModuleDestroy {
     const a = this.aircraft.get(callsign);
     const rwy = a?.target.approach?.runway;
     if (!a || !rwy) return;
+    // Own navigation round the missed-approach pattern and back to the approach; a heading
+    // from the controller (vectors) takes over whenever it comes.
     a.target = {
       ...a.target,
       approach: undefined,
       landingCleared: false,
-      headingDeg: Math.round(runway(rwy).trueBearingDeg) % 360,
-      turnDir: 'any',
+      headingDeg: undefined,
+      turnDir: undefined,
       altitudeFt: Math.max(GO_AROUND_ALTITUDE_FT, Math.round(a.altitudeFt / 100) * 100),
       speedKt: GO_AROUND_SPEED_KT,
     };
+    a.route = missedApproachRoute(rwy);
+    a.routeIndex = 0;
+    a.nextWaypoint = a.route[0].name;
     a.locCaptured = false;
     a.landingRequested = false;
-    a.altitudeAssigned = true;
+    a.altitudeAssigned = false;
     this.logger.log(`${callsign} going around runway ${rwy} (${reason})`);
     this.emit({ type: 'go-around', callsign, runway: rwy, reason });
   }
@@ -279,4 +286,35 @@ export class SimulationService implements OnModuleInit, OnModuleDestroy {
       holding: a.holding,
     };
   }
+}
+
+/**
+ * Missed-approach pattern for a runway, back to the start of its final approach: straight
+ * ahead, right turn onto crosswind, downwind parallel to the runway, then the intermediate
+ * fix (OZZET for runway 26) where the approach starts again.
+ */
+export function missedApproachRoute(id: RunwayId): Waypoint[] {
+  const rwy = runway(id);
+  const t = toXy(rwy.threshold);
+  const rad = (rwy.trueBearingDeg * Math.PI) / 180;
+  const along = { x: Math.sin(rad), y: Math.cos(rad) }; // runway direction
+  const right = { x: Math.cos(rad), y: -Math.sin(rad) }; // 90 degrees right of it
+  const at = (name: string, ahead: number, side: number): Waypoint => ({
+    name,
+    ...toLatLon({
+      x: t.x + along.x * ahead + right.x * side,
+      y: t.y + along.y * ahead + right.y * side,
+    }),
+  });
+  const intermediate = AIRSPACE.fixes.find((f) => f.role === 'IF');
+  const finalStart = intermediate
+    ? { name: intermediate.name, lat: intermediate.lat, lon: intermediate.lon }
+    : at('FINAL', -MISSED_APPROACH.finalNm, 0);
+  const behind = -MISSED_APPROACH.finalNm - MISSED_APPROACH.extendNm;
+  return [
+    at('GA CLIMB', MISSED_APPROACH.climbOutNm, 0),
+    at('CROSSWIND', MISSED_APPROACH.climbOutNm, MISSED_APPROACH.offsetNm),
+    at('DOWNWIND', behind, MISSED_APPROACH.offsetNm),
+    finalStart,
+  ];
 }

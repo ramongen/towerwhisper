@@ -50,3 +50,10 @@ export const ALIGNED_MAX_NM = 25;
 export const PROFILE_MARGIN_FT = 1000;
 /** At the end of the route the approach starts when within this of the glide path (ft). */
 export const JOIN_GLIDE_TOLERANCE_FT = 1500;
+
+/**
+ * Missed-approach pattern (NM): climb straight ahead this far past the threshold, turn right
+ * this far out (crosswind), fly downwind until this far beyond the start of the final
+ * approach (about where the IF is), then back to the IF.
+ */
+export const MISSED_APPROACH = { climbOutNm: 5, offsetNm: 6, finalNm: 12, extendNm: 4 };

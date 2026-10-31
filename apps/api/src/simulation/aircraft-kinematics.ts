@@ -39,6 +39,11 @@ export interface SimAircraft extends Aircraft {
   landingRequested?: boolean;
   /** The controller (or a demo fault) set its altitude: no more descent on its own. */
   altitudeAssigned?: boolean;
+  /**
+   * Heading the approach steers (intercept, localizer). Kept apart from target.headingDeg,
+   * which is only ever a heading the controller assigned ("on vectors").
+   */
+  approachHeadingDeg?: number;
 }
 
 /**
@@ -76,6 +81,7 @@ export class AircraftKinematics {
 
   private flyApproach(a: SimAircraft): void {
     const approach = a.target.approach;
+    a.approachHeadingDeg = undefined;
     if (!approach) return;
     const course = runway(approach.runway).trueBearingDeg;
     // alongTrack: NM before the threshold; crossTrack: + = left of the inbound course
@@ -102,10 +108,12 @@ export class AircraftKinematics {
       -LOC_MAX_CORRECTION_DEG,
       Math.min(LOC_MAX_CORRECTION_DEG, crossTrack * LOC_GAIN_DEG_PER_NM),
     );
-    a.target.headingDeg = normalizeHeading(Math.round(course + correction));
-    a.target.turnDir = 'any';
+    a.approachHeadingDeg = normalizeHeading(Math.round(course + correction));
 
     if (a.locCaptured) {
+      // On the localizer: the controller's vector is done, the approach steers now.
+      a.target.headingDeg = undefined;
+      a.target.turnDir = undefined;
       // 3 degree glide path above the threshold, and slowing down for landing.
       const distance = this.distanceToThreshold(a) ?? 0;
       const glideFt =
@@ -126,6 +134,11 @@ export class AircraftKinematics {
     if (a.target.headingDeg !== undefined) {
       a.navHeadingDeg = undefined;
       a.nextWaypoint = undefined;
+      a.holding = false;
+      return;
+    }
+    if (a.approachHeadingDeg !== undefined) {
+      a.navHeadingDeg = undefined; // the approach steers
       a.holding = false;
       return;
     }
@@ -188,7 +201,7 @@ export class AircraftKinematics {
 
   private turn(a: SimAircraft, dtS: number): void {
     const assigned = a.target.headingDeg !== undefined;
-    const target = a.target.headingDeg ?? a.navHeadingDeg;
+    const target = a.target.headingDeg ?? a.approachHeadingDeg ?? a.navHeadingDeg;
     if (target === undefined) {
       a.turnRateDegS = 0;
       return;
