@@ -4,6 +4,7 @@ import DesktopOnly from './components/DesktopOnly.vue';
 import './styles/tokens.css';
 import './styles/base.css';
 import { isPhonePage, isSmallScreen, SMALL_SCREEN_QUERY } from './utils/screen';
+import { initUiScale } from './utils/uiScale';
 
 /**
  * A phone (or any screen too small for the console) gets only the "desktop only" screen: the
@@ -17,6 +18,7 @@ if (isSmallScreen() && !isPhonePage(window.location.pathname)) {
     if (!event.matches) window.location.reload();
   });
 } else {
+  if (!isPhonePage(window.location.pathname)) initUiScale();
   void Promise.all([import('./App.vue'), import('./router')]).then(
     ([{ default: App }, { router }]) => {
       createApp(App).use(createPinia()).use(router).mount('#app');

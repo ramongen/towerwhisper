@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { SupervisorAnalytics } from '@towerwhisper/shared';
 import { computed, ref } from 'vue';
+import { cssZoom } from '../../utils/uiScale';
 import { niceScale, useChartSize } from './useChartSize';
 
 /**
@@ -86,8 +87,10 @@ const tip = computed(() => {
 });
 
 function onMove(event: MouseEvent): void {
-  const rect = (event.currentTarget as SVGElement).getBoundingClientRect();
-  const i = Math.floor((event.clientX - rect.left - PAD.left) / slot.value);
+  const svg = event.currentTarget as SVGElement;
+  const rect = svg.getBoundingClientRect();
+  const x = (event.clientX - rect.left) / cssZoom(svg);
+  const i = Math.floor((x - PAD.left) / slot.value);
   hover.value = i >= 0 && i < props.timeline.length ? i : null;
 }
 </script>

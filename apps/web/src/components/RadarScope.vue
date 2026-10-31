@@ -15,6 +15,7 @@ import { api } from '../utils/api';
 import { formatAge, heading, levelLine } from '../utils/format';
 import { loadTerrain, parseStops, type Terrain } from '../utils/terrain';
 import { readTokens } from '../utils/tokens';
+import { cssZoom } from '../utils/uiScale';
 import { levelsFromTokens, recolourTile } from '../utils/weatherRadar';
 import AdvisoryCard from './AdvisoryCard.vue';
 
@@ -240,7 +241,8 @@ function resize(): void {
   const el = canvas.value;
   const box = wrapper.value;
   if (!el || !box) return;
-  const dpr = window.devicePixelRatio || 1;
+  // Backing store at the real screen resolution, display scale (CSS zoom) included.
+  const dpr = (window.devicePixelRatio || 1) * cssZoom(el);
   width = box.clientWidth;
   height = box.clientHeight;
   el.width = Math.round(width * dpr);
@@ -919,7 +921,8 @@ let swallowClick = false;
 
 function localPoint(event: MouseEvent): { x: number; y: number } {
   const rect = canvas.value!.getBoundingClientRect();
-  return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  const zoom = cssZoom(canvas.value);
+  return { x: (event.clientX - rect.left) / zoom, y: (event.clientY - rect.top) / zoom };
 }
 
 function onClick(event: MouseEvent): void {
@@ -970,8 +973,9 @@ function onPointerDown(event: PointerEvent): void {
 function onPointerMove(event: PointerEvent): void {
   cursor = localPoint(event);
   if (!drag) return;
-  const dx = event.clientX - drag.x;
-  const dy = event.clientY - drag.y;
+  const zoom = cssZoom(canvas.value);
+  const dx = (event.clientX - drag.x) / zoom;
+  const dy = (event.clientY - drag.y) / zoom;
   if (!drag.moved && Math.hypot(dx, dy) < DRAG_THRESHOLD_PX) return;
   drag.moved = true;
   view.centerX = drag.centerX - dx / pxPerNm;

@@ -150,7 +150,7 @@ function toggleSelect(callsign: string): void {
 
 <style scoped>
 .controller {
-  height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;

@@ -4,6 +4,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useAuthStore } from '../stores/useAuthStore';
 import { useSectorStore } from '../stores/useSectorStore';
+import { setUiScale, UI_SCALE_CHOICES, uiScaleChoice } from '../utils/uiScale';
 
 const auth = useAuthStore();
 const { user } = storeToRefs(auth);
@@ -82,6 +83,22 @@ onBeforeUnmount(() => {
       <div class="menu-head">
         <span class="name">{{ user.name }}</span>
         <span class="email mono">{{ user.email }}</span>
+      </div>
+      <div class="scale" role="group" aria-labelledby="ui-scale-label">
+        <span id="ui-scale-label" class="scale-label">DISPLAY SCALE</span>
+        <div class="scale-options">
+          <button
+            v-for="c in UI_SCALE_CHOICES"
+            :key="c.label"
+            type="button"
+            class="mono scale-option"
+            :aria-pressed="uiScaleChoice === c.value"
+            @click="setUiScale(c.value)"
+          >
+            {{ c.label }}
+          </button>
+        </div>
+        <span class="scale-hint">Auto fits the 1920 × 1080 layout; lower = bigger radar</span>
       </div>
       <button type="button" role="menuitem" class="item" @click="signOut">
         <svg
@@ -182,6 +199,53 @@ onBeforeUnmount(() => {
 .email {
   font-size: 12px;
   color: var(--color-text-muted);
+}
+
+.scale {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3) var(--space-3);
+  border-bottom: var(--border-width) solid var(--color-border);
+  margin-bottom: var(--space-1);
+}
+
+.scale-label {
+  font-size: var(--font-size-caption);
+  font-weight: 700;
+  letter-spacing: var(--letter-label);
+  color: var(--color-text-muted);
+}
+
+.scale-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-1);
+}
+
+.scale-option {
+  padding: 6px 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text-secondary);
+  background: var(--color-control);
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius-sm);
+}
+
+.scale-option:hover {
+  border-color: var(--color-text-muted);
+}
+
+.scale-option[aria-pressed='true'] {
+  color: var(--color-atc);
+  background: var(--color-atc-bg);
+  border-color: var(--color-atc);
+}
+
+.scale-hint {
+  font-size: var(--font-size-caption);
+  color: var(--color-text-faint);
 }
 
 .item {

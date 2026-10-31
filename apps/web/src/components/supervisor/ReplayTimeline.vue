@@ -2,6 +2,7 @@
 import type { Alert, CommsReadbackPayload, CommsTransmissionPayload } from '@towerwhisper/shared';
 import { computed, ref } from 'vue';
 import { alertLabel, utcTime } from '../../utils/format';
+import { cssZoom } from '../../utils/uiScale';
 
 /**
  * The session as a bar: alerts drawn where they were active (amber / red), transmissions as
@@ -88,7 +89,7 @@ function onDown(event: PointerEvent): void {
 function onMove(event: PointerEvent): void {
   const rect = track.value!.getBoundingClientRect();
   hover.value = {
-    x: event.clientX - rect.left,
+    x: (event.clientX - rect.left) / cssZoom(track.value),
     t: timeAt(event.clientX),
     label: eventNear(event.clientX),
   };

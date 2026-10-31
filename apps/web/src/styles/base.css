@@ -11,6 +11,12 @@ body,
   height: 100%;
 }
 
+/* Display scale (utils/uiScale.ts). Percent heights fill the window at any zoom; avoid vh/vw
+   inside the app, they shrink with it. */
+#app {
+  zoom: var(--ui-scale, 1);
+}
+
 body {
   background: var(--color-bg);
   color: var(--color-text);
