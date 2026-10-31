@@ -52,7 +52,7 @@ export async function loadTerrain(
   heatStops: [number, [number, number, number]][],
 ): Promise<Terrain> {
   try {
-    const response = await fetch(`${BASE}lrcv-contours.json`);
+    const response = await fetch(`${BASE}relief-contours.json`);
     if (!response.ok) return { levels: [], peaks: [], heat: null };
     const file = (await response.json()) as TerrainFile;
     const levels = file.levels.map((level) => {

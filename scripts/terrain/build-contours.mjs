@@ -1,4 +1,4 @@
-// Builds the relief contours drawn behind the radar (apps/web/public/terrain/lrcv-contours.json).
+// Builds the relief contours drawn behind the radar (apps/web/public/terrain/relief-contours.json).
 //
 //   node scripts/terrain/build-contours.mjs [tile-cache-dir]
 //
@@ -12,14 +12,15 @@ import { inflateSync } from 'node:zlib';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const OUT_DIR = join(ROOT, 'apps', 'web', 'public', 'terrain');
-const OUT = join(OUT_DIR, 'lrcv-contours.json');
-const OUT_ELEVATION = join(OUT_DIR, 'lrcv-elevation.bin');
+const OUT = join(OUT_DIR, 'relief-contours.json');
+const OUT_ELEVATION = join(OUT_DIR, 'relief-elevation.bin');
 const CACHE = resolve(process.argv[2] ?? join(ROOT, '.cache', 'terrain-tiles'));
 
-const LRCV = { lat: 44.3181, lon: 23.8886 };
-/** About 60 NM around the airport, so panning out still shows relief. */
-/** About 205 NM east-west and 95 NM north-south: wider than the radar shows fully zoomed out. */
-const SPAN = { lat: 1.6, lon: 4.8 };
+/**
+ * Every approach sector's scope, fully zoomed out: Craiova and București in the south,
+ * Timișoara, Cluj and Oradea in the north-west (about 90 NM by 70 NM around each airport).
+ */
+const BOX = { latMin: 42.7, latMax: 48.4, lonMin: 19.1, lonMax: 28.7 };
 const ZOOM = 9;
 const GRID_DEG = 0.006; // ~670 m north-south
 /** Contour interval by height: dense in the plain, sparser in the mountains. */
@@ -33,7 +34,7 @@ const RASTER_DEG = 0.01;
 const PEAK_MIN_M = 300;
 const PEAK_WINDOW = 4; // cells each side
 const PEAK_SEPARATION_DEG = 0.12;
-const PEAK_MAX = 80;
+const PEAK_MAX = 140;
 const MIN_POINTS = 4;
 const TILE_URL = (z, x, y) =>
   `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`;
@@ -122,10 +123,7 @@ function decodePng(buf) {
 // --- Elevation grid in lat/lon -----------------------------------------------------------------
 
 async function elevationGrid() {
-  const latMin = LRCV.lat - SPAN.lat;
-  const latMax = LRCV.lat + SPAN.lat;
-  const lonMin = LRCV.lon - SPAN.lon;
-  const lonMax = LRCV.lon + SPAN.lon;
+  const { latMin, latMax, lonMin, lonMax } = BOX;
   const x0 = Math.floor(tileX(lonMin));
   const x1 = Math.floor(tileX(lonMax));
   const y0 = Math.floor(tileY(latMax));
@@ -353,7 +351,7 @@ writeFileSync(
     levels,
     peaks: peaks.map((p) => [+p.lat.toFixed(4), +p.lon.toFixed(4), p.elevM]),
     elevation: {
-      file: 'lrcv-elevation.bin',
+      file: 'relief-elevation.bin',
       format: 'int16le, metres, rows north to south',
       latMax: +latMax.toFixed(4),
       lonMin: +grid.lonMin.toFixed(4),
