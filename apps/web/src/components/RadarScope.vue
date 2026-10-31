@@ -1,5 +1,10 @@
 <script setup lang="ts">
-import type { Aircraft, AirspaceResponse, WeatherRadarResponse } from '@towerwhisper/shared';
+import type {
+  Advisory,
+  Aircraft,
+  AirspaceResponse,
+  WeatherRadarResponse,
+} from '@towerwhisper/shared';
 import { storeToRefs } from 'pinia';
 import { onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
 import { useAlertStore, type AlertLevel } from '../stores/useAlertStore';
@@ -11,6 +16,7 @@ import { formatAge, heading, levelLine } from '../utils/format';
 import { loadTerrain, parseStops, type Terrain } from '../utils/terrain';
 import { readTokens } from '../utils/tokens';
 import { levelsFromTokens, recolourTile } from '../utils/weatherRadar';
+import AdvisoryCard from './AdvisoryCard.vue';
 
 type Runway = AirspaceResponse['runways'][number];
 
@@ -36,6 +42,16 @@ const HIT_RADIUS_PX = 22;
 const ROSE_RADIUS_PX = 78;
 /** A press (left or middle button) that moves less than this is a click, not a pan. */
 const DRAG_THRESHOLD_PX = 3;
+/** NEXT CALL chip under a data block (px), and the card it opens. */
+const CHIP_H_PX = 22;
+const CHIP_PAD_PX = 9;
+const CHIP_ICON_PX = 14;
+const ADVISORY_CARD_W = 420;
+const ADVISORY_CARD_MIN_H = 320;
+/** The selected aircraft's details card (400 px + margins) owns the right edge of the scope. */
+const DETAILS_COLUMN_PX = 432;
+/** ...and the PTT bar its bottom edge. */
+const PTT_BAR_PX = 120;
 /**
  * The relief data is built around Craiova and covers this far from it; panning stays inside.
  * Other sectors pan within a fixed area round their airport (relief where it exists).
@@ -78,7 +94,7 @@ const sector = useSectorStore();
 const ORIGIN = sector.current?.airport ?? { lat: 44.31806, lon: 23.88861, icao: 'LRCV', name: '' };
 const COS_LAT0 = Math.cos((ORIGIN.lat * Math.PI) / 180);
 const COVERAGE_NM = ORIGIN.icao === 'LRCV' ? LRCV_COVERAGE_NM : SECTOR_COVERAGE_NM;
-const scopeLabel = `Radar scope around ${ORIGIN.name || ORIGIN.icao}; click an aircraft to select it, middle-drag to pan, wheel to zoom`;
+const scopeLabel = `Radar scope around ${ORIGIN.name || ORIGIN.icao}; click an aircraft to select it, its NEXT CALL chip for the suggested next call, left- or middle-drag to pan, wheel to zoom`;
 const alerts = useAlertStore();
 const demo = useDemoStore();
 
@@ -88,6 +104,12 @@ const panning = ref(false);
 const zoomLabel = ref('1.0×');
 const mapMode = ref<MapMode>(savedMode());
 const radarTime = ref<string | null>(null);
+/** The NEXT CALL card open on the scope: whose, and where (scope px, already kept on screen). */
+const advisoryOpen = ref<{ callsign: string; x: number; y: number; maxHeight: number } | null>(
+  null,
+);
+/** Advice the controller has opened: its chip stops pulsing. Plain set, read every frame. */
+const seenAdvisories = new Set<string>();
 
 function setMapMode(id: MapMode): void {
   mapMode.value = id;
@@ -139,6 +161,8 @@ function loadColors() {
     selected: '--color-atc',
     caution: '--color-caution',
     warning: '--color-warning',
+    selectedBg: '--color-atc-bg',
+    cautionBg: '--color-caution-bg',
     font: '--font-data',
   });
 }
@@ -159,7 +183,14 @@ let terrain: Terrain = { levels: [], peaks: [], heat: null };
 let wx: { info: WeatherRadarResponse; tiles: Map<string, HTMLCanvasElement> } | null = null;
 let radarTimer: ReturnType<typeof setInterval> | undefined;
 /** Screen positions of the last frame, for click hit-testing. */
-let hitTargets: { callsign: string; x: number; y: number; box: DOMRect }[] = [];
+let hitTargets: {
+  callsign: string;
+  x: number;
+  y: number;
+  box: DOMRect;
+  /** The NEXT CALL chip under the data block, when there is advice. */
+  chip: DOMRect | null;
+}[] = [];
 /** Mouse position over the scope, for the heading-to-cursor line of the selected aircraft. */
 let cursor: { x: number; y: number } | null = null;
 
@@ -812,15 +843,72 @@ function drawTraffic(ctx: CanvasRenderingContext2D, now: number): void {
     ctx.font = `600 13px ${colors.font}`;
     ctx.fillStyle = commsColor(a.commsAgeS);
     ctx.fillText(`LC ${formatAge(a.commsAgeS)}`, bx, by + 51);
+    const chip = a.advisory ? drawAdvisoryChip(ctx, a.advisory, bx, by + 60, now) : null;
 
     targets.push({
       callsign: a.callsign,
       x: pos.x,
       y: pos.y,
       box: new DOMRect(bx, by - 14, 120, 70),
+      chip,
     });
   }
   hitTargets = targets;
+}
+
+/**
+ * "NEXT CALL" under the data block when the advisor has a suggestion (amber "NEXT CALL NOW"
+ * when it is urgent). It pulses until the controller opens it. Returns its box for clicks.
+ */
+function drawAdvisoryChip(
+  ctx: CanvasRenderingContext2D,
+  advisory: Advisory,
+  x: number,
+  y: number,
+  now: number,
+): DOMRect {
+  const urgent = advisory.urgency === 'urgent';
+  const text = urgent ? 'NEXT CALL NOW' : 'NEXT CALL';
+  const color = urgent ? colors.caution : colors.selected;
+  ctx.font = `700 13px ${colors.font}`;
+  const w = Math.ceil(ctx.measureText(text).width) + CHIP_PAD_PX * 2 + CHIP_ICON_PX;
+  const fresh = !seenAdvisories.has(advisory.id);
+
+  ctx.fillStyle = urgent ? colors.cautionBg : colors.selectedBg;
+  ctx.strokeStyle = color;
+  ctx.lineWidth = fresh ? 2 : 1;
+  ctx.globalAlpha = fresh ? 0.55 + 0.45 * Math.sin(now / 200) ** 2 : 1;
+  ctx.beginPath();
+  ctx.roundRect(x, y, w, CHIP_H_PX, CHIP_H_PX / 2);
+  ctx.fill();
+  ctx.stroke();
+  ctx.globalAlpha = 1;
+
+  // A small diamond, then the label.
+  const cx = x + CHIP_PAD_PX + 4;
+  const cy = y + CHIP_H_PX / 2;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.moveTo(cx, cy - 4);
+  ctx.lineTo(cx + 4, cy);
+  ctx.lineTo(cx, cy + 4);
+  ctx.lineTo(cx - 4, cy);
+  ctx.closePath();
+  ctx.fill();
+  ctx.textBaseline = 'middle';
+  ctx.fillText(text, x + CHIP_PAD_PX + CHIP_ICON_PX, cy + 1);
+  ctx.textBaseline = 'alphabetic';
+  return new DOMRect(x, y, w, CHIP_H_PX);
+}
+
+/** Opens the NEXT CALL card under a chip, kept inside the scope. */
+function openAdvisory(callsign: string, chip: DOMRect, aircraftX: number): void {
+  // Under the chip; to the left of the aircraft when that would cover the details card.
+  const maxX = Math.max(8, width - DETAILS_COLUMN_PX - ADVISORY_CARD_W);
+  const preferred = chip.left <= maxX ? chip.left : aircraftX - ADVISORY_CARD_W - 24;
+  const x = Math.max(8, Math.min(preferred, maxX));
+  const y = Math.max(8, Math.min(chip.bottom + 6, height - PTT_BAR_PX - ADVISORY_CARD_MIN_H));
+  advisoryOpen.value = { callsign, x, y, maxHeight: height - PTT_BAR_PX - y };
 }
 
 // --- Interaction: click to select, left- or middle-drag to pan, wheel / buttons to zoom ------
@@ -841,6 +929,14 @@ function onClick(event: MouseEvent): void {
     return;
   }
   const { x, y } = localPoint(event);
+  for (const t of hitTargets) {
+    const c = t.chip;
+    if (c && x >= c.left && x <= c.right && y >= c.top && y <= c.bottom) {
+      traffic.select(t.callsign);
+      openAdvisory(t.callsign, c, t.x);
+      return;
+    }
+  }
   let best: string | null = null;
   let bestDistance = HIT_RADIUS_PX;
   for (const t of hitTargets) {
@@ -852,6 +948,7 @@ function onClick(event: MouseEvent): void {
       best = t.callsign;
     }
   }
+  if (!best) advisoryOpen.value = null; // a click on the empty map closes the card
   traffic.select(best === selected ? null : best);
 }
 
@@ -964,6 +1061,22 @@ onBeforeUnmount(() => {
       @auxclick.prevent
       @wheel="onWheel"
     />
+    <div
+      v-if="advisoryOpen"
+      class="advisory-anchor"
+      :style="{
+        left: `${advisoryOpen.x}px`,
+        top: `${advisoryOpen.y}px`,
+        maxHeight: `${advisoryOpen.maxHeight}px`,
+      }"
+    >
+      <AdvisoryCard
+        :key="advisoryOpen.callsign"
+        :callsign="advisoryOpen.callsign"
+        @close="advisoryOpen = null"
+        @seen="(id) => seenAdvisories.add(id)"
+      />
+    </div>
     <div class="map-modes mono" role="group" aria-label="Map background">
       <button
         v-for="m in MAP_MODES"
@@ -1062,6 +1175,14 @@ canvas {
   display: block;
   cursor: crosshair;
   touch-action: none;
+}
+
+/* The NEXT CALL card floats under the chip it was opened from. */
+.advisory-anchor {
+  position: absolute;
+  z-index: 3;
+  display: flex;
+  flex-direction: column;
 }
 
 canvas.panning {
