@@ -45,3 +45,8 @@ export const ALIGNED_CROSS_TRACK_NM = 4;
 export const ALIGNED_HEADING_DEG = 45;
 export const ALIGNED_MIN_NM = 2;
 export const ALIGNED_MAX_NM = 25;
+
+/** Own navigation descends this far above the extended 3 degree glide path (ft). */
+export const PROFILE_MARGIN_FT = 1000;
+/** At the end of the route the approach starts when within this of the glide path (ft). */
+export const JOIN_GLIDE_TOLERANCE_FT = 1500;

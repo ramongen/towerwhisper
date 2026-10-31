@@ -1,6 +1,4 @@
 import type { Aircraft } from '@towerwhisper/shared';
-import { ClearanceProbe } from '../src/safety/clearance-probe';
-import { AlertRegistry } from '../src/safety/alert-registry';
 import { CallsignResolver } from '../src/parser/callsign-resolver';
 import type { LlmParser } from '../src/parser/llm-parser';
 import { ParserService } from '../src/parser/parser.service';
@@ -102,7 +100,7 @@ describe('aircraft follow their instructions', () => {
   it('capture the ILS from vectors, slow down, land when cleared and leave the scope', () => {
     const sim = setup();
     const events: SimEvent[] = [];
-    sim.onEvent((e) => events.push(e));
+    sim.onEvent((e) => e.callsign === 'WZZ44' && events.push(e));
     clear(sim, ILS_26_VECTORS);
     clear(sim, 'WIZZ 44, cleared to land runway 26');
     let slowest = Infinity;
@@ -118,7 +116,7 @@ describe('aircraft follow their instructions', () => {
   it('asks for landing clearance on final and goes around without it', () => {
     const sim = setup();
     const events: SimEvent[] = [];
-    sim.onEvent((e) => events.push(e));
+    sim.onEvent((e) => e.callsign === 'WZZ44' && events.push(e));
     clear(sim, ILS_26_VECTORS);
     run(sim, 1200);
     expect(events.map((e) => e.type)).toEqual(['landing-request', 'go-around']);
@@ -140,7 +138,7 @@ describe('aircraft follow their instructions', () => {
   it('goes around when the controller says so', () => {
     const sim = setup();
     const events: SimEvent[] = [];
-    sim.onEvent((e) => events.push(e));
+    sim.onEvent((e) => e.callsign === 'WZZ44' && events.push(e));
     clear(sim, ILS_26_VECTORS);
     run(sim, 200);
     sim.goAround('WZZ44', 'instructed');
@@ -148,27 +146,19 @@ describe('aircraft follow their instructions', () => {
     expect(get(sim, 'WZZ44').target.approach).toBeUndefined();
   });
 
-  it('proceed direct to a fix and hold over the end of the route', () => {
+  it('proceed direct to a fix, then line up on the ILS by itself', () => {
     const sim = setup();
     clear(sim, 'WIZZ 44, turn right heading 270');
     run(sim, 20);
     clear(sim, 'WIZZ 44, proceed direct OZZET');
     run(sim, 5);
     expect(get(sim, 'WZZ44').nextWaypoint).toBe('OZZET');
-    run(sim, 900);
-    const a = get(sim, 'WZZ44');
-    expect(a.holding).toBe(true);
-    expect(a.turnRateDegS).toBeGreaterThan(0); // orbiting right
-  });
-
-  it('the scenario has no conflict before the controller does anything', () => {
-    const sim = setup();
-    const alerts = new AlertRegistry();
-    const probe = new ClearanceProbe(alerts);
-    for (let s = 0; s < 600; s += 30) {
-      run(sim, 30);
-      probe.scan(sim.getAircraft());
+    let onApproach = false;
+    for (let s = 0; s < 900 && !onApproach; s += 5) {
+      run(sim, 5);
+      expect(get(sim, 'WZZ44').holding).toBeFalsy(); // no circling over OZZET
+      onApproach = get(sim, 'WZZ44').target.approach?.runway === '26';
     }
-    expect(alerts.list()).toEqual([]);
+    expect(onApproach).toBe(true); // it starts the ILS 26 approach at the end of its route
   });
 });

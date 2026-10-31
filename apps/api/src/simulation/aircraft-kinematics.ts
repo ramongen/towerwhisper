@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import type { Aircraft, RunwayId, Waypoint } from '@towerwhisper/shared';
 import { AIRCRAFT_TYPES } from '../airport/constants';
-import { AIRSPACE, runway } from '../airspace/airspace';
+import { AIRSPACE, ILS_RUNWAY, runway } from '../airspace/airspace';
 import {
   ALIGNED_CROSS_TRACK_NM,
   ALIGNED_HEADING_DEG,
@@ -11,7 +11,9 @@ import {
   DEFAULT_APPROACH_SPEED_KT,
   GLIDE_SLOPE_FT_PER_NM,
   LEVEL_OFF_FPM_PER_FT,
+  JOIN_GLIDE_TOLERANCE_FT,
   LEVEL_OFF_MIN_FPM,
+  PROFILE_MARGIN_FT,
   LOC_CAPTURE_NM,
   LOC_GAIN_DEG_PER_NM,
   LOC_MAX_CORRECTION_DEG,
@@ -35,6 +37,8 @@ export interface SimAircraft extends Aircraft {
   navHeadingDeg?: number;
   /** The pilot has asked for landing clearance on this approach. */
   landingRequested?: boolean;
+  /** The controller (or a demo fault) set its altitude: no more descent on its own. */
+  altitudeAssigned?: boolean;
 }
 
 /**
@@ -136,12 +140,49 @@ export class AircraftKinematics {
       a.navHeadingDeg = normalizeHeading((Math.atan2(q.x - p.x, q.y - p.y) * 180) / Math.PI);
       a.nextWaypoint = next.name;
       a.holding = false;
+      this.descendOnProfile(a, distanceToGo(a, p));
     } else if (a.route.length > 0) {
-      a.navHeadingDeg = normalizeHeading(a.headingDeg + 90); // a continuous right turn
-      a.nextWaypoint = a.route[a.route.length - 1].name;
-      a.holding = true;
+      this.endOfRoute(a, p);
     } else {
       a.navHeadingDeg = undefined; // no plan: keep the present heading
+    }
+  }
+
+  /**
+   * Without an altitude from the controller the aircraft descends along its route on the
+   * 3:1 rule (the 3 degree glide path extended back, plus a margin), so it reaches the
+   * end of the route low enough to start the approach. It only ever descends.
+   */
+  private descendOnProfile(a: SimAircraft, distanceToGoNm: number): void {
+    if (a.altitudeAssigned) return;
+    const profileFt = Math.round((glidePathFt(distanceToGoNm) + PROFILE_MARGIN_FT) / 100) * 100;
+    if (a.target.altitudeFt === undefined || profileFt < a.target.altitudeFt) {
+      a.target.altitudeFt = profileFt;
+    }
+  }
+
+  /**
+   * End of the route (the intermediate fix OZZET, on the runway 26 centreline): start the
+   * ILS approach and line up with the runway. Only an aircraft still too high orbits over
+   * the fix first, descending, until it can join the glide path.
+   */
+  private endOfRoute(a: SimAircraft, p: { x: number; y: number }): void {
+    const last = a.route[a.route.length - 1];
+    a.nextWaypoint = last.name;
+    if (a.target.approach) return; // already on an approach: flyApproach steers
+    const toThresholdNm = distance(p, toXy(runway(ILS_RUNWAY).threshold));
+    const joinFt = glidePathFt(toThresholdNm) + JOIN_GLIDE_TOLERANCE_FT;
+    if (a.altitudeFt <= joinFt) {
+      a.target.approach = { type: 'ILS', runway: ILS_RUNWAY };
+      a.locCaptured = false;
+      a.holding = false;
+      a.navHeadingDeg = undefined;
+      return;
+    }
+    a.navHeadingDeg = normalizeHeading(a.headingDeg + 90); // a continuous right turn
+    a.holding = true;
+    if (!a.altitudeAssigned) {
+      a.target.altitudeFt = Math.round((joinFt - JOIN_GLIDE_TOLERANCE_FT) / 100) * 100;
     }
   }
 
@@ -225,6 +266,23 @@ export function finalApproachPosition(
   const alongTrack = -(dx * Math.sin(rad) + dy * Math.cos(rad));
   const crossTrack = -(dx * Math.cos(rad) - dy * Math.sin(rad));
   return { alongTrack, crossTrack };
+}
+
+/** Altitude (ft) of the 3 degree glide path this far (NM) from the threshold. */
+function glidePathFt(distanceNm: number): number {
+  return AIRSPACE.airport.elevationFt + distanceNm * GLIDE_SLOPE_FT_PER_NM;
+}
+
+/** NM along the rest of the route, then from its last fix to the ILS runway threshold. */
+function distanceToGo(a: SimAircraft, p: { x: number; y: number }): number {
+  let total = 0;
+  let from = p;
+  for (const fix of a.route.slice(a.routeIndex)) {
+    const q = toXy(fix);
+    total += distance(from, q);
+    from = q;
+  }
+  return total + distance(from, toXy(runway(ILS_RUNWAY).threshold));
 }
 
 function distance(a: { x: number; y: number }, b: { x: number; y: number }): number {

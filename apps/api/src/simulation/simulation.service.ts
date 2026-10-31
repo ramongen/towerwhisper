@@ -94,6 +94,7 @@ export class SimulationService implements OnModuleInit, OnModuleDestroy {
     };
     a.locCaptured = false;
     a.landingRequested = false;
+    a.altitudeAssigned = true;
     this.logger.log(`${callsign} going around runway ${rwy} (${reason})`);
     this.emit({ type: 'go-around', callsign, runway: rwy, reason });
   }
@@ -155,6 +156,7 @@ export class SimulationService implements OnModuleInit, OnModuleDestroy {
     }
     a.target = { ...a.target, ...targets };
     if (targets.approach) a.locCaptured = false;
+    if (targets.altitudeFt !== undefined) a.altitudeAssigned = true;
     if (targets.directTo) this.directTo(a, targets.directTo);
     if (clearanceId) a.activeClearanceId = clearanceId;
   }
