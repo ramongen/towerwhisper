@@ -2,6 +2,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import DesktopOnly from './components/DesktopOnly.vue';
+import { usePageTitle } from './composables/usePageTitle';
 import { connectSocket, disconnectSocket } from './composables/useSocket';
 import { useAuthStore } from './stores/useAuthStore';
 import { onApiUnauthorized } from './utils/api';
@@ -10,6 +11,7 @@ import { SMALL_SCREEN_QUERY } from './utils/screen';
 const auth = useAuthStore();
 const route = useRoute();
 const router = useRouter();
+usePageTitle();
 
 // A window made too small after loading: cover the app (the demo panel is fine anywhere).
 const media = window.matchMedia(SMALL_SCREEN_QUERY);

@@ -11,6 +11,7 @@ import { isPhonePage, isSmallScreen, SMALL_SCREEN_QUERY } from './utils/screen';
  * grows large enough. The demo panel is the exception: it is made for phones.
  */
 if (isSmallScreen() && !isPhonePage(window.location.pathname)) {
+  document.title = 'Desktop only · TowerWhisper';
   createApp(DesktopOnly).mount('#app');
   window.matchMedia(SMALL_SCREEN_QUERY).addEventListener('change', (event) => {
     if (!event.matches) window.location.reload();
