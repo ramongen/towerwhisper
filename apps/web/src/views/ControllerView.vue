@@ -191,12 +191,17 @@ function toggleSelect(callsign: string): void {
 }
 
 .top-left {
+  pointer-events: none; /* its empty corner must not block the map-mode buttons */
   position: absolute;
   top: var(--space-4);
   left: var(--space-4);
   display: flex;
   flex-direction: column;
   gap: var(--space-2);
+}
+
+.top-left > :not(.legend) {
+  pointer-events: auto;
 }
 
 .legend {
