@@ -182,7 +182,11 @@ const tabs = [
   fill: var(--color-warning);
 }
 
+/* The only scrolling box of the page. Positioned, so absolutely placed content (the
+   visually-hidden table labels, tooltips) stays inside it instead of stretching the body
+   into a second scrollbar. */
 .content {
+  position: relative;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
