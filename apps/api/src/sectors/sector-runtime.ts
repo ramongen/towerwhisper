@@ -14,6 +14,7 @@ import type {
   TransmissionResponse,
 } from '@towerwhisper/shared';
 import { randomUUID } from 'node:crypto';
+import { NextCallAdvisor } from '../advisor/next-call-advisor';
 import { AIRCRAFT_TYPES } from '../airport/constants';
 import { assessRunways } from '../airport/runway-advisor';
 import type { AppModeService } from '../app-mode.service';
@@ -109,6 +110,9 @@ export class SectorRuntime {
   private readonly pttHolders = new Set<string>();
   private readonly alertListeners: (() => void)[] = [];
   private frames: { sessionId: string; at: Date; aircraft: Aircraft[] }[] = [];
+  private readonly advisor: NextCallAdvisor;
+  /** When the controller last called each aircraft (sim ms): no advice right after it. */
+  private readonly lastAtcAt = new Map<string, number>();
   private lastFrameAt = 0;
   private flushTimer?: NodeJS.Timeout;
 
@@ -143,10 +147,12 @@ export class SectorRuntime {
       this.probe,
     );
     this.weather = new WeatherService(airspace);
+    this.advisor = new NextCallAdvisor(airspace);
 
-    this.simulation.onTick((aircraft) => {
-      this.emit('traffic:update', aircraft);
-      this.recordFrame(aircraft);
+    this.simulation.onTick((aircraft, simNowMs) => {
+      const traffic = this.withAdvice(aircraft, simNowMs);
+      this.emit('traffic:update', traffic);
+      this.recordFrame(traffic);
     });
     this.alerts.subscribe({
       raised: (alert) => this.onAlertRaised(alert),
@@ -275,6 +281,7 @@ export class SectorRuntime {
     }
 
     this.simulation.touchContact(clearance.callsign);
+    this.lastAtcAt.set(clearance.callsign, this.simulation.simNowMs());
     this.readbackChecker.expect(clearance, this.simulation.simNowMs());
 
     // Clearance Probe: what this instruction would do to separation, before it is flown.
@@ -328,7 +335,10 @@ export class SectorRuntime {
     send('stats:overlay', { visible: this.faults.isOverlayVisible() });
     const weather = this.weather.get();
     if (weather) send('weather:update', weather);
-    send('traffic:update', this.simulation.getAircraft());
+    send(
+      'traffic:update',
+      this.withAdvice(this.simulation.getAircraft(), this.simulation.simNowMs()),
+    );
     send('comms:history', this.history);
     send('alert:history', this.alerts.history());
     for (const alert of this.alerts.list()) send('alert:raised', alert);
@@ -374,6 +384,7 @@ export class SectorRuntime {
     this.sessionAlertIds = new Set();
     this.history = [];
     this.pttHolders.clear();
+    this.lastAtcAt.clear();
     this.frames = [];
     this.lastFrameAt = 0;
 
@@ -410,6 +421,21 @@ export class SectorRuntime {
       if (i < 2) phrases.push(`${a.telephony}, cleared ILS approach runway ${spoken}`);
       if (i === 0) phrases.push(`${a.telephony}, cleared to land runway ${spoken}`);
       return phrases;
+    });
+  }
+
+  /** The suggested next call on every aircraft (advisor/), for the scope and the replay. */
+  private withAdvice(aircraft: Aircraft[], simNowMs: number): Aircraft[] {
+    const weather = this.weather.get();
+    return aircraft.map((a) => {
+      const last = this.lastAtcAt.get(a.callsign);
+      const advisory = this.advisor.advise(a, {
+        flightPlan: this.simulation.getFlightPlan(a.callsign),
+        remainingRoute: this.simulation.getRemainingRoute(a.callsign),
+        weather,
+        sinceAtcMs: last === undefined ? null : simNowMs - last,
+      });
+      return advisory ? { ...a, advisory } : a;
     });
   }
 
