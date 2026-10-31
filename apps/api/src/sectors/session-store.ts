@@ -74,6 +74,7 @@ export class SessionStore {
         .where('ended_at IS NULL')
         .execute(),
     );
+    await this.repairSessionEnds();
     await this.persist(() =>
       this.alerts
         .createQueryBuilder()
@@ -85,6 +86,31 @@ export class SessionStore {
         })
         .where('ended_at IS NULL')
         .execute(),
+    );
+  }
+
+  /**
+   * Sessions recorded before radar frames existed were closed at their start: move their end
+   * to their last transmission or alert, and end their alerts no earlier than they were raised.
+   */
+  private async repairSessionEnds(): Promise<void> {
+    await this.persist(() =>
+      this.sessions.manager.query(`
+        UPDATE sessions s SET ended_at = e.last
+        FROM (
+          SELECT s2.id, GREATEST(
+            (SELECT MAX(t.created_at) FROM transmissions t WHERE t.session_id = s2.id),
+            (SELECT MAX(a.raised_at) FROM alerts a WHERE a.session_id = s2.id)
+          ) AS last
+          FROM sessions s2 WHERE s2.ended_at IS NOT NULL
+        ) e
+        WHERE s.id = e.id AND e.last IS NOT NULL AND e.last > s.ended_at`),
+    );
+    await this.persist(() =>
+      this.sessions.manager.query(`
+        UPDATE alerts a SET ended_at = GREATEST(s.ended_at, a.raised_at)
+        FROM sessions s
+        WHERE a.session_id = s.id AND a.ended_at < a.raised_at`),
     );
   }
 

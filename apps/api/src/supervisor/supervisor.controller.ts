@@ -1,5 +1,9 @@
-import { Controller, Get, Param, Query } from '@nestjs/common';
+import { BadRequestException, Controller, Get, Param, Query } from '@nestjs/common';
 import type {
+  Alert,
+  AlertOutcomeFilter,
+  AlertSearchResponse,
+  AlertType,
   AnalyticsRange,
   ReplaySession,
   ReplaySessionSummary,
@@ -32,6 +36,38 @@ export class SupervisorController {
     @Query('sector') sector?: string,
   ): Promise<SupervisorAnalytics> {
     return this.supervisor.analytics(range, sector && sector !== 'all' ? sector : null);
+  }
+
+  /** GET /api/supervisor/alerts — every alert ever raised, filtered, newest first. */
+  @Get('supervisor/alerts')
+  alerts(
+    @Query('sector') sector?: string,
+    @Query('type') type?: string,
+    @Query('severity') severity?: string,
+    @Query('outcome') outcome?: string,
+    @Query('since') since?: string,
+    @Query('q') q?: string,
+    @Query('page') page = '1',
+    @Query('pageSize') pageSize = '50',
+  ): Promise<AlertSearchResponse> {
+    const sinceDate = since ? new Date(since) : undefined;
+    if (sinceDate && Number.isNaN(sinceDate.getTime())) throw new BadRequestException('Bad since');
+    if (severity && !['caution', 'warning'].includes(severity)) {
+      throw new BadRequestException('Bad severity');
+    }
+    if (outcome && !['resolved', 'cleared', 'open'].includes(outcome)) {
+      throw new BadRequestException('Bad outcome');
+    }
+    return this.supervisor.searchAlerts({
+      sector: sector && sector !== 'all' ? sector : undefined,
+      type: (type || undefined) as AlertType | undefined,
+      severity: (severity || undefined) as Alert['severity'] | undefined,
+      outcome: (outcome || undefined) as AlertOutcomeFilter | undefined,
+      since: sinceDate,
+      q,
+      page: Number(page),
+      pageSize: Number(pageSize),
+    });
   }
 
   /** GET /api/replay/sessions?sector=craiova-app */

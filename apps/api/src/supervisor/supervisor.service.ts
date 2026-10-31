@@ -2,6 +2,9 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import type {
   Alert,
+  AlertOutcomeFilter,
+  AlertRecord,
+  AlertSearchResponse,
   AlertType,
   AnalyticsRange,
   CommsReadbackPayload,
@@ -22,8 +25,10 @@ import {
 import { SectorRegistry } from '../sectors/sector-registry';
 import { findSector, isSectorId } from '../sectors/sectors';
 import {
+  ALERTS_PAGE,
   ANALYTICS_BUCKET_S,
   ANALYTICS_RANGE_S,
+  MAX_ALERTS_PAGE,
   MAX_REPLAY_FRAMES,
   RECENT_ALERTS,
   REPLAY_SESSIONS_LIMIT,
@@ -31,6 +36,17 @@ import {
 } from './constants';
 
 type CommsPayload = CommsTransmissionPayload | CommsReadbackPayload;
+
+export interface AlertFilter {
+  sector?: string;
+  type?: AlertType;
+  severity?: Alert['severity'];
+  outcome?: AlertOutcomeFilter;
+  since?: Date;
+  q?: string;
+  page: number;
+  pageSize: number;
+}
 
 /**
  * Read-only views of what the sectors recorded: statistics for the supervisor dashboard and
@@ -189,11 +205,60 @@ export class SupervisorService {
       bySector,
       resolveHistogram,
       controllers,
-      recent: [...inRange]
-        .reverse()
-        .slice(0, RECENT_ALERTS)
-        .map((a) => ({ ...toAlert(a), sectorId: sectorOfSession.get(a.sessionId) ?? '' })),
+      recent: await this.records([...inRange].reverse().slice(0, RECENT_ALERTS), sectorOfSession),
     };
+  }
+
+  /** Every alert ever raised, filtered, newest first, a page at a time. */
+  async searchAlerts(filter: AlertFilter): Promise<AlertSearchResponse> {
+    const pageSize = Math.min(
+      MAX_ALERTS_PAGE,
+      Math.max(1, Math.floor(filter.pageSize) || ALERTS_PAGE),
+    );
+    const page = Math.max(1, Math.floor(filter.page) || 1);
+    const query = this.alerts
+      .createQueryBuilder('a')
+      .innerJoin(SessionEntity, 's', 's.id = a.session_id')
+      .addSelect('s.sector_id', 'sector_id');
+    if (filter.sector) {
+      if (!isSectorId(filter.sector))
+        throw new BadRequestException(`Unknown sector ${filter.sector}`);
+      query.andWhere('s.sector_id = :sector', { sector: filter.sector });
+    }
+    if (filter.type) query.andWhere('a.type = :type', { type: filter.type });
+    if (filter.severity) query.andWhere('a.severity = :severity', { severity: filter.severity });
+    if (filter.outcome === 'open') query.andWhere('a.ended_at IS NULL');
+    else if (filter.outcome) query.andWhere('a.outcome = :outcome', { outcome: filter.outcome });
+    if (filter.since) query.andWhere('a.raised_at >= :since', { since: filter.since });
+    if (filter.q?.trim()) {
+      query.andWhere("(a.message ILIKE :q OR array_to_string(a.callsigns, ' ') ILIKE :q)", {
+        q: `%${filter.q.trim()}%`,
+      });
+    }
+    const total = await query.getCount();
+    const { entities, raw } = await query
+      .orderBy('a.raised_at', 'DESC')
+      .offset((page - 1) * pageSize)
+      .limit(pageSize)
+      .getRawAndEntities<{ sector_id: string }>();
+    const sectorOf = new Map(entities.map((a, i) => [a.sessionId, raw[i]?.sector_id ?? '']));
+    return { total, page, pageSize, items: await this.records(entities, sectorOf) };
+  }
+
+  /** Alerts with their sector, session and who resolved them. */
+  private async records(
+    rows: AlertEntity[],
+    sectorOfSession: Map<string, string>,
+  ): Promise<AlertRecord[]> {
+    const ids = [...new Set(rows.map((a) => a.resolvedBy).filter((id): id is string => !!id))];
+    const people = ids.length ? await this.users.findBy({ id: In(ids) }) : [];
+    const names = new Map(people.map((u) => [u.id, u.name]));
+    return rows.map((a) => ({
+      ...toAlert(a),
+      sectorId: sectorOfSession.get(a.sessionId) ?? '',
+      sessionId: a.sessionId,
+      resolvedBy: a.resolvedBy ? (names.get(a.resolvedBy) ?? null) : null,
+    }));
   }
 
   async replaySessions(sector: string): Promise<ReplaySessionSummary[]> {
@@ -202,7 +267,12 @@ export class SupervisorService {
     const rows = await this.sessions
       .createQueryBuilder('s')
       .where('s.sector_id = :sector', { sector })
-      .andWhere('EXISTS (SELECT 1 FROM traffic_frames f WHERE f.session_id = s.id)')
+      // Sessions with something to replay: radar frames, or at least comms or alerts.
+      .andWhere(
+        `(EXISTS (SELECT 1 FROM traffic_frames f WHERE f.session_id = s.id)
+          OR EXISTS (SELECT 1 FROM transmissions t WHERE t.session_id = s.id)
+          OR EXISTS (SELECT 1 FROM alerts a WHERE a.session_id = s.id))`,
+      )
       .orderBy('s.started_at', 'DESC')
       .limit(REPLAY_SESSIONS_LIMIT)
       .getMany();
@@ -219,8 +289,15 @@ export class SupervisorService {
       );
     const alertCounts = await count('alerts');
     const transmissionCounts = await count('transmissions');
+    const frameCounts = await count('traffic_frames');
     return rows.map((s) =>
-      this.summary(s, liveId, alertCounts.get(s.id) ?? 0, transmissionCounts.get(s.id) ?? 0),
+      this.summary(
+        s,
+        liveId,
+        alertCounts.get(s.id) ?? 0,
+        transmissionCounts.get(s.id) ?? 0,
+        (frameCounts.get(s.id) ?? 0) > 0,
+      ),
     );
   }
 
@@ -274,9 +351,23 @@ export class SupervisorService {
       where: { sessionId: id },
       order: { raisedAt: 'ASC' },
     });
+
+    // The timeline: the recorded radar when there is one, else the session; always wide
+    // enough to hold every transmission and alert.
+    const live = s.id === liveId;
+    const events = [
+      ...comms.map((c) => Date.parse(c.at)),
+      ...alertRows.flatMap((a) => [a.raisedAt.getTime(), a.endedAt?.getTime() ?? 0]),
+    ].filter((ms) => ms > 0);
+    const from = Math.min(frames[0]?.t ?? s.startedAt.getTime(), ...events);
+    const lastKnown = frames.at(-1)?.t ?? s.endedAt?.getTime() ?? (live ? Date.now() : from);
+    const to = Math.max(lastKnown, ...events, from + 1000);
+
     return {
-      session: this.summary(s, liveId, alertRows.length, commsRows.length, frames.at(-1)?.t),
+      session: this.summary(s, liveId, alertRows.length, commsRows.length, frames.length > 0, to),
       sector: sector.info,
+      from,
+      to,
       frames,
       comms,
       alerts: alertRows.map(toAlert),
@@ -288,11 +379,12 @@ export class SupervisorService {
     liveId: string,
     alerts: number,
     transmissions: number,
-    lastFrameMs?: number,
+    hasRadar: boolean,
+    lastKnownMs?: number,
   ): ReplaySessionSummary {
     const live = s.id === liveId;
     const end =
-      s.endedAt?.getTime() ?? (live ? Date.now() : (lastFrameMs ?? s.startedAt.getTime()));
+      s.endedAt?.getTime() ?? (live ? Date.now() : (lastKnownMs ?? s.startedAt.getTime()));
     return {
       id: s.id,
       sectorId: s.sectorId,
@@ -302,6 +394,7 @@ export class SupervisorService {
       alerts,
       transmissions,
       live,
+      hasRadar,
     };
   }
 }

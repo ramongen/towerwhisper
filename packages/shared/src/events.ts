@@ -300,7 +300,28 @@ export interface SupervisorAnalytics {
     meanResolveS: number | null;
   }[];
   /** Latest alerts in the range, newest first. */
-  recent: (Alert & { sectorId: string })[];
+  recent: AlertRecord[];
+}
+
+/** A past (or active) alert with where it happened, so it can be replayed. */
+export interface AlertRecord extends Alert {
+  sectorId: string;
+  sessionId: string;
+  /** Name of the controller who resolved it. */
+  resolvedBy: string | null;
+}
+
+export type AlertOutcomeFilter = AlertOutcome | 'open';
+
+/**
+ * GET /supervisor/alerts?sector=&type=&severity=&outcome=&since=&q=&page=&pageSize=
+ * Every alert ever raised, newest first.
+ */
+export interface AlertSearchResponse {
+  total: number;
+  page: number;
+  pageSize: number;
+  items: AlertRecord[];
 }
 
 // --- Replay -------------------------------------------------------------------------------
@@ -316,6 +337,8 @@ export interface ReplaySessionSummary {
   alerts: number;
   transmissions: number;
   live: boolean;
+  /** Radar frames were recorded (sessions from before the replay have comms and alerts only). */
+  hasRadar: boolean;
 }
 
 /** One recorded radar picture. */
@@ -329,6 +352,9 @@ export interface ReplayFrame {
 export interface ReplaySession {
   session: ReplaySessionSummary;
   sector: SectorInfo;
+  /** The span the timeline covers (epoch ms): the session, or its recorded part. */
+  from: number;
+  to: number;
   frames: ReplayFrame[];
   /** ATC transmissions (with PTT audio when spoken) and pilot calls, oldest first. */
   comms: (CommsTransmissionPayload | CommsReadbackPayload)[];

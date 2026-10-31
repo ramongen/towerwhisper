@@ -2,6 +2,7 @@
 import type { SectorOverview } from '@towerwhisper/shared';
 import { computed } from 'vue';
 import { ago, alertLabel, clock, duration } from '../../utils/format';
+import { replayOf } from '../../utils/replay';
 
 /** One sector on the dashboard: who works it, its traffic and its live alerts. */
 const props = defineProps<{ sector: SectorOverview; now: number }>();
@@ -48,22 +49,29 @@ const sessionAge = computed(() => clock((props.now - Date.parse(props.sector.sta
     </div>
 
     <ul class="alerts">
-      <li v-for="a in sorted.slice(0, MAX_ALERTS)" :key="a.id" class="alert" :class="a.severity">
-        <svg
-          v-if="a.severity === 'warning'"
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          aria-hidden="true"
+      <li v-for="a in sorted.slice(0, MAX_ALERTS)" :key="a.id">
+        <RouterLink
+          class="alert"
+          :class="a.severity"
+          :to="replayOf({ ...a, sectorId: sector.sector.id, sessionId: sector.sessionId })"
+          :title="`Replay from just before this alert`"
         >
-          <path d="M12 3l10 18H2z" fill="currentColor" />
-        </svg>
-        <svg v-else width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
-          <circle cx="12" cy="12" r="9" fill="currentColor" />
-        </svg>
-        <span class="type mono">{{ alertLabel(a.type) }}</span>
-        <span class="msg">{{ a.message }}</span>
-        <span class="when mono">{{ ago(a.raisedAt, now) }}</span>
+          <svg
+            v-if="a.severity === 'warning'"
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path d="M12 3l10 18H2z" fill="currentColor" />
+          </svg>
+          <svg v-else width="14" height="14" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="9" fill="currentColor" />
+          </svg>
+          <span class="type mono">{{ alertLabel(a.type) }}</span>
+          <span class="msg">{{ a.message }}</span>
+          <span class="when mono">{{ ago(a.raisedAt, now) }}</span>
+        </RouterLink>
       </li>
       <li v-if="sector.activeAlerts.length > MAX_ALERTS" class="more mono">
         +{{ sector.activeAlerts.length - MAX_ALERTS }} more
@@ -241,6 +249,7 @@ const sessionAge = computed(() => clock((props.now - Date.parse(props.sector.sta
 }
 
 .alert {
+  text-decoration: none;
   display: grid;
   grid-template-columns: 16px auto 1fr auto;
   align-items: center;
@@ -258,6 +267,10 @@ const sessionAge = computed(() => clock((props.now - Date.parse(props.sector.sta
 .alert.warning {
   color: var(--color-warning-text);
   background: var(--color-warning-bg);
+}
+
+.alert:hover {
+  outline: 1px solid currentColor;
 }
 
 .type {

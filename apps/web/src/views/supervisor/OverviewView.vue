@@ -11,6 +11,7 @@ import { useNow } from '../../composables/useNow';
 import { useSectorStore } from '../../stores/useSectorStore';
 import { useSupervisorStore } from '../../stores/useSupervisorStore';
 import { alertLabel, duration, utcDateTime } from '../../utils/format';
+import { replayOf } from '../../utils/replay';
 
 /** Statistics are re-read this often (the live sector cards come from the socket). */
 const ANALYTICS_REFRESH_MS = 30_000;
@@ -273,7 +274,23 @@ function replay(sectorId: string): void {
       </div>
 
       <article class="panel">
-        <h3 class="panel-title">Latest alerts</h3>
+        <div class="panel-head">
+          <h3 class="panel-title">Latest alerts</h3>
+          <RouterLink :to="{ name: 'supervisor-alerts' }" class="all-link">
+            All alerts
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2.5"
+              aria-hidden="true"
+            >
+              <path d="M9 6l6 6-6 6" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </RouterLink>
+        </div>
         <table v-if="analytics?.recent.length" class="table">
           <thead>
             <tr>
@@ -283,6 +300,7 @@ function replay(sectorId: string): void {
               <th scope="col">Message</th>
               <th scope="col">Outcome</th>
               <th scope="col" class="num">Open for</th>
+              <th scope="col"><span class="visually-hidden">Replay</span></th>
             </tr>
           </thead>
           <tbody>
@@ -322,6 +340,14 @@ function replay(sectorId: string): void {
                     ((a.endedAt ? Date.parse(a.endedAt) : now) - Date.parse(a.raisedAt)) / 1000,
                   )
                 }}
+              </td>
+              <td class="replay-cell">
+                <RouterLink :to="replayOf(a)" class="replay-link" title="Replay this moment">
+                  <svg width="12" height="12" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M8 5l11 7-11 7z" fill="currentColor" />
+                  </svg>
+                  Replay
+                </RouterLink>
               </td>
             </tr>
           </tbody>
@@ -647,6 +673,45 @@ function replay(sectorId: string): void {
 
 .outcome-cell.open {
   color: var(--color-caution);
+}
+
+.panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.all-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--color-atc);
+  text-decoration: none;
+}
+
+.replay-cell {
+  text-align: right;
+}
+
+.replay-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--color-atc);
+  text-decoration: none;
+  border: var(--border-width) solid var(--color-atc);
+  border-radius: var(--radius);
+  white-space: nowrap;
+}
+
+.replay-link:hover {
+  background: var(--color-atc-bg);
 }
 
 @media (max-width: 1500px) {

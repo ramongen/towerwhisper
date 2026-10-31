@@ -30,8 +30,8 @@ export function useReplayPlayer() {
   const speed = ref<(typeof SPEEDS)[number]>(1);
   const voices = ref(true);
 
-  const start = computed(() => session.value?.frames[0]?.t ?? 0);
-  const end = computed(() => session.value?.frames.at(-1)?.t ?? 0);
+  const start = computed(() => session.value?.from ?? 0);
+  const end = computed(() => session.value?.to ?? 0);
   const voiceActive = computed(() => voices.value && speed.value <= MAX_VOICE_SPEED);
 
   let frame = 0;
@@ -42,17 +42,19 @@ export function useReplayPlayer() {
   let alertSignature = '';
   const commsTimes: number[] = [];
 
-  function load(next: ReplaySession): void {
+  /** Opens a session at its start, or at a given moment (e.g. just before an alert). */
+  function load(next: ReplaySession, atMs?: number): void {
     pause();
     session.value = next;
     commsTimes.length = 0;
     for (const c of next.comms) commsTimes.push(Date.parse(c.at));
-    seek(next.frames[0]?.t ?? 0);
+    seek(atMs ?? next.from);
   }
 
   function unload(): void {
     pause();
     session.value = null;
+    alerts.replayNow = null;
     traffic.reset();
     traffic.setAircraft([]);
     comms.clear();
@@ -114,6 +116,7 @@ export function useReplayPlayer() {
   function render(speak: boolean): void {
     const s = session.value;
     if (!s) return;
+    alerts.replayNow = t.value;
     traffic.setAircraft(aircraftAt(s, t.value));
 
     // Comms that happened up to the cursor (only new ones are added while playing).

@@ -29,3 +29,7 @@ export const RECENT_ALERTS = 25;
 export const REPLAY_SESSIONS_LIMIT = 60;
 /** A replay never sends more radar frames than this (longer sessions are thinned out). */
 export const MAX_REPLAY_FRAMES = 6000;
+
+/** Alert search: rows per page, and the most a page may ask for. */
+export const ALERTS_PAGE = 50;
+export const MAX_ALERTS_PAGE = 200;

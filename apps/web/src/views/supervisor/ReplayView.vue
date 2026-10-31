@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ReplaySession, ReplaySessionSummary } from '@towerwhisper/shared';
+import type { Alert, ReplaySession, ReplaySessionSummary } from '@towerwhisper/shared';
 import { storeToRefs } from 'pinia';
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -15,7 +15,8 @@ import { useAlertStore } from '../../stores/useAlertStore';
 import { useSectorStore } from '../../stores/useSectorStore';
 import { useTrafficStore } from '../../stores/useTrafficStore';
 import { api, setApiSector } from '../../utils/api';
-import { clock, duration, utcDateTime, utcTime } from '../../utils/format';
+import { REPLAY_LEAD_S } from '../../utils/replay';
+import { alertLabel, clock, duration, utcDateTime, utcTime } from '../../utils/format';
 
 /** NO_CONTACT colours in the replay use the default limits (30 / 60 min). */
 const LIMITS = { cautionS: 1800, warningS: 3600 };
@@ -52,8 +53,12 @@ async function loadSessions(): Promise<void> {
   }
 }
 
-async function open(id: string): Promise<void> {
+/** The alert the replay was opened for (from the alert history), shown above the radar. */
+const focus = ref<Alert | null>(null);
+
+async function open(id: string, atMs?: number, alertId?: string): Promise<void> {
   selectedId.value = id;
+  focus.value = null;
   void router.replace({ query: { sector: sectorId.value, session: id } });
   loading.value = true;
   loadError.value = null;
@@ -67,7 +72,12 @@ async function open(id: string): Promise<void> {
       startedAt: replay.session.startedAt,
       access: 'view',
     });
-    player.load(replay);
+    const alert = alertId ? replay.alerts.find((a) => a.id === alertId) : undefined;
+    player.load(replay, atMs);
+    if (alert) {
+      focus.value = alert;
+      traffic.select(alert.callsigns[0] ?? null);
+    }
   } catch (e) {
     loadError.value = (e as Error).message;
   } finally {
@@ -102,8 +112,11 @@ onMounted(async () => {
   window.addEventListener('keydown', onKey);
   void sectors.loadAll().catch(() => undefined);
   await loadSessions();
-  const wanted = selectedId.value && sessions.value.some((s) => s.id === selectedId.value);
-  if (wanted) void open(selectedId.value!);
+  // Opened from an alert: that session, just before the alert (even if it is an old session
+  // beyond the list).
+  const at = Number(route.query.at);
+  const alertId = typeof route.query.alert === 'string' ? route.query.alert : undefined;
+  if (selectedId.value) void open(selectedId.value, Number.isFinite(at) ? at : undefined, alertId);
 });
 
 onBeforeUnmount(() => {
@@ -165,6 +178,13 @@ function toggleSelect(callsign: string): void {
             <span class="row">
               <span class="when mono">{{ utcDateTime(s.startedAt) }}</span>
               <span v-if="s.live" class="live mono">LIVE</span>
+              <span
+                v-else-if="!s.hasRadar"
+                class="no-radar mono"
+                title="Recorded before radar replay existed"
+              >
+                NO RADAR
+              </span>
             </span>
             <span class="meta mono">
               {{ duration(s.durationS) }} · {{ s.transmissions }} TX ·
@@ -218,6 +238,42 @@ function toggleSelect(callsign: string): void {
         <div class="body">
           <div class="radar">
             <RadarScope :key="session.session.id" />
+            <div v-if="focus" class="focus" :class="focus.severity" role="status">
+              <svg
+                v-if="focus.severity === 'warning'"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path d="M12 3l10 18H2z" fill="currentColor" />
+              </svg>
+              <svg v-else width="16" height="16" viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" fill="currentColor" />
+              </svg>
+              <span class="focus-type mono"
+                >{{ alertLabel(focus.type) }} · {{ utcTime(focus.raisedAt) }}</span
+              >
+              <span class="focus-msg">{{ focus.message }}</span>
+              <button
+                type="button"
+                class="focus-again"
+                title="Back to just before this alert"
+                @click="player.seek(Date.parse(focus.raisedAt) - REPLAY_LEAD_S * 1000)"
+              >
+                Replay again
+              </button>
+              <button type="button" class="focus-close" aria-label="Hide" @click="focus = null">
+                ×
+              </button>
+            </div>
+            <div v-if="!session.session.hasRadar" class="no-radar-note">
+              <span class="mono">NO RADAR RECORDING</span>
+              <span
+                >This session was recorded before radar replay existed: transcripts, voices and
+                alerts only.</span
+              >
+            </div>
           </div>
           <aside class="side">
             <CommsPanel class="comms" />
@@ -563,6 +619,96 @@ select {
   min-width: 0;
   overflow: hidden;
   border-right: var(--border-width) solid var(--color-border);
+}
+
+.focus {
+  position: absolute;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 5;
+  max-width: calc(100% - 48px);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px 8px 14px;
+  font-size: 15px;
+  background: var(--color-panel-overlay);
+  border: var(--border-width) solid currentColor;
+  border-radius: var(--radius-card);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.focus.caution {
+  color: var(--color-caution);
+}
+
+.focus.warning {
+  color: var(--color-warning-text);
+}
+
+.focus-type {
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.focus-msg {
+  color: var(--color-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.focus-again,
+.focus-close {
+  height: 30px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text);
+  background: transparent;
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius);
+  white-space: nowrap;
+}
+
+.focus-again {
+  padding: 0 var(--space-3);
+}
+
+.focus-close {
+  width: 30px;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.no-radar-note {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-size: 15px;
+  color: var(--color-text-secondary);
+  background: rgba(7, 12, 18, 0.72);
+  pointer-events: none;
+}
+
+.no-radar-note .mono {
+  font-size: 13px;
+  letter-spacing: 0.1em;
+  color: var(--color-text-muted);
+}
+
+.no-radar {
+  padding: 1px 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--color-text-muted);
+  border: var(--border-width) solid var(--color-border-control);
+  border-radius: var(--radius-sm);
 }
 
 .side {

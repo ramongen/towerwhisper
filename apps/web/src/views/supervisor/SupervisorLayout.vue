@@ -19,6 +19,7 @@ const warnings = computed(() => activeAlerts.value.filter((a) => a.severity === 
 
 const tabs = [
   { name: 'supervisor', label: 'Overview' },
+  { name: 'supervisor-alerts', label: 'Alerts' },
   { name: 'supervisor-replay', label: 'Replay' },
   { name: 'supervisor-users', label: 'Accounts' },
 ];

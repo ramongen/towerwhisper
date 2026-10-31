@@ -50,6 +50,11 @@ export const router = createRouter({
           component: () => import('./views/supervisor/LiveSectorView.vue'),
         },
         {
+          path: 'alerts',
+          name: 'supervisor-alerts',
+          component: () => import('./views/supervisor/AlertsView.vue'),
+        },
+        {
           path: 'replay',
           name: 'supervisor-replay',
           component: () => import('./views/supervisor/ReplayView.vue'),

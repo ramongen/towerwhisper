@@ -13,6 +13,8 @@ export type AlertLevel = Alert['severity'];
 export const useAlertStore = defineStore('alerts', () => {
   const active = ref<Alert[]>([]);
   const history = ref<Alert[]>([]);
+  /** In a replay: the replayed moment, so "2 min ago" is counted from it (null when live). */
+  const replayNow = ref<number | null>(null);
 
   function raise(alert: Alert): void {
     // The backend may re-send an alert with the same id (e.g. NO_CONTACT caution -> warning).
@@ -71,6 +73,7 @@ export const useAlertStore = defineStore('alerts', () => {
   return {
     active,
     history,
+    replayNow,
     sorted,
     pastNewestFirst,
     levelByCallsign,

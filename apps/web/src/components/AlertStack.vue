@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Alert } from '@towerwhisper/shared';
 import { storeToRefs } from 'pinia';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { playAlertSound } from '../composables/useAlertSound';
 import { useNow } from '../composables/useNow';
 import { useAlertStore } from '../stores/useAlertStore';
@@ -16,7 +16,9 @@ const FRESH_ALERT_MS = 5000;
 const alerts = useAlertStore();
 const { sorted, active, pastNewestFirst } = storeToRefs(alerts);
 const traffic = useTrafficStore();
-const now = useNow();
+const liveNow = useNow();
+/** The replayed moment in a replay, the clock otherwise. */
+const now = computed(() => alerts.replayNow ?? liveNow.value);
 
 const tab = ref<'active' | 'history'>('active');
 const confirming = ref<Alert | null>(null);

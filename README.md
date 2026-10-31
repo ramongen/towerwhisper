@@ -104,6 +104,10 @@ simulated. A controller works the sector set on the account and goes straight to
 - **Replay** — any recorded session of a sector on a timeline: radar (recorded every 2 s and
   interpolated), transcripts, pilot voice and the controller's own PTT recordings, alerts as they
   were. Play at 1–16×, scrub, or jump with ← / → (voices play at 1× and 2×).
+- **Alerts** — every alert ever raised, in every sector, with search and filters (sector, type,
+  severity, outcome, period). **Replay** on any alert (here, on the overview's latest alerts, or on
+  a live alert in a sector card) opens its session 20 s before it, with the aircraft selected.
+  Sessions recorded before radar replay existed replay their transcripts and alerts only.
 - **Accounts** — create accounts, switch a role between ATC and Supervisor, set the sector an ATC
   works (an open screen moves at once), set a password, delete.
 
