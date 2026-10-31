@@ -1,0 +1,870 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TowerWhisper — prezentare</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<!-- Design tokens: the same file the app uses (Claude Design handoff). -->
+<link rel="stylesheet" href="../../apps/web/src/styles/tokens.css">
+<style>
+  /* Slide-only scale on top of the app tokens (1920 x 1080, read from 5 m). */
+  :root {
+    --s-title: 64px;
+    --s-h2: 40px;
+    --s-body: 32px;
+    --s-small: 28px;
+    --s-chrome: 24px;
+    --pad-x: 120px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #000; }
+  body { font-family: var(--font-ui); color: var(--color-text); -webkit-font-smoothing: antialiased; }
+  .mono { font-family: var(--font-data); }
+
+  .slide {
+    width: 1920px; height: 1080px; position: relative; overflow: hidden;
+    background: var(--color-bg);
+    padding: 72px var(--pad-x) 96px;
+    display: flex; flex-direction: column;
+  }
+  .slide > .chrome {
+    position: absolute; left: var(--pad-x); right: var(--pad-x); bottom: 36px;
+    display: flex; justify-content: space-between;
+    font-size: var(--s-chrome); color: var(--color-text-faint); letter-spacing: var(--letter-label);
+    text-transform: uppercase;
+  }
+  .kicker { font-size: var(--s-small); font-weight: 600; letter-spacing: var(--letter-label); color: var(--color-text-muted); text-transform: uppercase; margin: 0 0 12px; }
+  h1 { font-size: var(--s-title); line-height: 1.1; margin: 0 0 40px; font-weight: 700; letter-spacing: -0.01em; }
+  h2 { font-size: var(--s-h2); margin: 0 0 16px; font-weight: 700; }
+  p, li, td, th { font-size: var(--s-body); line-height: 1.35; }
+  p { margin: 0 0 20px; }
+  .muted { color: var(--color-text-muted); }
+  .small { font-size: var(--s-small); }
+  .atc { color: var(--color-atc); }
+  .ok { color: var(--color-ok); }
+  .caution { color: var(--color-caution); }
+  .warning { color: var(--color-warning-text); }
+  .grow { flex: 1; min-height: 0; }
+  .row { display: flex; gap: 48px; }
+  .col { flex: 1; min-width: 0; }
+  .card {
+    background: var(--color-panel); border: var(--border-width) solid var(--color-border-strong);
+    border-radius: var(--radius-card); padding: 32px 36px;
+  }
+  .tbd {
+    display: inline-block; border: 2px dashed var(--color-text-faint); color: var(--color-text-secondary);
+    border-radius: var(--radius); padding: 2px 14px; font-family: var(--font-data); font-size: var(--s-small);
+  }
+  ul.clean { list-style: none; padding: 0; margin: 0; }
+  ul.clean > li { padding-left: 40px; position: relative; margin-bottom: 22px; }
+  ul.clean > li::before { content: ''; position: absolute; left: 8px; top: 18px; width: 12px; height: 12px; border-radius: 2px; background: var(--color-text-faint); }
+  .alert-line {
+    border-left: 6px solid var(--color-warning); background: var(--color-warning-bg);
+    padding: 14px 20px; border-radius: var(--radius-sm); font-size: var(--s-small); line-height: 1.35;
+  }
+  .alert-line.caution { border-left-color: var(--color-caution); background: var(--color-caution-bg); color: var(--color-text); }
+  .alert-line b { font-family: var(--font-data); letter-spacing: 0.04em; }
+  .alert-line.warning { color: var(--color-text); }
+  .alert-line.warning b { color: var(--color-warning-text); }
+  .alert-line.caution b { color: var(--color-caution); }
+  .tag { font-family: var(--font-data); font-weight: 700; letter-spacing: 0.04em; }
+
+  table.t { width: 100%; border-collapse: collapse; }
+  table.t th { text-align: left; font-size: var(--s-small); font-weight: 600; color: var(--color-text-muted); letter-spacing: 0.06em; text-transform: uppercase; padding: 0 20px 14px; border-bottom: 2px solid var(--color-border-strong); }
+  table.t td { padding: 16px 20px; vertical-align: top; border-bottom: 1px solid var(--color-border); font-size: var(--s-small); }
+  table.t td.lead { font-weight: 600; color: var(--color-text); }
+
+  /* Screenshot slides */
+  .shot-slide { padding-top: 48px; }
+  .shot-head { display: flex; align-items: baseline; gap: 28px; margin-bottom: 20px; }
+  .shot-head h1 { margin: 0; font-size: 52px; }
+  .shot { display: block; border: 1px solid var(--color-border-strong); border-radius: var(--radius-card); }
+  .caption { font-size: var(--s-body); color: var(--color-text-secondary); margin-top: 20px; line-height: 1.3; }
+
+  svg text { font-family: var(--font-ui); fill: var(--color-text); }
+  svg .t-title { font-size: 30px; font-weight: 700; }
+  svg .t-sub { font-size: 28px; fill: var(--color-text-muted); }
+  svg .t-mono { font-family: var(--font-data); font-size: 28px; }
+  svg .box { fill: var(--color-panel); stroke: var(--color-border-control); stroke-width: 2; }
+  svg .box-atc { fill: var(--color-atc-bg); stroke: var(--color-atc); stroke-width: 2; }
+  svg .box-warn { fill: var(--color-warning-bg); stroke: var(--color-warning); stroke-width: 2; }
+  svg .box-dash { fill: none; stroke: var(--color-border-control); stroke-width: 2; stroke-dasharray: 10 8; }
+  svg .frame { fill: none; stroke: var(--color-text-faint); stroke-width: 2; stroke-dasharray: 14 10; }
+  svg .arrow { stroke: var(--color-text-muted); stroke-width: 3; fill: none; }
+  svg .arrow-dash { stroke: var(--color-text-faint); stroke-width: 3; fill: none; stroke-dasharray: 10 8; }
+  svg .step circle { fill: var(--color-bg); stroke: var(--color-atc); stroke-width: 2; }
+  svg .step text { font-family: var(--font-data); font-size: 24px; font-weight: 700; fill: var(--color-atc); }
+
+  /* Viewer: one slide at a time, scaled to the window. ?print lists all, ?slide=n shows one. */
+  body.viewer { height: 100vh; overflow: hidden; display: grid; place-items: center; }
+  body.viewer .slide { display: none; position: absolute; left: 50%; top: 50%; transform-origin: center; }
+  body.viewer .slide.on { display: flex; }
+  body.single .slide { display: none; }
+  body.single .slide.on { display: flex; }
+  @page { size: 1920px 1080px; margin: 0; }
+  @media print { .slide { break-after: page; } }
+</style>
+</head>
+<body>
+
+<!-- ============ PARTEA 1 — PROBLEMA ȘI PRODUSUL ============ -->
+
+<!-- 1. Titlu -->
+<section class="slide" data-part="" style="justify-content:center">
+  <svg width="1100" height="1100" viewBox="0 0 1100 1100" style="position:absolute;right:-180px;top:-10px" aria-hidden="true">
+    <g fill="none" stroke="var(--radar-ring)" stroke-width="2">
+      <circle cx="550" cy="550" r="160"/><circle cx="550" cy="550" r="300"/><circle cx="550" cy="550" r="440"/>
+    </g>
+    <line x1="550" y1="60" x2="550" y2="1040" stroke="var(--radar-ring)" stroke-width="2"/>
+    <line x1="60" y1="550" x2="1040" y2="550" stroke="var(--radar-ring)" stroke-width="2"/>
+    <rect x="470" y="545" width="160" height="10" rx="5" fill="var(--radar-runway)"/>
+    <g fill="var(--color-atc)"><rect x="652" y="332" width="16" height="16"/></g>
+    <text x="684" y="330" class="t-mono" style="fill:var(--color-atc)">ROT301</text>
+    <text x="684" y="366" class="t-mono" style="fill:var(--color-text-muted)">040 ↓ 040</text>
+  </svg>
+  <p class="kicker atc">Craiova Hackathon v2</p>
+  <h1 style="font-size:128px;margin-bottom:24px">TowerWhisper</h1>
+  <p style="font-size:48px;max-width:1000px;line-height:1.25;color:var(--color-text-secondary)">Copilot AI pentru controlorii<br>de trafic aerian</p>
+  <p style="margin-top:56px;font-size:var(--s-body)">Echipa: <span class="tbd">[ECHIPA — DE COMPLETAT]</span></p>
+</section>
+
+<!-- 2. Problema -->
+<section class="slide" data-part="Partea 1 · Problema și produsul">
+  <p class="kicker">Problema</p>
+  <h1>Radarul știe unde e avionul.<br>Nu știe ce i s-a spus.</h1>
+  <div class="row grow" style="align-items:flex-start">
+    <div class="col">
+      <ul class="clean">
+        <li>Vocea pe VHF e încă <b>canalul principal</b> în apropiere și în turn; datalink-ul text (CPDLC) e folosit mai ales în spațiul aerian superior.</li>
+        <li><b>Readback / hearback:</b> pilotul repetă instrucțiunea greșit, iar controlorul, ocupat cu alte avioane, nu observă. E un factor cunoscut în level bust-uri și incursiuni pe pistă.</li>
+        <li><b>Nimic nu leagă azi vocea de radar.</b> Sistemele știu poziția, nu și instrucțiunea.</li>
+      </ul>
+    </div>
+    <div class="card" style="width:640px">
+      <p class="small muted" style="margin-bottom:24px">Un controlor dă zeci de instrucțiuni pe oră și trebuie să asculte fiecare confirmare.</p>
+      <p class="mono" style="font-size:30px;margin-bottom:12px"><span class="atc">ATC</span>&nbsp; descend 3000</p>
+      <p class="mono" style="font-size:30px;margin-bottom:28px"><span style="color:var(--color-pilot)">PILOT</span> descend <span class="warning">5000</span></p>
+      <p style="font-size:var(--s-body);margin:0">Dacă controlorul e ocupat, <b>nu prinde nimeni.</b></p>
+    </div>
+  </div>
+</section>
+
+<!-- 3. Soluția -->
+<section class="slide" data-part="Partea 1 · Problema și produsul">
+  <p class="kicker">Soluția</p>
+  <h1 style="max-width:1600px">TowerWhisper ascultă instrucțiunile și îi spune controlorului când un avion nu a înțeles sau nu face ce i s-a cerut.</h1>
+  <div class="row" style="align-items:stretch;margin-top:8px">
+    <div class="card col">
+      <p class="kicker atc">1 · Readback</p>
+      <h2>Pilotul a repetat corect?</h2>
+      <p class="small muted">Readback-ul pilotului e comparat cu instrucțiunea: altitudine, cap, sens de viraj, pistă, frecvență.</p>
+      <p class="tag warning small" style="margin:0">HEARBACK MISMATCH</p>
+    </div>
+    <div class="card col">
+      <p class="kicker atc">2 · Execuție</p>
+      <h2>Avionul face ce i s-a cerut?</h2>
+      <p class="small muted">Manevra e urmărită pe radar până la țintă: viraj, urcare / coborâre, oprire la nivel.</p>
+      <p class="tag warning small" style="margin:0">WRONG TURN · LEVEL BUST</p>
+    </div>
+    <div class="card col">
+      <p class="kicker atc">3 · Ultimul contact</p>
+      <h2>Cu cine n-am mai vorbit de mult?</h2>
+      <p class="small muted">Fiecare avion are un timer de la ultima transmisie: galben la prima limită, roșu la a doua.</p>
+      <p class="tag caution small" style="margin:0">NO CONTACT</p>
+    </div>
+  </div>
+</section>
+
+<!-- 4. Fluxul demo -->
+<section class="slide" data-part="Partea 1 · Problema și produsul">
+  <p class="kicker">Cum funcționează</p>
+  <h1>De la voce la alertă, în câteva secunde</h1>
+  <svg viewBox="0 0 1680 380" width="1680" height="380" role="img" aria-label="Voce, text, instrucțiune, readback, verificări, alertă">
+    <defs>
+      <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--color-text-muted)"/></marker>
+    </defs>
+    <g>
+      <rect class="box-atc" x="0" y="20" width="230" height="140" rx="10"/>
+      <text class="t-title" x="115" y="80" text-anchor="middle">Voce</text>
+      <text class="t-sub" x="115" y="124" text-anchor="middle">PTT · Space</text>
+    </g>
+    <g>
+      <rect class="box" x="290" y="20" width="230" height="140" rx="10"/>
+      <text class="t-title" x="405" y="80" text-anchor="middle">Text</text>
+      <text class="t-sub" x="405" y="124" text-anchor="middle">Whisper</text>
+    </g>
+    <g>
+      <rect class="box" x="580" y="20" width="230" height="140" rx="10"/>
+      <text class="t-title" x="695" y="80" text-anchor="middle">Instrucțiune</text>
+      <text class="t-sub" x="695" y="124" text-anchor="middle">parser</text>
+    </g>
+    <g>
+      <rect class="box" x="870" y="20" width="230" height="140" rx="10"/>
+      <text class="t-title" x="985" y="80" text-anchor="middle">Readback</text>
+      <text class="t-sub" x="985" y="124" text-anchor="middle">pilot simulat</text>
+    </g>
+    <g>
+      <rect class="box" x="1160" y="20" width="230" height="140" rx="10"/>
+      <text class="t-title" x="1275" y="80" text-anchor="middle">Verificări</text>
+      <text class="t-sub" x="1275" y="124" text-anchor="middle">cod determinist</text>
+    </g>
+    <g>
+      <rect class="box-warn" x="1450" y="20" width="230" height="140" rx="10"/>
+      <text class="t-title" x="1565" y="80" text-anchor="middle">Alertă</text>
+      <text class="t-sub" x="1565" y="124" text-anchor="middle">cu motivul</text>
+    </g>
+    <g class="arrow" marker-end="url(#ah)">
+      <line x1="232" y1="90" x2="286" y2="90"/><line x1="522" y1="90" x2="576" y2="90"/>
+      <line x1="812" y1="90" x2="866" y2="90"/><line x1="1102" y1="90" x2="1156" y2="90"/>
+      <line x1="1392" y1="90" x2="1446" y2="90"/>
+      <line x1="1275" y1="250" x2="1275" y2="166"/>
+    </g>
+    <g>
+      <rect class="box" x="1160" y="250" width="230" height="120" rx="10"/>
+      <text class="t-title" x="1275" y="302" text-anchor="middle">Radar</text>
+      <text class="t-sub" x="1275" y="344" text-anchor="middle">poziții, 4 Hz</text>
+    </g>
+    <text class="t-sub" x="1130" y="310" text-anchor="end">execuția manevrei →</text>
+  </svg>
+  <div class="card mono" style="margin-top:28px;font-size:30px;line-height:1.75;padding:24px 36px">
+    <div><span class="atc" style="display:inline-block;width:170px">ATC</span>TAROM 301, descend altitude 4000 feet, turn left heading 080</div>
+    <div><span class="muted" style="display:inline-block;width:170px">PARSER</span>ROT301 · ALT 4000 ↓ · HDG 080 L · parsePath: rules</div>
+    <div><span style="display:inline-block;width:170px;color:var(--color-pilot)">PILOT</span>Descend <span class="warning">6000</span>, left heading 080, TAROM 301</div>
+    <div><span class="warning" style="display:inline-block;width:170px">ALERTĂ</span><span class="warning">HEARBACK MISMATCH</span> · ROT301 cleared 4000 ft, read back 6000 ft</div>
+  </div>
+</section>
+
+<!-- ============ PARTEA 2 — PRODUSUL AZI ============ -->
+
+<!-- 5. Ecranul controlorului -->
+<section class="slide shot-slide" data-part="Partea 2 · Produsul azi">
+  <div class="shot-head"><p class="kicker" style="margin:0">Ecranul controlorului</p><h1>Trafic normal</h1></div>
+  <img class="shot" src="screens/01-controller-normal.png" width="1360" height="765" alt="Ecranul controlorului cu trafic normal">
+  <p class="caption">Radar cu 6 avioane în jurul LRCV, instrucțiunile parsate, readback confirmat cu verde.</p>
+</section>
+
+<!-- 6. HEARBACK MISMATCH -->
+<section class="slide shot-slide" data-part="Partea 2 · Produsul azi">
+  <div class="shot-head"><p class="kicker" style="margin:0">Readback greșit</p><h1 class="warning">HEARBACK MISMATCH</h1></div>
+  <img class="shot" src="screens/02-hearback-mismatch.png" width="1360" height="765" alt="Alerta HEARBACK MISMATCH">
+  <p class="caption">S-a cerut 4000 ft, pilotul a confirmat 6000 ft. Alerta spune motivul, cu valorile.</p>
+</section>
+
+<!-- 7. WRONG TURN -->
+<section class="slide shot-slide" data-part="Partea 2 · Produsul azi">
+  <div class="shot-head"><p class="kicker" style="margin:0">Execuție greșită</p><h1 class="warning">WRONG TURN</h1></div>
+  <img class="shot" src="screens/03-wrong-turn.png" width="1360" height="765" alt="Alerta WRONG TURN">
+  <p class="caption">Readback corect, dar avionul virează în sens opus. Alerta apare după 4 s de abatere.</p>
+</section>
+
+<!-- 8. NO CONTACT -->
+<section class="slide shot-slide" data-part="Partea 2 · Produsul azi">
+  <div class="shot-head"><p class="kicker" style="margin:0">Timp de la ultimul contact</p><h1 class="caution">NO CONTACT</h1></div>
+  <img class="shot" src="screens/04-no-contact.png" width="1360" height="765" alt="Alertele NO CONTACT galben și roșu">
+  <p class="caption">Galben la 30 min, roșu la 60 min (în demo 15 / 30 s). Dispare la următoarea transmisie.</p>
+</section>
+
+<!-- 9. Panoul de demo -->
+<section class="slide" data-part="Partea 2 · Produsul azi">
+  <div class="row grow" style="align-items:center;gap:96px">
+    <div style="width:440px;border:14px solid #1b2733;border-radius:48px;overflow:hidden;background:#000;flex:none">
+      <img src="screens/05-demo-panel.png" width="412" height="892" alt="Panoul de demo pe telefon" style="display:block">
+    </div>
+    <div class="col">
+      <p class="kicker">Panoul de demo · /demo</p>
+      <h1>Erorile pilotului, la comandă, de pe telefon</h1>
+      <ul class="clean">
+        <li>Juriul vede doar ecranul mare; erorile se declanșează discret de pe telefon.</li>
+        <li>Erori de readback și de execuție, în modul <span class="mono">ONCE</span> sau <span class="mono">PERSISTENT</span>.</li>
+        <li>Contor live: erori injectate, detectate, timp mediu de detecție.</li>
+        <li>Nu are nevoie de microfon și nici de cont.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 10. Supervizor + poziție -->
+<section class="slide shot-slide" data-part="Partea 2 · Produsul azi">
+  <div class="shot-head"><p class="kicker" style="margin:0">Conturi și sectoare</p><h1>Supervizor și poziția de lucru</h1></div>
+  <div class="row" style="gap:32px;align-items:flex-start">
+    <img class="shot" src="screens/06-supervisor-overview.png" width="1240" height="698" alt="Dashboard-ul supervizorului">
+    <div style="width:408px;height:556px;flex:none;border:1px solid var(--color-border-strong);border-radius:var(--radius-card);background:url(screens/09-login.png) -686px -222px / 1780px auto no-repeat" role="img" aria-label="Autentificare pe poziție"></div>
+  </div>
+  <p class="caption">Cinci sectoare rulează în paralel. Controlorul se autentifică pe poziția lui; supervizorul vede toate sectoarele, statistici și replay.</p>
+</section>
+
+<!-- ============ PARTEA 3 — ARHITECTURA ============ -->
+
+<!-- 11. Arhitectura sistemului -->
+<section class="slide" data-part="Partea 3 · Arhitectura">
+  <p class="kicker">Arhitectura sistemului</p>
+  <h1 style="margin-bottom:24px">Browserul afișează, backend-ul decide</h1>
+  <svg viewBox="0 0 1680 720" width="1680" height="720" role="img" aria-label="Browser, Docker Compose cu web, api, db, whisper, servicii externe opționale">
+    <defs>
+      <marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--color-text-muted)"/></marker>
+      <marker id="ah2f" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--color-text-faint)"/></marker>
+    </defs>
+    <!-- Browser -->
+    <rect class="box-atc" x="0" y="110" width="300" height="560" rx="12"/>
+    <text class="t-title" x="24" y="166">Browser · Vue 3</text>
+    <rect class="box" x="22" y="200" width="256" height="130" rx="8"/>
+    <text class="t-title" x="42" y="252" style="font-size:28px">Controlor</text>
+    <text class="t-mono" x="42" y="300" style="fill:var(--color-text-muted)">/atc</text>
+    <rect class="box" x="22" y="350" width="256" height="130" rx="8"/>
+    <text class="t-title" x="42" y="402" style="font-size:28px">Supervizor</text>
+    <text class="t-mono" x="42" y="450" style="fill:var(--color-text-muted)">/supervisor</text>
+    <rect class="box" x="22" y="500" width="256" height="140" rx="8"/>
+    <text class="t-title" x="42" y="552" style="font-size:28px">Panou demo</text>
+    <text class="t-mono" x="42" y="600" style="fill:var(--color-text-muted)">/demo</text>
+    <!-- Compose frame -->
+    <rect class="frame" x="470" y="10" width="730" height="700" rx="16"/>
+    <text class="t-sub" x="496" y="56">Docker Compose</text>
+    <rect class="box" x="500" y="320" width="220" height="140" rx="10"/>
+    <text class="t-title" x="610" y="378" text-anchor="middle">web</text>
+    <text class="t-sub" x="610" y="422" text-anchor="middle">nginx</text>
+    <rect class="box" x="840" y="320" width="320" height="140" rx="10"/>
+    <text class="t-title" x="1000" y="378" text-anchor="middle">api</text>
+    <text class="t-sub" x="1000" y="422" text-anchor="middle">NestJS · Node 20</text>
+    <rect class="box" x="840" y="90" width="320" height="140" rx="10"/>
+    <text class="t-title" x="1000" y="148" text-anchor="middle">whisper</text>
+    <text class="t-sub" x="1000" y="192" text-anchor="middle">STT local · GPU / CPU</text>
+    <rect class="box" x="840" y="550" width="320" height="140" rx="10"/>
+    <text class="t-title" x="1000" y="608" text-anchor="middle">db</text>
+    <text class="t-sub" x="1000" y="652" text-anchor="middle">PostgreSQL 16</text>
+    <!-- Externals -->
+    <text class="t-sub" x="1280" y="56">Externe · opționale</text>
+    <rect class="box-dash" x="1280" y="90" width="400" height="140" rx="10"/>
+    <text class="t-title" x="1480" y="148" text-anchor="middle">OpenAI TTS</text>
+    <text class="t-sub" x="1480" y="192" text-anchor="middle">vocea pilotului</text>
+    <rect class="box-dash" x="1280" y="320" width="400" height="140" rx="10"/>
+    <text class="t-title" x="1480" y="378" text-anchor="middle">Claude Haiku</text>
+    <text class="t-sub" x="1480" y="422" text-anchor="middle">parser de rezervă</text>
+    <rect class="box-dash" x="1280" y="550" width="400" height="140" rx="10"/>
+    <text class="t-title" x="1480" y="608" text-anchor="middle">OpenAI Whisper</text>
+    <text class="t-sub" x="1480" y="652" text-anchor="middle">STT de rezervă</text>
+    <!-- Arrows -->
+    <g class="arrow" marker-end="url(#ah2)" marker-start="url(#ah2)">
+      <line x1="306" y1="390" x2="494" y2="390"/>
+      <line x1="726" y1="390" x2="834" y2="390"/>
+      <line x1="1000" y1="314" x2="1000" y2="236"/>
+      <line x1="1000" y1="466" x2="1000" y2="544"/>
+    </g>
+    <g class="arrow-dash" marker-end="url(#ah2f)">
+      <line x1="1166" y1="370" x2="1274" y2="170"/>
+      <line x1="1166" y1="390" x2="1274" y2="390"/>
+      <line x1="1166" y1="410" x2="1274" y2="610"/>
+    </g>
+    <text class="t-sub" x="385" y="306" text-anchor="middle">REST</text>
+    <text class="t-sub" x="385" y="346" text-anchor="middle">Socket.IO</text>
+    <text class="t-sub" x="1018" y="282">audio → text</text>
+    <text class="t-sub" x="1018" y="512">TypeORM</text>
+  </svg>
+  <p class="small muted" style="margin:16px 0 0">Fără chei API aplicația pornește oricum: STT local, voce din cache, instrucțiuni tastate ca rezervă.</p>
+</section>
+
+<!-- 12. Arhitectura backend -->
+<section class="slide" data-part="Partea 3 · Arhitectura">
+  <p class="kicker">Arhitectura backend · NestJS</p>
+  <h1 style="margin-bottom:24px">O transmisie, pas cu pas</h1>
+  <svg viewBox="0 0 1680 420" width="1680" height="420" role="img" aria-label="Modulele NestJS și fluxul unei transmisii">
+    <defs>
+      <marker id="ah3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--color-text-muted)"/></marker>
+    </defs>
+    <!-- Row 1 -->
+    <rect class="box" x="0" y="10" width="300" height="130" rx="10"/>
+    <text class="t-title" x="150" y="64" text-anchor="middle">Voice</text><text class="t-sub" x="150" y="108" text-anchor="middle">STT · TTS</text>
+    <rect class="box" x="460" y="10" width="300" height="130" rx="10"/>
+    <text class="t-title" x="610" y="64" text-anchor="middle">Parser</text><text class="t-sub" x="610" y="108" text-anchor="middle">reguli · LLM</text>
+    <rect class="box" x="920" y="10" width="300" height="130" rx="10"/>
+    <text class="t-title" x="1070" y="64" text-anchor="middle">Pilot</text><text class="t-sub" x="1070" y="108" text-anchor="middle">readback</text>
+    <rect class="box-atc" x="1380" y="10" width="300" height="130" rx="10"/>
+    <text class="t-title" x="1530" y="64" text-anchor="middle">Safety</text><text class="t-sub" x="1530" y="108" text-anchor="middle">verificări</text>
+    <!-- Row 2 -->
+    <rect class="box" x="0" y="280" width="300" height="130" rx="10"/>
+    <text class="t-title" x="150" y="334" text-anchor="middle">Session</text><text class="t-sub" x="150" y="378" text-anchor="middle">Postgres</text>
+    <rect class="box" x="460" y="280" width="300" height="130" rx="10"/>
+    <text class="t-title" x="610" y="334" text-anchor="middle">DemoControl</text><text class="t-sub" x="610" y="378" text-anchor="middle">erori → pilot</text>
+    <rect class="box" x="920" y="280" width="300" height="130" rx="10"/>
+    <text class="t-title" x="1070" y="334" text-anchor="middle">Simulation</text><text class="t-sub" x="1070" y="378" text-anchor="middle">tick 250 ms</text>
+    <rect class="box" x="1380" y="280" width="300" height="130" rx="10"/>
+    <text class="t-title" x="1530" y="334" text-anchor="middle">Realtime</text><text class="t-sub" x="1530" y="378" text-anchor="middle">Socket.IO</text>
+    <g class="arrow" marker-end="url(#ah3)">
+      <line x1="302" y1="75" x2="454" y2="75"/>
+      <line x1="762" y1="75" x2="914" y2="75"/>
+      <line x1="1222" y1="75" x2="1374" y2="75"/>
+      <path d="M610,142 V200 H150 V274"/>
+      <line x1="762" y1="300" x2="914" y2="130"/>
+      <line x1="1070" y1="142" x2="1070" y2="274"/>
+      <line x1="1222" y1="300" x2="1374" y2="130"/>
+      <line x1="1530" y1="142" x2="1530" y2="274"/>
+    </g>
+    <g class="step"><circle cx="378" cy="75" r="22"/><text x="378" y="83" text-anchor="middle">1</text></g>
+    <g class="step"><circle cx="838" cy="75" r="22"/><text x="838" y="83" text-anchor="middle">2</text></g>
+    <g class="step"><circle cx="1298" cy="75" r="22"/><text x="1298" y="83" text-anchor="middle">3</text></g>
+    <g class="step"><circle cx="1070" cy="210" r="22"/><text x="1070" y="218" text-anchor="middle">4</text></g>
+    <g class="step"><circle cx="1298" cy="215" r="22"/><text x="1298" y="223" text-anchor="middle">5</text></g>
+    <g class="step"><circle cx="1530" cy="210" r="22"/><text x="1530" y="218" text-anchor="middle">6</text></g>
+  </svg>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 64px;margin-top:20px;font-size:var(--s-small);line-height:1.35">
+    <div><b class="atc mono">1</b>&nbsp; <span class="mono">POST /api/transmissions</span>: audio → text (Whisper)</div>
+    <div><b class="atc mono">4</b>&nbsp; Pilotul dă țintele simulatorului după 2–3 s, alterate dacă e armată o eroare de execuție</div>
+    <div><b class="atc mono">2</b>&nbsp; Text → <span class="mono">Clearance</span>, salvat în Postgres; <span class="mono">comms:transmission</span></div>
+    <div><b class="atc mono">5</b>&nbsp; La fiecare tick: ConformanceMonitor și CommsWatchdog</div>
+    <div><b class="atc mono">3</b>&nbsp; Readback din șablon (+ eroarea din DemoControl), trecut prin același parser → ReadbackChecker</div>
+    <div><b class="atc mono">6</b>&nbsp; <span class="mono">alert:raised</span> / <span class="mono">alert:cleared</span> pe toate ecranele</div>
+  </div>
+</section>
+
+<!-- 13. Parser -->
+<section class="slide" data-part="Partea 3 · Arhitectura">
+  <p class="kicker">Parser-ul de frazeologie ATC</p>
+  <h1 style="margin-bottom:28px">Reguli întâi, LLM doar ca rezervă</h1>
+  <svg viewBox="0 0 1680 150" width="1680" height="150" role="img" aria-label="Prompt STT, normalizare, reguli, callsign, LLM de rezervă">
+    <defs><marker id="ah4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--color-text-muted)"/></marker></defs>
+    <rect class="box" x="0" y="5" width="292" height="140" rx="10"/>
+    <text class="t-title" x="146" y="62" text-anchor="middle">Prompt STT</text><text class="t-sub" x="146" y="106" text-anchor="middle">indicative, termeni</text>
+    <rect class="box" x="347" y="5" width="292" height="140" rx="10"/>
+    <text class="t-title" x="493" y="62" text-anchor="middle">Normalizare</text><text class="t-sub" x="493" y="106" text-anchor="middle">niner → 9</text>
+    <rect class="box" x="694" y="5" width="292" height="140" rx="10"/>
+    <text class="t-title" x="840" y="62" text-anchor="middle">Reguli</text><text class="t-sub" x="840" y="106" text-anchor="middle">regex ICAO</text>
+    <rect class="box" x="1041" y="5" width="292" height="140" rx="10"/>
+    <text class="t-title" x="1187" y="62" text-anchor="middle">Callsign</text><text class="t-sub" x="1187" y="106" text-anchor="middle">Levenshtein ≤ 2</text>
+    <rect class="box-dash" x="1388" y="5" width="292" height="140" rx="10"/>
+    <text class="t-title" x="1534" y="62" text-anchor="middle">LLM rezervă</text><text class="t-sub" x="1534" y="106" text-anchor="middle">timeout 2 s</text>
+    <g class="arrow" marker-end="url(#ah4)">
+      <line x1="294" y1="75" x2="341" y2="75"/><line x1="641" y1="75" x2="688" y2="75"/><line x1="988" y1="75" x2="1035" y2="75"/>
+    </g>
+    <line class="arrow-dash" x1="1335" y1="75" x2="1382" y2="75" marker-end="url(#ah4)"/>
+  </svg>
+  <div class="row grow" style="margin-top:28px;gap:40px">
+    <div style="width:720px;flex:none">
+      <p class="small muted" style="margin-bottom:8px">Normalizare (din testele parser-ului)</p>
+      <div class="mono" style="font-size:28px;line-height:1.6;margin-bottom:22px">
+        <div>tree thousand fife hundred <span class="muted">→</span> 3500</div>
+        <div>flight level six zero <span class="muted">→</span> fl060</div>
+        <div>runway zero niner <span class="muted">→</span> rwy09</div>
+        <div>Lufthansa nine tango charlie <span class="muted">→</span> 9tc</div>
+      </div>
+      <p class="small" style="margin-bottom:10px">Callsign-ul se caută <b>doar</b> printre avioanele din sesiune; altfel, avionul selectat pe radar.</p>
+      <p class="small" style="margin:0">LLM-ul rulează doar dacă nicio regulă nu prinde, iar răspunsul e validat față de tipul <span class="mono">Clearance</span>.</p>
+    </div>
+    <div class="card col" style="padding:24px 32px">
+      <p class="small muted" style="margin-bottom:6px">Intrare</p>
+      <p class="mono atc" style="font-size:28px;margin-bottom:14px">TAROM 301, descend altitude 4000 feet, turn left heading 080</p>
+      <p class="small muted" style="margin-bottom:6px">Ieșire reală din API</p>
+<pre class="mono" style="font-size:28px;line-height:1.38;margin:0;color:var(--color-text-secondary)">{ "callsign": "ROT301", "speaker": "atc",
+  "altitude": { "valueFt": 4000,
+                "action": "descend" },
+  "heading": { "valueDeg": 80, "turn": "left" },
+  "confidence": 0.95, "parsePath": "<span class="ok">rules</span>" }</pre>
+    </div>
+  </div>
+  <p class="small" style="margin:18px 0 0">Măsurat: <b>84 / 84</b> fraze din setul de test text (<span class="mono">test/phrases.json</span>) parsate corect, pe toate câmpurile.</p>
+</section>
+
+<!-- 14. Motorul de siguranță -->
+<section class="slide" data-part="Partea 3 · Arhitectura">
+  <p class="kicker">Motorul de siguranță · SafetyModule</p>
+  <h1 style="margin-bottom:28px">Patru verificări, toate cod determinist</h1>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px" class="grow">
+    <div class="card" style="padding:26px 32px">
+      <h2 style="font-size:34px;margin-bottom:8px">ReadbackChecker</h2>
+      <p class="small muted" style="margin-bottom:14px">La fiecare readback: valoare diferită, câmp lipsă, nimic în 8 s.</p>
+      <div class="alert-line warning"><b>HEARBACK MISMATCH</b><br>ROT301 cleared 4000 ft, read back 6000 ft</div>
+    </div>
+    <div class="card" style="padding:26px 32px">
+      <h2 style="font-size:34px;margin-bottom:8px">ConformanceMonitor</h2>
+      <p class="small muted" style="margin-bottom:14px">La fiecare tick; abaterea trebuie să persiste <b style="color:var(--color-text)">4 s</b>. Viraj opus, sens vertical opus, level bust.</p>
+      <div class="alert-line warning"><b>WRONG TURN</b><br>ROT612 cleared LEFT heading 200, turning RIGHT through 019°</div>
+    </div>
+    <div class="card" style="padding:26px 32px">
+      <h2 style="font-size:34px;margin-bottom:8px">CommsWatchdog</h2>
+      <p class="small muted" style="margin-bottom:14px">Timp de la ultimul contact: 30 / 60 min (configurabil), 15 / 30 s în demo.</p>
+      <div class="alert-line warning"><b>NO CONTACT</b><br>No communication with DLH9TC for 33 s (limit 30 s)</div>
+    </div>
+    <div class="card" style="padding:26px 32px">
+      <h2 style="font-size:34px;margin-bottom:8px">ClearanceProbe <span class="muted" style="font-weight:500;font-size:28px">· bonus</span></h2>
+      <p class="small muted" style="margin-bottom:14px">Traiectoria pe 5 min: sub 3 NM și sub 1000 ft.</p>
+      <div class="alert-line warning"><b>CONFLICT PREDICTED</b><br>DLH2MP and THY7KM predicted 1.1 NM / 900 ft apart in 5 min 0 s</div>
+    </div>
+  </div>
+</section>
+
+<!-- 15. Date și contract real-time -->
+<section class="slide" data-part="Partea 3 · Arhitectura">
+  <p class="kicker">Modelul de date și contractul real-time</p>
+  <h1 style="margin-bottom:28px">Tipurile comune stau în <span class="mono" style="font-size:56px">packages/shared</span></h1>
+  <div class="row grow" style="gap:56px">
+    <div style="width:780px;flex:none">
+      <h2 style="font-size:32px">PostgreSQL · tabele</h2>
+      <table class="t">
+        <tr><td class="mono lead">sessions</td><td class="muted">o sesiune per sector</td></tr>
+        <tr><td class="mono lead">transmissions</td><td class="muted">transcriere, audio, latență</td></tr>
+        <tr><td class="mono lead">clearances</td><td class="muted">instrucțiunea parsată (jsonb)</td></tr>
+        <tr><td class="mono lead">alerts</td><td class="muted">mesaj, detalii, cine a rezolvat</td></tr>
+        <tr><td class="mono lead">fault_events</td><td class="muted">erorile injectate din demo</td></tr>
+        <tr><td class="mono lead">traffic_frames</td><td class="muted">radarul la 2 s, pentru replay</td></tr>
+        <tr><td class="mono lead">users</td><td class="muted">conturi și roluri</td></tr>
+      </table>
+    </div>
+    <div class="col">
+      <h2 style="font-size:32px">Socket.IO <span class="mono" style="font-size:30px">/live</span> · server → client</h2>
+      <table class="t">
+        <tr><td class="mono lead">traffic:update</td><td class="muted">toate avioanele, <b style="color:var(--color-text)">4 Hz</b></td></tr>
+        <tr><td class="mono lead">comms:transmission</td><td class="muted">după fiecare PTT</td></tr>
+        <tr><td class="mono lead">comms:readback</td><td class="muted">ok · mismatch · incomplete</td></tr>
+        <tr><td class="mono lead">clearance:issued</td><td class="muted">odată cu transmisia</td></tr>
+        <tr><td class="mono lead">alert:raised</td><td class="muted">la detecție</td></tr>
+        <tr><td class="mono lead">alert:cleared</td><td class="muted">când condiția dispare</td></tr>
+      </table>
+      <p class="small muted" style="margin-top:20px">REST doar pentru comenzi: <span class="mono">/api/transmissions</span>, <span class="mono">/api/demo/*</span>, <span class="mono">/api/alerts</span>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 16. Siguranță prin design -->
+<section class="slide" data-part="Partea 3 · Arhitectura">
+  <p class="kicker">Siguranță prin design</p>
+  <h1>AI-ul înțelege vorbirea. Nu ia decizii de siguranță.</h1>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:28px 56px">
+    <div class="card"><h2 style="font-size:34px">AI doar pentru vorbire</h2><p class="small muted" style="margin:0">Transcriere, vocea pilotului și frazele pe care regulile nu le recunosc.</p></div>
+    <div class="card"><h2 style="font-size:34px">Verificări deterministe</h2><p class="small muted" style="margin:0">Readback, conformitate și conflicte: TypeScript, fără apeluri de rețea.</p></div>
+    <div class="card"><h2 style="font-size:34px">Doar advisory</h2><p class="small muted" style="margin:0">Sistemul avertizează, nu dă instrucțiuni. Controlorul decide.</p></div>
+    <div class="card"><h2 style="font-size:34px">Merge fără chei AI</h2><p class="small muted" style="margin:0">Whisper local; vocea din cache; fraze tastate ca rezervă.</p></div>
+  </div>
+  <div class="alert-line warning" style="margin-top:32px;font-size:var(--s-body)"><span style="font-weight:700;color:var(--color-warning-text)">Fiecare alertă se explică singură:</span> tipul, avionul și valorile, în clar.</div>
+</section>
+
+<!-- ============ PARTEA 4 — IMPLEMENTAREA LA CLIENT ============ -->
+
+<!-- 17. Arhitectura de implementare -->
+<section class="slide" data-part="Partea 4 · Implementarea la client">
+  <p class="kicker">Arhitectura de implementare</p>
+  <h1 style="margin-bottom:24px">Pe serverele clientului, nu pe ale noastre</h1>
+  <svg viewBox="0 0 1680 700" width="1680" height="700" role="img" aria-label="Implementare on-premise în rețeaua ANSP">
+    <defs><marker id="ah5" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--color-text-muted)"/></marker></defs>
+    <rect class="frame" x="0" y="0" width="1680" height="700" rx="18"/>
+    <text class="t-sub" x="32" y="48">Rețeaua ANSP · on-premise · izolată de internet</text>
+    <!-- inputs -->
+    <text class="t-sub" x="40" y="112">Intrări existente</text>
+    <rect class="box" x="40" y="132" width="420" height="130" rx="10"/>
+    <text class="t-title" x="66" y="184">Sistemul de voce (VCS)</text><text class="t-sub" x="66" y="228">audio pasiv, per frecvență</text>
+    <rect class="box" x="40" y="292" width="420" height="130" rx="10"/>
+    <text class="t-title" x="66" y="344">Radar (ASTERIX)</text><text class="t-sub" x="66" y="388">pozițiile avioanelor</text>
+    <rect class="box" x="40" y="452" width="420" height="130" rx="10"/>
+    <text class="t-title" x="66" y="504">Planuri de zbor (FDP)</text><text class="t-sub" x="66" y="548">callsign, rută, nivel</text>
+    <!-- server -->
+    <rect class="box-atc" x="620" y="132" width="440" height="370" rx="12"/>
+    <text class="t-title" x="650" y="188">Server TowerWhisper</text>
+    <text class="t-sub" x="650" y="246">recunoaștere vocală locală</text>
+    <text class="t-sub" x="650" y="296">parser + verificări</text>
+    <text class="t-sub" x="650" y="346">bază de date + audit</text>
+    <text class="t-sub" x="650" y="396">Docker, per centru</text>
+    <text class="t-sub" x="650" y="456" style="fill:var(--color-text)">fără AI în cloud</text>
+    <rect class="box" x="620" y="560" width="440" height="110" rx="10"/>
+    <text class="t-title" x="650" y="608" style="font-size:28px">SSO · Active Directory</text><text class="t-sub" x="650" y="648">conturi și roluri</text>
+    <!-- outputs -->
+    <text class="t-sub" x="1220" y="112">Ieșiri</text>
+    <rect class="box" x="1220" y="132" width="420" height="130" rx="10"/>
+    <text class="t-title" x="1246" y="184">Ecran controlor</text><text class="t-sub" x="1246" y="228">alerte advisory</text>
+    <rect class="box" x="1220" y="292" width="420" height="130" rx="10"/>
+    <text class="t-title" x="1246" y="344">Dashboard supervizor</text><text class="t-sub" x="1246" y="388">starea sectoarelor</text>
+    <rect class="box" x="1220" y="452" width="420" height="130" rx="10"/>
+    <text class="t-title" x="1246" y="504">Analiză de siguranță</text><text class="t-sub" x="1246" y="548">statistici, investigații</text>
+    <g class="arrow" marker-end="url(#ah5)">
+      <line x1="462" y1="197" x2="614" y2="250"/><line x1="462" y1="357" x2="614" y2="330"/><line x1="462" y1="517" x2="614" y2="410"/>
+      <line x1="840" y1="558" x2="840" y2="508"/>
+      <line x1="1062" y1="250" x2="1214" y2="197"/><line x1="1062" y1="330" x2="1214" y2="357"/><line x1="1062" y1="410" x2="1214" y2="517"/>
+    </g>
+  </svg>
+</section>
+
+<!-- 18. Prototip vs produs -->
+<section class="slide" data-part="Partea 4 · Implementarea la client">
+  <p class="kicker">Prototip vs produs</p>
+  <h1 style="margin-bottom:28px">Ce se schimbă la un client real</h1>
+  <table class="t">
+    <tr><th style="width:24%">În prototip</th><th style="width:44%">În produs</th><th>De ce</th></tr>
+    <tr><td class="lead">Controlorul apasă Space în browser</td><td>Audio preluat pasiv din sistemul de voce (VCS), pe fiecare frecvență, inclusiv vocea piloților</td><td class="muted">Controlorul nu face nimic în plus</td></tr>
+    <tr><td class="lead">Trafic simulat</td><td>Date radar reale în formatul european ASTERIX, plus planurile de zbor</td><td class="muted">Verificăm avioanele reale</td></tr>
+    <tr><td class="lead">Whisper și Claude prin API, în cloud</td><td>Model de recunoaștere vocală rulat local, antrenat pe frazeologia ATC; fără LLM extern</td><td class="muted">Datele nu ies din rețea</td></tr>
+    <tr><td class="lead">Conturi locale în aplicație</td><td>Conturi prin SSO / Active Directory</td><td class="muted">Fără parole în plus</td></tr>
+    <tr><td class="lead">Ecran separat în browser</td><td>Întâi ecran advisory auxiliar; apoi integrat în stația de lucru prin furnizorul ei</td><td class="muted">Integrarea directă o fac furnizorii ATM</td></tr>
+  </table>
+</section>
+
+<!-- 19. Cum ajunge interfața la controlor -->
+<section class="slide" data-part="Partea 4 · Implementarea la client">
+  <p class="kicker">Cum ajunge interfața la controlor</p>
+  <h1 style="margin-bottom:32px">Trei pași, de la simulator la radarul existent</h1>
+  <div class="row" style="gap:28px;align-items:stretch">
+    <div class="card col">
+      <p class="kicker atc">Pasul 1</p>
+      <h2 style="font-size:34px">Pregătire și shadow mode</h2>
+      <p class="small muted" style="margin:0">În simulatoare: interfața completă. În shadow mode controlorul nu vede nimic; alertele le vede doar echipa de siguranță.</p>
+    </div>
+    <div class="card col">
+      <p class="kicker atc">Pasul 2</p>
+      <h2 style="font-size:34px">Ecran auxiliar mic</h2>
+      <p class="small muted" style="margin:0">La poziția de lucru, doar alertele active și timerele de comunicare, fără radar propriu.</p>
+    </div>
+    <div class="card col">
+      <p class="kicker atc">Pasul 3</p>
+      <h2 style="font-size:34px">În radarul existent</h2>
+      <p class="small muted" style="margin:0">Eticheta avionului colorată și câmpul „LC”, integrate de furnizorul sistemului ATM.</p>
+    </div>
+  </div>
+  <h2 style="font-size:32px;margin:44px 0 18px">Roluri</h2>
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:24px">
+    <div><p class="atc" style="font-weight:700;margin-bottom:6px">Controlor</p><p class="small muted">alertele sectorului lui</p></div>
+    <div><p style="font-weight:700;margin-bottom:6px">Supervizor</p><p class="small muted">toate sectoarele, pragurile</p></div>
+    <div><p style="font-weight:700;margin-bottom:6px">Analist de siguranță</p><p class="small muted">istoric și statistici</p></div>
+    <div><p style="font-weight:700;margin-bottom:6px">Administrator</p><p class="small muted">instalare, actualizări, jurnal de acces</p></div>
+  </div>
+</section>
+
+<!-- ============ PARTEA 5 — BUSINESS ============ -->
+
+<!-- 20. Clienți și piață -->
+<section class="slide" data-part="Partea 5 · Business">
+  <p class="kicker">Clienți și piață</p>
+  <h1 style="margin-bottom:24px">Plătesc furnizorii de navigație aeriană (ANSP)</h1>
+  <table class="t">
+    <tr><th style="width:26%">Actor</th><th style="width:40%">Rol pentru noi</th><th>Exemple</th></tr>
+    <tr><td class="lead">ANSP</td><td><b class="atc">Clientul principal</b></td><td class="muted">ROMATSA, DFS, DSNA, ENAV, ENAIRE</td></tr>
+    <tr><td class="lead">Centre de pregătire ATC</td><td><b>Primul client realist</b>, fără risc operațional</td><td class="muted">centrele ANSP-urilor, școli de controlori</td></tr>
+    <tr><td class="lead">Furnizori de sisteme ATM</td><td><b>Canal de distribuție</b></td><td class="muted">Frequentis, Thales, Indra</td></tr>
+    <tr><td class="lead">SESAR Joint Undertaking</td><td>Finanțare și validare</td><td class="muted">apeluri SESAR / Horizon Europe</td></tr>
+    <tr><td class="lead">EASA</td><td><b>Regulatorul</b>, nu client</td><td class="muted">atestarea echipamentelor ATM/ANS</td></tr>
+  </table>
+  <p class="small muted" style="margin-top:24px">Echipamentele ATM/ANS din UE se atestă după Regulamentul delegat (UE) 2023/1768, aplicabil din septembrie 2023, de regulă împreună cu ANSP-ul și un furnizor de sisteme.</p>
+</section>
+
+<!-- 21. Roadmap -->
+<section class="slide" data-part="Partea 5 · Business">
+  <p class="kicker">Lansare pe etape</p>
+  <h1 style="margin-bottom:40px">Întâi fără risc operațional, apoi operațional</h1>
+  <svg viewBox="0 0 1680 120" width="1680" height="120" aria-hidden="true">
+    <line x1="20" y1="60" x2="1660" y2="60" stroke="var(--color-border-control)" stroke-width="4"/>
+    <g>
+      <circle cx="160" cy="60" r="26" fill="var(--color-atc)"/><circle cx="496" cy="60" r="26" fill="var(--color-panel)" stroke="var(--color-text-muted)" stroke-width="3"/>
+      <circle cx="832" cy="60" r="26" fill="var(--color-panel)" stroke="var(--color-text-muted)" stroke-width="3"/>
+      <circle cx="1168" cy="60" r="26" fill="var(--color-panel)" stroke="var(--color-text-muted)" stroke-width="3"/>
+      <circle cx="1504" cy="60" r="26" fill="var(--color-panel)" stroke="var(--color-text-muted)" stroke-width="3"/>
+    </g>
+    <g font-family="var(--font-data)" font-size="26" font-weight="700" text-anchor="middle">
+      <text x="160" y="69" style="fill:var(--color-bg)">0</text><text x="496" y="69">1</text><text x="832" y="69">2</text><text x="1168" y="69">3</text><text x="1504" y="69">4</text>
+    </g>
+  </svg>
+  <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:20px;margin-top:8px">
+    <div class="card" style="padding:24px 22px;border-color:var(--color-atc)"><h2 style="font-size:32px">Prototip</h2><p class="small atc" style="margin-bottom:12px">acum</p><p class="small muted" style="margin:0">Aplicația de la hackathon, trafic simulat. Dovedim că merge.</p></div>
+    <div class="card" style="padding:24px 22px"><h2 style="font-size:32px">Pregătire și analiză</h2><p class="small" style="margin-bottom:12px">estimat 3–6 luni</p><p class="small muted" style="margin:0">Simulatoare și analiză offline. Centre de pregătire.</p></div>
+    <div class="card" style="padding:24px 22px"><h2 style="font-size:32px">Shadow mode</h2><p class="small" style="margin-bottom:12px">estimat 6–12 luni</p><p class="small muted" style="margin:0">Frecvența și radarul reale, alertele doar se salvează. Un ANSP pilot.</p></div>
+    <div class="card" style="padding:24px 22px"><h2 style="font-size:32px">Advisory operațional</h2><p class="small" style="margin-bottom:12px">estimat 12–24+ luni</p><p class="small muted" style="margin:0">Alertele la controlor, pe un sector. Atestare EASA.</p></div>
+    <div class="card" style="padding:24px 22px"><h2 style="font-size:32px">Scalare</h2><p class="small" style="margin-bottom:12px">după etapa 3</p><p class="small muted" style="margin:0">Mai multe sectoare și ANSP-uri, prin furnizori.</p></div>
+  </div>
+  <p class="small muted" style="margin-top:28px">Duratele sunt estimări, nu angajamente. Etapele 2–3 se finanțează prin SESAR / Horizon Europe, în parteneriat cu un ANSP.</p>
+</section>
+
+<!-- 22. Model de business și scalare -->
+<section class="slide" data-part="Partea 5 · Business">
+  <p class="kicker">Model de business și scalare</p>
+  <h1 style="margin-bottom:32px">Licență per poziție, un server per centru</h1>
+  <div class="row grow" style="gap:56px">
+    <div class="col">
+      <h2 style="font-size:34px">Venituri</h2>
+      <ul class="clean">
+        <li>Licență anuală <b>per poziție de lucru sau per sector</b>, cu instalare, mentenanță și suport.</li>
+        <li>Licență <b>per centru</b> pentru modulul de pregătire și analiza offline.</li>
+        <li>Granturi <b>SESAR / Horizon Europe</b>.</li>
+      </ul>
+      <p class="small muted">Prețurile se stabilesc cu un client pilot, nu le inventăm acum.</p>
+    </div>
+    <div class="col">
+      <h2 style="font-size:34px">Scalare tehnică</h2>
+      <svg viewBox="0 0 760 400" width="760" height="400" role="img" aria-label="Un server per centru, un proces STT per frecvență">
+        <rect class="box-atc" x="0" y="0" width="760" height="300" rx="12"/>
+        <text class="t-title" x="28" y="52">Server per centru · Docker</text>
+        <rect class="box" x="28" y="90" width="220" height="110" rx="8"/><text class="t-sub" x="138" y="135" text-anchor="middle" style="fill:var(--color-text)">STT</text><text class="t-sub" x="138" y="175" text-anchor="middle">frecvența 1</text>
+        <rect class="box" x="270" y="90" width="220" height="110" rx="8"/><text class="t-sub" x="380" y="135" text-anchor="middle" style="fill:var(--color-text)">STT</text><text class="t-sub" x="380" y="175" text-anchor="middle">frecvența 2</text>
+        <rect class="box-dash" x="512" y="90" width="220" height="110" rx="8"/><text class="t-sub" x="622" y="135" text-anchor="middle">+ STT</text><text class="t-sub" x="622" y="175" text-anchor="middle">sector nou</text>
+        <text class="t-sub" x="28" y="260">parser · verificări · bază de date</text>
+        <text class="t-sub" x="0" y="360">De la un laptop la un cluster în data center.</text>
+      </svg>
+      <p class="small muted" style="margin:0">Modelul de voce se re-antrenează pe datele fiecărui ANSP.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 23. Concurență și riscuri -->
+<section class="slide" data-part="Partea 5 · Business">
+  <p class="kicker">Concurență și riscuri</p>
+  <h1 style="margin-bottom:28px">Problema e validată. Diferența e execuția.</h1>
+  <div class="row" style="gap:48px;align-items:flex-start">
+    <div class="card" style="width:600px;flex:none">
+      <h2 style="font-size:32px">SESAR HAAWAII</h2>
+      <p class="small muted">DLR, NATS, Isavia, 2020–2022. Prototip de cercetare pentru erori de readback: peste 80% din erori prinse în teste offline.</p>
+      <h2 style="font-size:32px;margin-top:24px" class="atc">TowerWhisper</h2>
+      <p class="small muted" style="margin:0">Verifică în plus <b style="color:var(--color-text)">execuția</b> pe radar și <b style="color:var(--color-text)">timpul de la ultimul contact</b>, într-un produs ușor de instalat.</p>
+    </div>
+    <div class="col">
+      <table class="t">
+        <tr><th style="width:42%">Risc</th><th>Răspuns</th></tr>
+        <tr><td class="lead">Certificarea durează ani</td><td class="muted">Începem cu pregătire și analiză offline</td></tr>
+        <tr><td class="lead">Achiziții ANSP lente</td><td class="muted">Granturi SESAR, furnizori deja contractați</td></tr>
+        <tr><td class="lead">Accente și zgomot</td><td class="muted">Antrenare pe datele ANSP; shadow mode</td></tr>
+        <tr><td class="lead">Alarme false</td><td class="muted">Praguri reglabile, persistență, măsurare</td></tr>
+        <tr><td class="lead">Înregistrări sensibile</td><td class="muted">On-premise, roluri, jurnal de acces, GDPR</td></tr>
+        <tr><td class="lead">HAAWAII, furnizori mari</td><td class="muted">Execuție + timp de comunicare; sau modul pentru un furnizor mare</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PARTEA 6 — ÎNCERCAȚI ============ -->
+
+<!-- 24. Încercați -->
+<section class="slide" data-part="Partea 6 · Încercați">
+  <p class="kicker">Încercați</p>
+  <h1 style="margin-bottom:28px">Sunteți <span class="atc mono" style="font-size:60px">CRAIOVA APPROACH</span></h1>
+  <div class="row" style="gap:28px;margin-bottom:36px">
+    <div class="card col" style="padding:24px 30px"><p class="kicker atc" style="margin-bottom:6px">1</p><p style="margin:0">Țineți apăsat <span class="mono" style="border:2px solid var(--color-border-control);border-radius:6px;padding:0 12px">Space</span></p></div>
+    <div class="card col" style="padding:24px 30px"><p class="kicker atc" style="margin-bottom:6px">2</p><p style="margin:0">Spuneți instrucțiunea, cu indicativul la început</p></div>
+    <div class="card col" style="padding:24px 30px"><p class="kicker atc" style="margin-bottom:6px">3</p><p style="margin:0">Eliberați și ascultați pilotul</p></div>
+  </div>
+  <div class="row grow" style="gap:48px">
+    <div class="col">
+      <h2 style="font-size:32px">Avioanele</h2>
+      <table class="t">
+        <tr><td class="mono lead atc" style="font-size:32px">TAROM 301</td><td class="mono">ROT301</td><td class="mono muted">AT76</td></tr>
+        <tr><td class="mono lead atc" style="font-size:32px">WIZZ 44</td><td class="mono">WZZ44</td><td class="mono muted">A21N</td></tr>
+        <tr><td class="mono lead atc" style="font-size:32px">TAROM 612</td><td class="mono">ROT612</td><td class="mono muted">B738</td></tr>
+      </table>
+    </div>
+    <div class="col">
+      <h2 style="font-size:32px">Pe panoul de demo, o singură dată</h2>
+      <table class="t">
+        <tr><td class="lead">TARGET</td><td class="mono">Selected</td></tr>
+        <tr><td class="lead">MODE</td><td class="mono">ONCE</td></tr>
+        <tr><td class="lead">COMMS TIMER</td><td><span class="mono">30 / 60 min</span><br><span class="muted"><span class="mono">15 / 30 s</span> doar la testul 9</span></td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- 25. Teste 1-5 -->
+<section class="slide" data-part="Partea 6 · Încercați" style="padding-top:56px">
+  <p class="kicker">Scenariu de test · 1 / 2</p>
+  <h1 style="margin-bottom:20px;font-size:56px">Testele 1–5: readback</h1>
+  <table class="t">
+    <tr><th style="width:4%">#</th><th style="width:19%">Panou demo</th><th style="width:44%">Spuneți</th><th>Rezultat așteptat</th></tr>
+    <tr><td class="mono">1</td><td class="muted">nimic</td><td class="mono">TAROM 301, descend altitude 4000 feet, turn left heading 080</td><td><span class="tag ok">READBACK OK</span>, bifă verde</td></tr>
+    <tr><td class="mono">2</td><td>Wrong altitude</td><td class="mono">TAROM 612, descend altitude 6000 feet</td><td><span class="tag warning">HEARBACK MISMATCH</span><br><span class="muted">read back 8000 ft</span></td></tr>
+    <tr><td class="mono">3</td><td>Wrong turn direction</td><td class="mono">WIZZ 44, descend altitude 5000 feet, turn left heading 240, reduce speed 220</td><td><span class="tag warning">HEARBACK MISMATCH</span><br><span class="muted">LEFT 240, read back RIGHT</span></td></tr>
+    <tr><td class="mono">4</td><td>Incomplete readback</td><td class="mono">TAROM 301, descend altitude 4000 feet, turn left heading 080</td><td><span class="tag caution">READBACK INCOMPLETE</span><br><span class="muted">4000 ft missing</span></td></tr>
+    <tr><td class="mono">5</td><td>No response</td><td class="mono">TAROM 612, descend altitude 6000 feet</td><td><span class="tag caution">NO RESPONSE</span><br><span class="muted">după 8 s de tăcere</span></td></tr>
+  </table>
+</section>
+
+<!-- 26. Teste 6-10 -->
+<section class="slide" data-part="Partea 6 · Încercați" style="padding-top:56px">
+  <p class="kicker">Scenariu de test · 2 / 2</p>
+  <h1 style="margin-bottom:20px;font-size:56px">Testele 6–10: execuție și contact</h1>
+  <table class="t">
+    <tr><th style="width:4%">#</th><th style="width:21%">Panou demo</th><th style="width:42%">Spuneți</th><th>Rezultat așteptat</th></tr>
+    <tr><td class="mono">6</td><td>Turn wrong way</td><td class="mono">TAROM 612, turn left heading 200</td><td><span class="tag warning">WRONG TURN</span><br><span class="muted">virează la dreapta</span></td></tr>
+    <tr><td class="mono">7</td><td>Wrong vertical</td><td class="mono">WIZZ 44, descend altitude 5000 feet, turn left heading 240, reduce speed 220</td><td><span class="tag warning">WRONG VERTICAL</span><br><span class="muted">urcă în loc să coboare</span></td></tr>
+    <tr><td class="mono">8</td><td>Level bust</td><td class="mono">TAROM 612, descend altitude 6000 feet</td><td><span class="tag warning">LEVEL BUST</span><br><span class="muted">după ~2 min, la 1×</span></td></tr>
+    <tr><td class="mono">9</td><td>15 / 30 s, click TAROM 612, Age to 30 s</td><td class="mono">TAROM 612, descend altitude 6000 feet</td><td><span class="tag warning">NO CONTACT</span> roșu, dispare la transmisie</td></tr>
+    <tr><td class="mono">10</td><td>Wrong runway</td><td class="mono">WIZZ 44, cleared ILS approach runway two six</td><td><span class="tag warning">HEARBACK MISMATCH</span><br><span class="muted">runway 26, read back 08</span></td></tr>
+  </table>
+</section>
+
+<!-- 27. Consola de simulare -->
+<section class="slide" data-part="Partea 6 · Încercați" style="padding-top:32px">
+  <div class="row grow" style="gap:64px;align-items:center">
+    <div style="display:flex;gap:16px;flex:none;align-items:flex-start">
+      <div style="width:392px;height:902px;border:1px solid var(--color-border-strong);border-radius:var(--radius-card);background:url(screens/05-demo-panel-full.png) 0 0 / 392px auto no-repeat"></div>
+      <div style="width:392px;height:940px;border:1px solid var(--color-border-strong);border-radius:var(--radius-card);background:url(screens/05-demo-panel-full.png) 0 -902px / 392px auto no-repeat"></div>
+    </div>
+    <div class="col">
+      <p class="kicker">Consola de simulare a erorilor · /demo</p>
+      <h1 style="font-size:52px;margin-bottom:28px">Ce face fiecare secțiune</h1>
+      <table class="t">
+        <tr><td class="lead mono" style="width:38%">Contoare</td><td class="muted">injectate, detectate, timp mediu</td></tr>
+        <tr><td class="lead mono">TARGET</td><td class="muted">avionul selectat, un indicativ sau oricare</td></tr>
+        <tr><td class="lead mono">MODE</td><td class="muted">o dată sau permanent</td></tr>
+        <tr><td class="lead mono">READBACK</td><td class="muted">pilotul confirmă greșit</td></tr>
+        <tr><td class="lead mono">EXECUTION</td><td class="muted">avionul face altceva</td></tr>
+        <tr><td class="lead mono">COMMS TIMER</td><td class="muted">limitele și „îmbătrânirea” timerului</td></tr>
+        <tr><td class="lead mono">SCENARIO</td><td class="muted">conflict, zgomot, viteza timpului, reset</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- 28. Pașii următori -->
+<section class="slide" data-part="Pașii următori">
+  <p class="kicker">Pașii următori</p>
+  <h1 style="margin-bottom:36px">De la hackathon la un ANSP pilot</h1>
+  <div class="row grow" style="gap:64px">
+    <div class="col">
+      <ul class="clean">
+        <li>Modul pentru <b>simulatoarele de pregătire</b> și analiza offline a înregistrărilor.</li>
+        <li><b>Shadow mode</b> cu un ANSP pilot, ideal ROMATSA, pe un sector.</li>
+        <li>Model de voce <b>local</b>, antrenat pe frazeologia ATC.</li>
+        <li>Aplicație <b>SESAR / Horizon Europe</b> împreună cu un ANSP.</li>
+      </ul>
+    </div>
+    <div style="width:560px;display:flex;flex-direction:column;justify-content:center">
+      <p style="font-size:96px;font-weight:800;margin:0 0 20px;letter-spacing:-0.02em">Mulțumim!</p>
+      <p class="muted" style="margin:0 0 12px">Echipa: <span class="tbd">[ECHIPA — DE COMPLETAT]</span></p>
+      <p class="muted" style="margin:0">Contact: <span class="tbd">[DE CONFIRMAT]</span></p>
+    </div>
+  </div>
+</section>
+
+<script>
+  (function () {
+    const slides = [...document.querySelectorAll('.slide')];
+    const total = slides.length;
+    slides.forEach((s, i) => {
+      const chrome = document.createElement('div');
+      chrome.className = 'chrome';
+      chrome.innerHTML = `<span>TowerWhisper${s.dataset.part ? ' · ' + s.dataset.part : ''}</span><span>${i + 1} / ${total}</span>`;
+      if (i > 0) s.appendChild(chrome);
+    });
+    const params = new URLSearchParams(location.search);
+    if (params.has('print')) return;
+    if (params.has('slide')) {
+      document.body.classList.add('single');
+      slides[Number(params.get('slide')) - 1]?.classList.add('on');
+      return;
+    }
+    document.body.classList.add('viewer');
+    let current = Math.min(Math.max(Number(location.hash.slice(1)) || 1, 1), total) - 1;
+    function fit() {
+      const k = Math.min(innerWidth / 1920, innerHeight / 1080);
+      slides.forEach((s) => (s.style.transform = `translate(-50%, -50%) scale(${k})`));
+    }
+    function show(i) {
+      current = Math.min(Math.max(i, 0), total - 1);
+      slides.forEach((s, j) => s.classList.toggle('on', j === current));
+      history.replaceState(null, '', '#' + (current + 1));
+    }
+    addEventListener('resize', fit);
+    addEventListener('keydown', (e) => {
+      if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) show(current + 1);
+      if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) show(current - 1);
+      if (e.key === 'Home') show(0);
+      if (e.key === 'End') show(total - 1);
+    });
+    addEventListener('click', (e) => show(current + (e.clientX < innerWidth / 3 ? -1 : 1)));
+    fit();
+    show(current);
+  })();
+</script>
+</body>
+</html>

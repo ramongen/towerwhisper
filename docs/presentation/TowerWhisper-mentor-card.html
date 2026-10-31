@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<title>TowerWhisper — fișa mentorului</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;600;700&display=swap">
+<style>
+  /* Printable A4, light on purpose (paper). Severity is written as a word too, for B/W printers. */
+  @page { size: A4; margin: 0; }
+  :root {
+    --ink: #0e1620; --muted: #4e6074; --rule: #c9d4e0; --soft: #eef2f6;
+    --warn: #b42318; --caution: #9a6700; --ok: #146c43; --atc: #0b6b7d;
+    --mono: 'JetBrains Mono', Consolas, monospace; --ui: 'Inter', 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #fff; color: var(--ink); font-family: var(--ui); }
+  .page { width: 210mm; height: 297mm; padding: 9mm 12mm 8mm; display: flex; flex-direction: column; overflow: hidden; }
+  header { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid var(--ink); padding-bottom: 2.5mm; }
+  h1 { font-size: 19pt; margin: 0; letter-spacing: -0.01em; }
+  header p { margin: 0; font-size: 9.5pt; color: var(--muted); }
+  h2 { font-size: 10.5pt; text-transform: uppercase; letter-spacing: 0.08em; margin: 3mm 0 1.5mm; }
+  .mono { font-family: var(--mono); }
+  .setup { display: grid; grid-template-columns: 1.25fr 1fr; gap: 5mm; }
+  ol, ul { margin: 0; padding-left: 5mm; font-size: 9.5pt; line-height: 1.38; }
+  li { margin-bottom: 0.6mm; }
+  .ac { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+  .ac td { padding: 1mm 1.5mm; border-bottom: 1px solid var(--rule); }
+  table.tests { width: 100%; border-collapse: collapse; font-size: 9pt; }
+  .tests th { text-align: left; font-size: 8pt; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); border-bottom: 1.5px solid var(--ink); padding: 1.2mm 1.5mm; }
+  .tests td { vertical-align: top; padding: 1.1mm 1.5mm; border-bottom: 1px solid var(--rule); line-height: 1.32; }
+  .tests tr:nth-child(even) td { background: var(--soft); }
+  .tests td.n { font-family: var(--mono); font-weight: 700; width: 6mm; }
+  .tests td.say { font-family: var(--mono); font-size: 9.5pt; font-weight: 600; }
+  .tag { font-family: var(--mono); font-weight: 700; font-size: 8.5pt; }
+  .w { color: var(--warn); } .c { color: var(--caution); } .o { color: var(--ok); }
+  .msg { display: block; font-family: var(--mono); font-size: 8pt; color: var(--muted); margin-top: 0.6mm; }
+  .note { font-size: 9pt; color: var(--muted); margin: 2mm 0 0; }
+  .tips { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+  footer { margin-top: auto; font-size: 8pt; color: var(--muted); display: flex; justify-content: space-between; border-top: 1px solid var(--rule); padding-top: 2mm; }
+  .key { font-family: var(--mono); border: 1px solid var(--ink); border-radius: 3px; padding: 0 1.5mm; }
+</style>
+</head>
+<body>
+<div class="page">
+  <header>
+    <h1>TowerWhisper · fișa mentorului</h1>
+    <p>Sunteți <b class="mono" style="color:var(--atc)">CRAIOVA APPROACH</b></p>
+  </header>
+
+  <div class="setup">
+    <div>
+      <h2>Pregătire (o singură dată)</h2>
+      <ol>
+        <li>Laptop: <span class="mono">http://localhost:8080</span> în Chrome / Edge, cont <span class="mono">atc@towerwhisper.app</span> / <span class="mono">passpass</span>. Permiteți microfonul.</li>
+        <li>Telefon: <span class="mono">http://&lt;ip-laptop&gt;:8080/demo</span></li>
+        <li>Pe panou: <b>TARGET → Selected</b>, <b>MODE → ONCE</b>, <b>COMMS TIMER → 30 / 60 min</b> (15 / 30 s doar la testul 9).</li>
+        <li>Dați click pe avionul căruia îi vorbiți (sau pe un loc gol): eroarea se aplică avionului selectat.</li>
+        <li>Înainte de fiecare test, armați eroarea pe panou; se consumă la prima transmisie.</li>
+      </ol>
+    </div>
+    <div>
+      <h2>Avioanele</h2>
+      <table class="ac">
+        <tr><td class="mono" style="font-weight:700">TAROM 301</td><td class="mono">ROT301</td><td class="mono" style="color:var(--muted)">AT76</td></tr>
+        <tr><td class="mono" style="font-weight:700">WIZZ 44</td><td class="mono">WZZ44</td><td class="mono" style="color:var(--muted)">A21N</td></tr>
+        <tr><td class="mono" style="font-weight:700">TAROM 612</td><td class="mono">ROT612</td><td class="mono" style="color:var(--muted)">B738</td></tr>
+      </table>
+      <p class="note">Țineți apăsat <span class="key">Space</span>, vorbiți, eliberați. Între teste: <b>RESOLVE</b> pe alertă sau <b>RESET SCENARIO</b> pe panou.</p>
+    </div>
+  </div>
+
+  <h2>Cele 10 teste</h2>
+  <table class="tests">
+    <tr><th>#</th><th style="width:27mm">Panou demo</th><th style="width:73mm">Spuneți</th><th>Rezultat așteptat</th></tr>
+    <tr><td class="n">1</td><td>nimic</td><td class="say">TAROM 301, descend altitude 4000 feet, turn left heading 080</td><td><span class="tag o">READBACK OK</span> (bifă verde), nicio alertă</td></tr>
+    <tr><td class="n">2</td><td>Wrong altitude</td><td class="say">TAROM 612, descend altitude 6000 feet</td><td><span class="tag w">HEARBACK MISMATCH</span> roșu<span class="msg">ROT612 cleared 6000 ft, read back 8000 ft</span></td></tr>
+    <tr><td class="n">3</td><td>Wrong turn direction</td><td class="say">WIZZ 44, descend altitude 5000 feet, turn left heading 240, reduce speed 220</td><td><span class="tag w">HEARBACK MISMATCH</span> roșu<span class="msg">WZZ44 cleared LEFT heading 240, read back RIGHT</span></td></tr>
+    <tr><td class="n">4</td><td>Incomplete readback</td><td class="say">TAROM 301, descend altitude 4000 feet, turn left heading 080</td><td><span class="tag c">READBACK INCOMPLETE</span> galben<span class="msg">ROT301 read back heading 080; 4000 ft missing</span></td></tr>
+    <tr><td class="n">5</td><td>No response</td><td class="say">TAROM 612, descend altitude 6000 feet</td><td>Pilotul tace; după 8 s <span class="tag c">NO RESPONSE</span> galben<span class="msg">No readback from ROT612 8 s after: 6000 ft</span></td></tr>
+    <tr><td class="n">6</td><td>Turn wrong way</td><td class="say">TAROM 612, turn left heading 200</td><td>Readback corect, avionul virează la dreapta: <span class="tag w">WRONG TURN</span> roșu<span class="msg">ROT612 cleared LEFT heading 200, turning RIGHT through …°</span></td></tr>
+    <tr><td class="n">7</td><td>Wrong vertical</td><td class="say">WIZZ 44, descend altitude 5000 feet, turn left heading 240, reduce speed 220</td><td>Urcă în loc să coboare: <span class="tag w">WRONG VERTICAL</span> roșu<span class="msg">WZZ44 cleared descent to 5000 ft, climbing at … ft/min</span></td></tr>
+    <tr><td class="n">8</td><td>Level bust</td><td class="say">TAROM 612, descend altitude 6000 feet</td><td>După ~2 min (la 1×): <span class="tag w">LEVEL BUST</span> roșu<span class="msg">ROT612 will bust 6000 ft in … s</span></td></tr>
+    <tr><td class="n">9</td><td>COMMS TIMER 15 / 30 s, click TAROM 612, <b>Age to 30 s</b></td><td class="say">TAROM 612, descend altitude 6000 feet</td><td>Înainte: <span class="tag w">NO CONTACT</span> roșu<span class="msg">No communication with ROT612 for 3x s (limit 30 s)</span>După transmisie alerta dispare. Reveniți la 30 / 60 min.</td></tr>
+    <tr><td class="n">10</td><td>Wrong runway</td><td class="say">WIZZ 44, cleared ILS approach runway two six</td><td><span class="tag w">HEARBACK MISMATCH</span> roșu<span class="msg">WZZ44 cleared ILS runway 26, read back runway 08</span></td></tr>
+  </table>
+
+  <h2>Sfaturi pentru microfon</h2>
+  <div class="tips">
+    <ul>
+      <li>Apăsați Space o clipă <b>înainte</b> să vorbiți și eliberați <b>după</b> ultimul cuvânt (sub 300 ms se ignoră).</li>
+      <li>Începeți cu indicativul, apoi instrucțiunea, în ritm normal, ca pe frecvență.</li>
+      <li>Cifrele pe rând: „zero eight zero”, „four thousand”; „niner” e înțeles.</li>
+    </ul>
+    <ul>
+      <li>Căști cu microfon sau microfon USB; laptopul prinde sala.</li>
+      <li>Microfonul merge doar pe <span class="mono">localhost</span> sau HTTPS.</li>
+      <li>Nu merge microfonul? Butonul cu tastatura din bara PTT permite scrierea frazei.</li>
+    </ul>
+  </div>
+
+  <footer><span>Rezultate verificate pe aplicația pornită în Docker, 31 oct 2026.</span><span>Mesajele alertelor rămân în engleză, ca în aplicație.</span></footer>
+</div>
+</body>
+</html>
