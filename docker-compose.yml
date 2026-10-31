@@ -52,6 +52,24 @@ services:
               capabilities: [gpu]
     restart: unless-stopped
 
+  # Same service on the CPU, for laptops without an NVIDIA GPU. Enabled with
+  # COMPOSE_PROFILES=whisper-cpu; answers on the same "whisper" host name, so WHISPER_URL
+  # does not change. Use a small model here (small.en by default): large-v3 is too slow on a CPU.
+  whisper-cpu:
+    image: onerahmet/openai-whisper-asr-webservice:v1.10.0
+    profiles: ['whisper-cpu']
+    environment:
+      ASR_ENGINE: faster_whisper
+      ASR_MODEL: ${WHISPER_CPU_MODEL:-small.en}
+      ASR_QUANTIZATION: int8
+      ASR_MODEL_PATH: /models
+    volumes:
+      - whisper-models:/models
+    networks:
+      default:
+        aliases: [whisper]
+    restart: unless-stopped
+
   web:
     build: { context: ., dockerfile: apps/web/Dockerfile }
     ports:
