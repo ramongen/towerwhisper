@@ -73,7 +73,8 @@ pnpm --filter api start:dev             # NestJS on :3000
 pnpm --filter web dev                   # Vite on :5173, proxies /api and /socket.io to :3000
 pnpm --filter api test                  # Jest, including parser accuracy over test/phrases.json
 pnpm -r lint && pnpm -r typecheck
-docker compose up --build               # full stack on http://localhost:8080
+docker compose up --build               # full stack on http://localhost:8080 (WEB_PORT)
+./start.sh  |  start.cmd                # same, on the first free port from 8080, prints the links
 ```
 
 Run `typecheck` and the relevant tests before saying a task is done.

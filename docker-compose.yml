@@ -72,8 +72,11 @@ services:
 
   web:
     build: { context: ., dockerfile: apps/web/Dockerfile }
+    # Port taken? ./start.sh or start.cmd pick the first free one from 8080 and set WEB_PORT.
     ports:
       - '${WEB_PORT:-8080}:80'
+    environment:
+      TW_PUBLIC_PORT: ${WEB_PORT:-8080} # for the "open http://localhost:<port>" banner
     depends_on:
       api: { condition: service_healthy }
     restart: unless-stopped

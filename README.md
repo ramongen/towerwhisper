@@ -62,12 +62,18 @@ live in the backend. Shared types and event contracts are in `packages/shared`.
 ```bash
 git clone <repo> && cd towerwhisper
 cp .env.example .env        # optional: add API keys, or leave empty for no-keys mode
-docker compose up --build
+./start.sh                  # macOS / Linux; on Windows: start.cmd (or .\start.ps1)
 ```
 
-Open <http://localhost:8080> and sign in, and `http://<laptop-ip>:8080/demo` on a phone (demo
-panel, no login). The microphone only works on `localhost` or HTTPS. If port 8080 is taken (Oracle
-XE listens there, for example), set `WEB_PORT=8081` in `.env`.
+The start script starts Docker Desktop if it is not running, picks the first free port from 8080
+(Oracle XE, for example, listens on 8080), builds and starts the stack, waits until it answers and
+prints where to go: the console (`http://localhost:<port>`), the demo panel for a phone
+(`http://<laptop-ip>:<port>/demo`, no login) and the accounts. Run again, it keeps the same port;
+`--logs` (`-Logs` in PowerShell) then follows the logs. Stop with `docker compose down`.
+
+Plain `docker compose up --build` works too, on `WEB_PORT` from `.env` (8080 by default), and the
+web container prints the same links in its log; it cannot move to another port by itself, which is
+what the scripts are for. The microphone only works on `localhost` or HTTPS.
 
 ### Accounts
 
