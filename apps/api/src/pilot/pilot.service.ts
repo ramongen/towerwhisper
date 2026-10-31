@@ -16,6 +16,12 @@ import { ReadbackBuilder } from './readback-builder';
 import { executionFaultApplies, faultyTargets, targetsFor } from './targets';
 
 /**
+ * Runs a pilot step after `ms`. The live sectors use real timers; a headless run (the demo
+ * history) passes one driven by simulation time.
+ */
+export type PilotScheduler = (ms: number, step: () => void | Promise<void>) => void;
+
+/**
  * The simulated pilot. ~1.5 s after an instruction it reads back (template text + TTS),
  * the readback goes through the same parser and the ReadbackChecker, then 2-3 s later
  * the aircraft starts the manoeuvre. Demo faults change what is said or flown.
@@ -38,6 +44,7 @@ export class PilotService {
     private readonly broadcast: (payload: CommsReadbackPayload) => void,
     /** Who the pilot calls for landing clearance: 'Craiova Tower'. */
     private readonly towerCallsign: string,
+    private readonly schedule?: PilotScheduler,
   ) {
     this.logger = new Logger(`Pilot ${simulation.airspace.airport.icao}`);
     this.simulation.onEvent((event) => void this.onSimEvent(event));
@@ -151,6 +158,7 @@ export class PilotService {
   }
 
   private later(ms: number, fn: () => void | Promise<void>): void {
+    if (this.schedule) return this.schedule(ms, fn);
     const timer = setTimeout(() => {
       this.timers.delete(timer);
       Promise.resolve(fn()).catch((error: Error) =>

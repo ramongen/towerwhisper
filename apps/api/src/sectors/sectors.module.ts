@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AirportController } from '../airport/airport.controller';
 import { AuthModule } from '../auth/auth.module';
 import { ENTITIES } from '../database/entities';
+import { DemoHistoryService } from '../demo/demo-history.service';
 import { DemoController } from '../demo/demo.controller';
 import { ParserModule } from '../parser/parser.module';
 import { RealtimeGateway } from '../realtime/realtime.gateway';
@@ -42,6 +43,7 @@ import { SessionStore } from './session-store';
     TransmissionService,
     SupervisorService,
     RadarService,
+    DemoHistoryService,
   ],
 })
 export class SectorsModule {}

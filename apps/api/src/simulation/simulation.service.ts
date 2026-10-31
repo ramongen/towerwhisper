@@ -204,6 +204,11 @@ export class SimulationService {
     a.commsAgeS = ageS;
   }
 
+  /** One tick without the timer: headless runs (the demo history) drive their own clock. */
+  step(): void {
+    this.tick();
+  }
+
   private tick(): void {
     const dtS = (TICK_MS / 1000) * this.timeScale;
     this.simNow += dtS * 1000;

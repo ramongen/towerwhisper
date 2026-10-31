@@ -85,6 +85,9 @@ click:
 | `atc@towerwhisper.app`        | `passpass` | ATC        | the Craiova Approach position (radar, PTT)      |
 | `supervisor@towerwhisper.app` | `passpass` | Supervisor | the dashboard: every sector, statistics, replay |
 
+The demo history (below) also creates one controller per other sector, same password:
+`atc.bucuresti@`, `atc.timisoara@`, `atc.cluj@` and `atc.oradea@towerwhisper.app`.
+
 Set `AUTH_SECRET` in `.env` (any long random string) outside a local demo; without it a development
 secret signs the tokens and the API says so at startup.
 
@@ -117,6 +120,16 @@ entry points (ODSOU, ODSEA, ...) are simulated too. A controller works the secto
   Sessions recorded before radar replay existed replay their transcripts and alerts only.
 - **Accounts** — create accounts, switch a role between ATC and Supervisor, set the sector an ATC
   works (an open screen moves at once), set a password, delete.
+
+**Demo history.** So the dashboard has something to show from the first start, the API records
+past sessions for București, Timișoara, Cluj and Oradea (Craiova keeps only what is really done in
+it): about 20 short sessions per sector over the last 30 days, most of them in the last 24 h. They
+are not made up row by row: each one runs the sector's real simulation, pilots, demo faults and
+safety checks headless, on simulation time, with a scripted controller who calls every arrival,
+clears them to land and reacts to the alerts (resolves some, repeats the instruction). The alerts,
+messages and transcripts are therefore exactly what a live session produces; the two most recent
+sessions per sector also have radar to replay. It takes about half a minute in the background
+after startup, is redone when older than 6 h, and `DEMO_HISTORY=false` turns it off.
 
 The `/demo` panel lists every sector's session with who is signed in; pick the one to drive.
 

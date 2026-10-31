@@ -51,3 +51,92 @@ export const EXPECTED_ALERTS: Record<FaultKind, AlertType[]> = {
 };
 
 export type { FaultKind };
+
+// --- Demo history: past sessions recorded at startup for the supervisor dashboard ---------
+
+/** Stored as the session's scenario, so the seeded sessions can be found and replaced. */
+export const HISTORY_SCENARIO = 'demo-history';
+
+/** Regenerate when the newest seeded session ended longer ago than this (charts stay current). */
+export const HISTORY_STALE_AFTER_H = 6;
+
+/**
+ * Past sessions per sector, as [hours before now when it ended, minutes long]. At most 16
+ * minutes: until then the generated arrivals keep their separation by themselves (later the
+ * controller would have to sequence them, which the scripted one does not). The first
+ * HISTORY_RADAR_SESSIONS also get their radar recorded (the replay's moving picture); older
+ * ones replay transcripts and alerts only, which keeps the database small.
+ */
+export const HISTORY_SESSIONS: [endedHoursAgo: number, minutes: number][] = [
+  [0.3, 15],
+  [2, 14],
+  [3.5, 16],
+  [6, 13],
+  [8, 15],
+  [11, 14],
+  [15, 16],
+  [18, 12],
+  [21, 15],
+  [30, 14],
+  [44, 16],
+  [52, 13],
+  [77, 15],
+  [99, 14],
+  [124, 16],
+  [148, 13],
+  [200, 15],
+  [270, 14],
+  [340, 13],
+  [420, 15],
+  [500, 14],
+  [600, 13],
+];
+export const HISTORY_RADAR_SESSIONS = 2;
+
+/** Each sector's sessions are shifted by up to this much, so they do not line up. */
+export const HISTORY_SECTOR_JITTER_H = 1.5;
+
+/** Incidents (armed faults or triggers) per session, inclusive. */
+export const HISTORY_INCIDENTS = { min: 2, max: 5 };
+
+/** Seconds between the controller's first call to each arrival, plus up to the jitter. */
+export const HISTORY_CALL_SPACING_S = 140;
+export const HISTORY_CALL_JITTER_S = 40;
+export const HISTORY_FIRST_CALL_S = 40;
+
+/** The controller answers a landing request after this many seconds (min, max). */
+export const HISTORY_LANDING_REPLY_S = [4, 9] as const;
+/** A vector off the route lasts this long before "proceed direct" (min, max). */
+export const HISTORY_VECTOR_S = [50, 90] as const;
+
+/**
+ * How the controller handles an alert in the history: after `delayS` (min, max) it resolves
+ * it with probability `resolve`, and repeats the instruction (min, max s later) when `repeat`.
+ */
+export const HISTORY_REACTIONS: Record<
+  AlertType,
+  { delayS: readonly [number, number]; resolve: number; repeat: boolean }
+> = {
+  HEARBACK_MISMATCH: { delayS: [4, 25], resolve: 0.55, repeat: true },
+  READBACK_INCOMPLETE: { delayS: [5, 30], resolve: 0.5, repeat: true },
+  NO_RESPONSE: { delayS: [3, 15], resolve: 0.3, repeat: true },
+  WRONG_TURN: { delayS: [5, 35], resolve: 0.85, repeat: true },
+  WRONG_VERTICAL: { delayS: [5, 35], resolve: 0.85, repeat: true },
+  LEVEL_BUST: { delayS: [3, 20], resolve: 0.9, repeat: true },
+  NO_CONTACT: { delayS: [20, 150], resolve: 0.5, repeat: true },
+  CONFLICT_PREDICTED: { delayS: [8, 45], resolve: 0.6, repeat: false },
+};
+
+/** One controller per generated sector, created with the history (password DEFAULT_PASSWORD). */
+export const HISTORY_CONTROLLERS: Record<string, { email: string; name: string }> = {
+  'bucuresti-app': { email: 'atc.bucuresti@towerwhisper.app', name: 'Elena Dumitrescu' },
+  'timisoara-app': { email: 'atc.timisoara@towerwhisper.app', name: 'Mihai Stan' },
+  'cluj-app': { email: 'atc.cluj@towerwhisper.app', name: 'Ioana Rusu' },
+  'oradea-app': { email: 'atc.oradea@towerwhisper.app', name: 'Radu Marin' },
+};
+
+/** Radar frames are written in batches of this many rows. */
+export const HISTORY_FRAME_BATCH = 300;
+
+/** A headless session hands the event loop back to the live sectors every this many ticks. */
+export const HISTORY_YIELD_TICKS = 200;
