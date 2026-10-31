@@ -34,7 +34,7 @@ const ARROWS = { up: '↑', down: '↓', level: '=' };
 const HIT_RADIUS_PX = 22;
 /** Heading rose drawn around the selected aircraft (screen px, independent of zoom). */
 const ROSE_RADIUS_PX = 78;
-/** A middle-button press that moves less than this is not a pan. */
+/** A press (left or middle button) that moves less than this is a click, not a pan. */
 const DRAG_THRESHOLD_PX = 3;
 /**
  * The relief data is built around Craiova and covers this far from it; panning stays inside.
@@ -823,9 +823,11 @@ function drawTraffic(ctx: CanvasRenderingContext2D, now: number): void {
   hitTargets = targets;
 }
 
-// --- Interaction: click to select, middle-drag to pan, wheel / buttons to zoom ---------------
+// --- Interaction: click to select, left- or middle-drag to pan, wheel / buttons to zoom ------
 
 let drag: { x: number; y: number; centerX: number; centerY: number; moved: boolean } | null = null;
+/** A left-drag ends with a click event; it must not select or deselect an aircraft. */
+let swallowClick = false;
 
 function localPoint(event: MouseEvent): { x: number; y: number } {
   const rect = canvas.value!.getBoundingClientRect();
@@ -834,6 +836,10 @@ function localPoint(event: MouseEvent): { x: number; y: number } {
 
 function onClick(event: MouseEvent): void {
   if (event.button !== 0) return;
+  if (swallowClick) {
+    swallowClick = false;
+    return;
+  }
   const { x, y } = localPoint(event);
   let best: string | null = null;
   let bestDistance = HIT_RADIUS_PX;
@@ -850,8 +856,9 @@ function onClick(event: MouseEvent): void {
 }
 
 function onPointerDown(event: PointerEvent): void {
-  if (event.button !== 1) return;
-  event.preventDefault(); // no autoscroll cursor
+  if (event.button !== 0 && event.button !== 1) return;
+  if (event.button === 1) event.preventDefault(); // no autoscroll cursor
+  swallowClick = false;
   canvas.value?.setPointerCapture(event.pointerId);
   drag = {
     x: event.clientX,
@@ -878,6 +885,7 @@ function onPointerMove(event: PointerEvent): void {
 function onPointerUp(event: PointerEvent): void {
   if (!drag) return;
   canvas.value?.releasePointerCapture(event.pointerId);
+  swallowClick = drag.moved && event.button === 0;
   drag = null;
   panning.value = false;
 }
