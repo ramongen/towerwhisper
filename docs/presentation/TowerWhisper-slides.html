@@ -124,10 +124,10 @@
     <text x="684" y="330" class="t-mono" style="fill:var(--color-atc)">ROT301</text>
     <text x="684" y="366" class="t-mono" style="fill:var(--color-text-muted)">040 ↓ 040</text>
   </svg>
-  <p class="kicker atc">Craiova Hackathon v2</p>
+  <p class="kicker atc">Siguranță în controlul traficului aerian</p>
   <h1 style="font-size:128px;margin-bottom:24px">TowerWhisper</h1>
   <p style="font-size:48px;max-width:1000px;line-height:1.25;color:var(--color-text-secondary)">Copilot AI pentru controlorii<br>de trafic aerian</p>
-  <p style="margin-top:56px;font-size:var(--s-body)">Echipa: <span class="tbd">[ECHIPA — DE COMPLETAT]</span></p>
+  <p style="margin-top:56px;font-size:var(--s-body)">Ardeal Team</p>
 </section>
 
 <!-- 2. Problema -->
@@ -263,23 +263,23 @@
 <section class="slide shot-slide" data-part="Partea 2 · Produsul azi">
   <div class="shot-head"><p class="kicker" style="margin:0">Timp de la ultimul contact</p><h1 class="caution">NO CONTACT</h1></div>
   <img class="shot" src="screens/04-no-contact.png" width="1360" height="765" alt="Alertele NO CONTACT galben și roșu">
-  <p class="caption">Galben la 30 min, roșu la 60 min (în demo 15 / 30 s). Dispare la următoarea transmisie.</p>
+  <p class="caption">Galben la 30 min, roșu la 60 min (configurabil). Dispare la următoarea transmisie.</p>
 </section>
 
 <!-- 9. Panoul de demo -->
 <section class="slide" data-part="Partea 2 · Produsul azi">
   <div class="row grow" style="align-items:center;gap:96px">
     <div style="width:440px;border:14px solid #1b2733;border-radius:48px;overflow:hidden;background:#000;flex:none">
-      <img src="screens/05-demo-panel.png" width="412" height="892" alt="Panoul de demo pe telefon" style="display:block">
+      <img src="screens/05-demo-panel.png" width="412" height="892" alt="Consola de simulare pe telefon" style="display:block">
     </div>
     <div class="col">
-      <p class="kicker">Panoul de demo · /demo</p>
-      <h1>Erorile pilotului, la comandă, de pe telefon</h1>
+      <p class="kicker">Consola de simulare · /demo</p>
+      <h1>Erori simulate, pentru training și demonstrații</h1>
       <ul class="clean">
-        <li>Juriul vede doar ecranul mare; erorile se declanșează discret de pe telefon.</li>
+        <li>Instructorul declanșează erori ale pilotului de pe telefon sau tabletă, fără să întrerupă exercițiul.</li>
         <li>Erori de readback și de execuție, în modul <span class="mono">ONCE</span> sau <span class="mono">PERSISTENT</span>.</li>
         <li>Contor live: erori injectate, detectate, timp mediu de detecție.</li>
-        <li>Nu are nevoie de microfon și nici de cont.</li>
+        <li>Același scenariu se repetă identic, pentru antrenament și pentru demonstrații la client.</li>
       </ul>
     </div>
   </div>
@@ -316,7 +316,7 @@
     <text class="t-title" x="42" y="402" style="font-size:28px">Supervizor</text>
     <text class="t-mono" x="42" y="450" style="fill:var(--color-text-muted)">/supervisor</text>
     <rect class="box" x="22" y="500" width="256" height="140" rx="8"/>
-    <text class="t-title" x="42" y="552" style="font-size:28px">Panou demo</text>
+    <text class="t-title" x="42" y="552" style="font-size:28px">Simulare</text>
     <text class="t-mono" x="42" y="600" style="fill:var(--color-text-muted)">/demo</text>
     <!-- Compose frame -->
     <rect class="frame" x="470" y="10" width="730" height="700" rx="16"/>
@@ -481,7 +481,7 @@
     </div>
     <div class="card" style="padding:26px 32px">
       <h2 style="font-size:34px;margin-bottom:8px">CommsWatchdog</h2>
-      <p class="small muted" style="margin-bottom:14px">Timp de la ultimul contact: 30 / 60 min (configurabil), 15 / 30 s în demo.</p>
+      <p class="small muted" style="margin-bottom:14px">Timp de la ultimul contact: 30 / 60 min, praguri configurabile.</p>
       <div class="alert-line warning"><b>NO CONTACT</b><br>No communication with DLH9TC for 33 s (limit 30 s)</div>
     </div>
     <div class="card" style="padding:26px 32px">
@@ -504,7 +504,7 @@
         <tr><td class="mono lead">transmissions</td><td class="muted">transcriere, audio, latență</td></tr>
         <tr><td class="mono lead">clearances</td><td class="muted">instrucțiunea parsată (jsonb)</td></tr>
         <tr><td class="mono lead">alerts</td><td class="muted">mesaj, detalii, cine a rezolvat</td></tr>
-        <tr><td class="mono lead">fault_events</td><td class="muted">erorile injectate din demo</td></tr>
+        <tr><td class="mono lead">fault_events</td><td class="muted">erorile simulate</td></tr>
         <tr><td class="mono lead">traffic_frames</td><td class="muted">radarul la 2 s, pentru replay</td></tr>
         <tr><td class="mono lead">users</td><td class="muted">conturi și roluri</td></tr>
       </table>
@@ -659,7 +659,7 @@
     </g>
   </svg>
   <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:20px;margin-top:8px">
-    <div class="card" style="padding:24px 22px;border-color:var(--color-atc)"><h2 style="font-size:32px">Prototip</h2><p class="small atc" style="margin-bottom:12px">acum</p><p class="small muted" style="margin:0">Aplicația de la hackathon, trafic simulat. Dovedim că merge.</p></div>
+    <div class="card" style="padding:24px 22px;border-color:var(--color-atc)"><h2 style="font-size:32px">Prototip</h2><p class="small atc" style="margin-bottom:12px">acum</p><p class="small muted" style="margin:0">Prototip funcțional pe trafic simulat, gata de demonstrat.</p></div>
     <div class="card" style="padding:24px 22px"><h2 style="font-size:32px">Pregătire și analiză</h2><p class="small" style="margin-bottom:12px">estimat 3–6 luni</p><p class="small muted" style="margin:0">Simulatoare și analiză offline. Centre de pregătire.</p></div>
     <div class="card" style="padding:24px 22px"><h2 style="font-size:32px">Shadow mode</h2><p class="small" style="margin-bottom:12px">estimat 6–12 luni</p><p class="small muted" style="margin:0">Frecvența și radarul reale, alertele doar se salvează. Un ANSP pilot.</p></div>
     <div class="card" style="padding:24px 22px"><h2 style="font-size:32px">Advisory operațional</h2><p class="small" style="margin-bottom:12px">estimat 12–24+ luni</p><p class="small muted" style="margin:0">Alertele la controlor, pe un sector. Atestare EASA.</p></div>
@@ -744,7 +744,7 @@
       </table>
     </div>
     <div class="col">
-      <h2 style="font-size:32px">Pe panoul de demo, o singură dată</h2>
+      <h2 style="font-size:32px">Pe consola de simulare, o singură dată</h2>
       <table class="t">
         <tr><td class="lead">TARGET</td><td class="mono">Selected</td></tr>
         <tr><td class="lead">MODE</td><td class="mono">ONCE</td></tr>
@@ -759,7 +759,7 @@
   <p class="kicker">Scenariu de test · 1 / 2</p>
   <h1 style="margin-bottom:20px;font-size:56px">Testele 1–5: readback</h1>
   <table class="t">
-    <tr><th style="width:4%">#</th><th style="width:19%">Panou demo</th><th style="width:44%">Spuneți</th><th>Rezultat așteptat</th></tr>
+    <tr><th style="width:4%">#</th><th style="width:19%">Consola de simulare</th><th style="width:44%">Spuneți</th><th>Rezultat așteptat</th></tr>
     <tr><td class="mono">1</td><td class="muted">nimic</td><td class="mono">TAROM 301, descend altitude 4000 feet, turn left heading 080</td><td><span class="tag ok">READBACK OK</span>, bifă verde</td></tr>
     <tr><td class="mono">2</td><td>Wrong altitude</td><td class="mono">TAROM 612, descend altitude 6000 feet</td><td><span class="tag warning">HEARBACK MISMATCH</span><br><span class="muted">read back 8000 ft</span></td></tr>
     <tr><td class="mono">3</td><td>Wrong turn direction</td><td class="mono">WIZZ 44, descend altitude 5000 feet, turn left heading 240, reduce speed 220</td><td><span class="tag warning">HEARBACK MISMATCH</span><br><span class="muted">LEFT 240, read back RIGHT</span></td></tr>
@@ -773,7 +773,7 @@
   <p class="kicker">Scenariu de test · 2 / 2</p>
   <h1 style="margin-bottom:20px;font-size:56px">Testele 6–10: execuție și contact</h1>
   <table class="t">
-    <tr><th style="width:4%">#</th><th style="width:21%">Panou demo</th><th style="width:42%">Spuneți</th><th>Rezultat așteptat</th></tr>
+    <tr><th style="width:4%">#</th><th style="width:21%">Consola de simulare</th><th style="width:42%">Spuneți</th><th>Rezultat așteptat</th></tr>
     <tr><td class="mono">6</td><td>Turn wrong way</td><td class="mono">TAROM 612, turn left heading 200</td><td><span class="tag warning">WRONG TURN</span><br><span class="muted">virează la dreapta</span></td></tr>
     <tr><td class="mono">7</td><td>Wrong vertical</td><td class="mono">WIZZ 44, descend altitude 5000 feet, turn left heading 240, reduce speed 220</td><td><span class="tag warning">WRONG VERTICAL</span><br><span class="muted">urcă în loc să coboare</span></td></tr>
     <tr><td class="mono">8</td><td>Level bust</td><td class="mono">TAROM 612, descend altitude 6000 feet</td><td><span class="tag warning">LEVEL BUST</span><br><span class="muted">după ~2 min, la 1×</span></td></tr>
@@ -787,7 +787,7 @@
   <div class="row grow" style="gap:64px;align-items:center">
     <div style="display:flex;gap:16px;flex:none;align-items:flex-start">
       <div style="width:392px;height:902px;border:1px solid var(--color-border-strong);border-radius:var(--radius-card);background:url(screens/05-demo-panel-full.png) 0 0 / 392px auto no-repeat"></div>
-      <div style="width:392px;height:940px;border:1px solid var(--color-border-strong);border-radius:var(--radius-card);background:url(screens/05-demo-panel-full.png) 0 -902px / 392px auto no-repeat"></div>
+      <div style="position:relative;width:392px;height:940px;border:1px solid var(--color-border-strong);border-radius:var(--radius-card);background:url(screens/05-demo-panel-full.png) 0 -902px / 392px auto no-repeat"><div style="position:absolute;left:12px;top:328px;width:366px;height:36px;background:var(--color-bg)"></div></div>
     </div>
     <div class="col">
       <p class="kicker">Consola de simulare a erorilor · /demo</p>
@@ -808,7 +808,7 @@
 <!-- 28. Pașii următori -->
 <section class="slide" data-part="Pașii următori">
   <p class="kicker">Pașii următori</p>
-  <h1 style="margin-bottom:36px">De la hackathon la un ANSP pilot</h1>
+  <h1 style="margin-bottom:36px">Următorul pas: un ANSP pilot</h1>
   <div class="row grow" style="gap:64px">
     <div class="col">
       <ul class="clean">
@@ -820,8 +820,7 @@
     </div>
     <div style="width:560px;display:flex;flex-direction:column;justify-content:center">
       <p style="font-size:96px;font-weight:800;margin:0 0 20px;letter-spacing:-0.02em">Mulțumim!</p>
-      <p class="muted" style="margin:0 0 12px">Echipa: <span class="tbd">[ECHIPA — DE COMPLETAT]</span></p>
-      <p class="muted" style="margin:0">Contact: <span class="tbd">[DE CONFIRMAT]</span></p>
+      <p class="atc" style="margin:0;font-size:40px;font-weight:700">Ardeal Team</p>
     </div>
   </div>
 </section>
