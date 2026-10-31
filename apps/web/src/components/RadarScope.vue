@@ -87,7 +87,7 @@ function setMapMode(id: MapMode): void {
 // Reactive state copied into plain variables, so the 60 fps loop never touches Vue reactivity.
 let selected: string | null = null;
 let levels = new Map<string, AlertLevel>();
-let limits = { cautionS: 900, warningS: 1800 };
+let limits = { cautionS: 1800, warningS: 3600 };
 let mode: MapMode = 'contours';
 watchEffect(() => {
   mode = mapMode.value;

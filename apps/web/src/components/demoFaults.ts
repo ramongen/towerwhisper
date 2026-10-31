@@ -22,7 +22,7 @@ export const EXECUTION_FAULTS: { kind: ExecutionKind; label: string; tag: string
 ];
 
 export const DEMO_LIMITS = { cautionS: 15, warningS: 30 };
-export const REAL_LIMITS = { cautionS: 15 * 60, warningS: 30 * 60 };
+export const REAL_LIMITS = { cautionS: 30 * 60, warningS: 60 * 60 };
 
 /** Shortcut key -> fault, for the big screen (once mode). */
 export const SHORTCUTS: (

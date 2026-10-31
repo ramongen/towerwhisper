@@ -12,7 +12,7 @@ plays a simulated pilot readback, and raises alerts when:
 
 - the readback does not match the instruction (`HEARBACK_MISMATCH`, `READBACK_INCOMPLETE`, `NO_RESPONSE`);
 - the aircraft does not do what it was told (`WRONG_TURN`, `WRONG_VERTICAL`, `LEVEL_BUST`);
-- there has been no communication with an aircraft for too long (`NO_CONTACT`: amber at 15 min, red at 30 min);
+- there has been no communication with an aircraft for too long (`NO_CONTACT`: amber at 30 min, red at 60 min);
 - (bonus) the instruction would create a conflict with another aircraft (`CONFLICT_PREDICTED`).
 
 Traffic is **simulated** around Craiova airport (ICAO `LRCV`, runway 08/26, ILS on runway 26), not live data.
@@ -110,7 +110,7 @@ Keep these in one `constants.ts` per module, not inline:
 - `WRONG_VERTICAL`: vertical speed opposite to target beyond 300 ft/min.
 - `LEVEL_BUST`: within 300 ft of target with vertical speed still above 1000 ft/min;
   include estimated seconds to bust in the message.
-- `NO_CONTACT`: amber at `COMMS_CAUTION_MIN` (default 15), red at `COMMS_WARNING_MIN` (default 30)
+- `NO_CONTACT`: amber at `COMMS_CAUTION_MIN` (default 30), red at `COMMS_WARNING_MIN` (default 60)
   without any transmission to or from the aircraft. The demo panel can switch to 15 s / 30 s.
 - `CONFLICT_PREDICTED`: closest approach within 0–5 min, under 3 NM horizontal and under 1000 ft vertical.
 - PTT recordings shorter than 300 ms are discarded.
@@ -123,7 +123,7 @@ Keep these in one `constants.ts` per module, not inline:
   transmission from it, readback included. Selecting the aircraft or ACKing an alert does not reset it.
 - `CommsWatchdog` runs every tick, uses simulation time (so it follows the demo time scale), raises
   `NO_CONTACT` as caution at the first limit, upgrades the same alert to warning at the second, and
-  clears it on the next transmission. Message format: `No communication with DLH9TC for 31 min (limit 30 min)`.
+  clears it on the next transmission. Message format: `No communication with DLH9TC for 61 min (limit 60 min)`.
 - Limits live in `FaultConfig.commsLimits` (`cautionS`, `warningS`), seeded from env, changeable via
   `PUT /api/demo/faults`. Demo triggers: `POST /api/demo/triggers/age-comms` `{ callsign, ageS }` and
   `POST /api/demo/triggers/reset-comms` `{ callsign }`.

@@ -29,8 +29,8 @@ export const LEVEL_BUST_MAX_VS_FPM = 1000;
 export const LEVEL_REACHED_FT = 100;
 
 /** NO_CONTACT defaults in minutes (overridden by COMMS_CAUTION_MIN / COMMS_WARNING_MIN). */
-export const DEFAULT_COMMS_CAUTION_MIN = 15;
-export const DEFAULT_COMMS_WARNING_MIN = 30;
+export const DEFAULT_COMMS_CAUTION_MIN = 30;
+export const DEFAULT_COMMS_WARNING_MIN = 60;
 
 /** NO_CONTACT limits used by the demo-panel "15 / 30 s" toggle. */
 export const DEMO_COMMS_CAUTION_S = 15;

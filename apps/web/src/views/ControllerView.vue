@@ -34,9 +34,9 @@ function closeOverlay(): void {
   void demo.trigger('stats-overlay', { visible: false }).catch(() => undefined);
 }
 
-const limits = computed(() => faults.value?.commsLimits ?? { cautionS: 900, warningS: 1800 });
+const limits = computed(() => faults.value?.commsLimits ?? { cautionS: 1800, warningS: 3600 });
 
-/** '15 MIN' or '15 S' for the radar legend. */
+/** '30 MIN' or '15 S' for the radar legend. */
 const limitText = (s: number) =>
   limits.value.cautionS < 120 ? `${s} S` : `${Math.round(s / 60)} MIN`;
 

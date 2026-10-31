@@ -166,13 +166,13 @@ describe('CommsWatchdog', () => {
     const registry = new AlertRegistry();
     const { raised, cleared } = recorder(registry);
     const watchdog = new CommsWatchdog(registry);
-    const limits = { cautionS: 900, warningS: 1800 };
+    const limits = { cautionS: 1800, warningS: 3600 };
 
-    watchdog.tick([aircraft({ callsign: 'DLH9TC', commsAgeS: 960 })], limits);
     watchdog.tick([aircraft({ callsign: 'DLH9TC', commsAgeS: 1860 })], limits);
+    watchdog.tick([aircraft({ callsign: 'DLH9TC', commsAgeS: 3660 })], limits);
     expect(raised.map((a) => a.severity)).toEqual(['caution', 'warning']);
     expect(raised[0].id).toBe(raised[1].id);
-    expect(raised[1].message).toBe('No communication with DLH9TC for 31 min (limit 30 min)');
+    expect(raised[1].message).toBe('No communication with DLH9TC for 61 min (limit 60 min)');
 
     watchdog.tick([aircraft({ callsign: 'DLH9TC', commsAgeS: 0 })], limits);
     expect(cleared).toEqual(['NO_CONTACT']);

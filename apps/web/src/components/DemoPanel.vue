@@ -33,7 +33,7 @@ const feedback = ref('');
 const pickedCallsign = ref<string>('');
 
 const target = computed(() => faults.value?.target.mode ?? 'selected');
-const demoLimits = computed(() => (faults.value?.commsLimits.cautionS ?? 900) < 120);
+const demoLimits = computed(() => (faults.value?.commsLimits.cautionS ?? 1800) < 120);
 const noisePercent = computed(() => Math.round((faults.value?.radioNoise ?? 0) * 100));
 const callsigns = computed(() => aircraft.value.map((a) => a.callsign));
 
@@ -221,9 +221,9 @@ const avgDetection = computed(() =>
         <button
           type="button"
           :class="{ on: !demoLimits }"
-          @click="patch({ commsLimits: REAL_LIMITS }, 'Limits 15 / 30 min')"
+          @click="patch({ commsLimits: REAL_LIMITS }, 'Limits 30 / 60 min')"
         >
-          15 / 30 min
+          30 / 60 min
         </button>
         <button
           type="button"
@@ -238,13 +238,13 @@ const avgDetection = computed(() =>
       </p>
       <div class="tiles">
         <DemoTile
-          :label="demoLimits ? 'Age to 15 s' : 'Age to 15 min'"
+          :label="demoLimits ? 'Age to 15 s' : 'Age to 30 min'"
           tag="NO CONTACT · AMBER"
           :sent="sent === 'age-caution'"
           @press="ageTo('caution')"
         />
         <DemoTile
-          :label="demoLimits ? 'Age to 30 s' : 'Age to 30 min'"
+          :label="demoLimits ? 'Age to 30 s' : 'Age to 60 min'"
           tag="NO CONTACT · RED"
           :sent="sent === 'age-warning'"
           @press="ageTo('warning')"

@@ -86,7 +86,7 @@ listens there, for example), set `WEB_PORT=8081` in `.env`.
 | 9   | level bust                                          | `LEVEL_BUST`          |
 
 Other keys on the controller screen: **D** demo drawer, **S** results overlay, **R** reset scenario.
-The demo panel also ages comms timers (`NO_CONTACT` amber / red, 15/30 min or 15/30 s), spawns a
+The demo panel also ages comms timers (`NO_CONTACT` amber / red, 30/60 min or 15/30 s), spawns a
 conflicting BLUE AIR 12 (`CONFLICT_PREDICTED`), steps on the next readback, and sets radio noise and
 time speed.
 

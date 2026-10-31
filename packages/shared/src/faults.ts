@@ -21,5 +21,5 @@ export interface FaultConfig {
   };
   radioNoise: number; // 0-1
   timeScale: 0 | 1 | 2 | 4;
-  commsLimits: { cautionS: number; warningS: number }; // default 900 / 1800; demo 15 / 30
+  commsLimits: { cautionS: number; warningS: number }; // default 1800 / 3600; demo 15 / 30
 }
