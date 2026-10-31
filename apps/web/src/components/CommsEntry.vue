@@ -18,7 +18,8 @@ const callsign = computed(() =>
   props.entry.speaker === 'pilot' ? props.entry.callsign : (props.entry.clearance?.callsign ?? '—'),
 );
 const check = computed(() => (props.entry.speaker === 'pilot' ? props.entry.check : null));
-const audioUrl = computed(() => (props.entry.speaker === 'pilot' ? props.entry.audioUrl : null));
+/** Pilot audio (TTS), or the controller's own PTT recording. */
+const audioUrl = computed(() => props.entry.audioUrl ?? null);
 
 const diff = computed(() =>
   isPilot.value
@@ -77,10 +78,12 @@ const chipList = computed(() => chips(props.entry.clearance));
         INCOMPLETE
       </span>
       <button
-        v-if="isPilot"
+        v-if="isPilot || audioUrl"
         type="button"
         class="play"
-        :aria-label="`Play pilot audio from ${callsign}`"
+        :aria-label="
+          isPilot ? `Play pilot audio from ${callsign}` : 'Play the controller recording'
+        "
         @click="$emit('play', entry)"
       >
         <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">

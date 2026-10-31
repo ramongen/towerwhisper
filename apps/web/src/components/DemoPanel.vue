@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia';
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useSocket } from '../composables/useSocket';
 import { useDemoStore } from '../stores/useDemoStore';
+import { useSectorStore } from '../stores/useSectorStore';
 import { useTrafficStore } from '../stores/useTrafficStore';
 import DemoTile from './DemoTile.vue';
 import {
@@ -26,6 +27,7 @@ const demo = useDemoStore();
 const { faults, stats, overlayVisible } = storeToRefs(demo);
 const { aircraft } = storeToRefs(useTrafficStore());
 const { connected } = useSocket();
+const { current: sector } = storeToRefs(useSectorStore());
 
 const once = ref(true);
 const sent = ref<string | null>(null);
@@ -152,7 +154,7 @@ const avgDetection = computed(() =>
           <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
             <circle cx="5" cy="5" r="4" />
           </svg>
-          {{ connected ? 'Live · LRCV' : 'Offline' }}
+          {{ connected ? `Live · ${sector?.airportIcao ?? '…'}` : 'Offline' }}
         </span>
       </div>
       <div class="counters">

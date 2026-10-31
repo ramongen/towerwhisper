@@ -99,6 +99,19 @@ Run `typecheck` and the relevant tests before saying a task is done.
 8. **Contracts live in `packages/shared`.** REST routes and WebSocket events must match the spec
    tables. If you need a new field or event, add it to `shared` first and mention it in your summary.
 
+## Accounts and sectors
+
+- Accounts (`users` table, `src/auth/`): scrypt hashes and HMAC-signed bearer tokens (no extra
+  dependency). Roles: `atc` (works one sector, transmits, resolves alerts) and `supervisor` (all
+  sectors read-only, statistics, replay, account management). Every REST route needs a token
+  unless marked `@Public()` (health, login, audio, radar tiles, sessions and `/demo/*`).
+- Sectors (`src/sectors/sectors.ts`): Craiova, București, Sibiu, Timișoara and Cluj Approach. Each
+  runs its own `SectorRuntime` (simulation, safety checks, pilots, faults, weather, comms,
+  recording) side by side. An ATC always acts on its own sector; a supervisor or the demo panel
+  name one with the `X-Sector-Id` header and `sector:watch` on the socket (Craiova by default).
+- Replay: radar frames every 2 s (`traffic_frames`), full comms payloads with PTT audio, alerts with
+  who resolved them. The frontend shows a "desktop only" page below 1100 × 600, except on `/demo`.
+
 ## Key thresholds and constants
 
 Keep these in one `constants.ts` per module, not inline:

@@ -6,6 +6,7 @@ import { useNow } from '../composables/useNow';
 import { useRadioVoice } from '../composables/useRadioVoice';
 import { useCommsStore, type CommsEntryData } from '../stores/useCommsStore';
 import { useDemoStore } from '../stores/useDemoStore';
+import { useSectorStore } from '../stores/useSectorStore';
 import { useTrafficStore } from '../stores/useTrafficStore';
 import CommsEntry from './CommsEntry.vue';
 
@@ -15,6 +16,14 @@ const PENDING_SHOW_MS = 10_000;
 const { entries } = storeToRefs(useCommsStore());
 const { faults } = storeToRefs(useDemoStore());
 const { aircraft } = storeToRefs(useTrafficStore());
+const { readonly } = storeToRefs(useSectorStore());
+/** An example with one of this sector's own callsigns. */
+const example = computed(() => {
+  const first = aircraft.value[0];
+  return first
+    ? `${first.telephony}, descend altitude 4000 feet`
+    : 'TAROM 301, descend altitude 3000 feet';
+});
 const voice = useRadioVoice();
 const now = useNow(500);
 
@@ -56,8 +65,9 @@ const pending = computed(() => {
 const newestFirst = computed(() => [...entries.value].reverse());
 
 function play(entry: CommsEntryData): void {
-  if (entry.speaker !== 'pilot') return;
-  void voice.play(entry.audioUrl, entry.transcript, faults.value?.radioNoise ?? 0.3);
+  // A typed controller transmission has no recording: nothing to play.
+  if (entry.speaker === 'atc' && !entry.audioUrl) return;
+  void voice.play(entry.audioUrl ?? null, entry.transcript, faults.value?.radioNoise ?? 0.3);
 }
 </script>
 
@@ -90,9 +100,11 @@ function play(entry: CommsEntryData): void {
         :instruction="instructionFor.get(e.id) ?? null"
         @play="play"
       />
-      <p v-if="entries.length === 0" class="empty">
-        Hold <kbd>SPACE</kbd> and speak an instruction, e.g. “TAROM 301, descend altitude 3000
-        feet”.
+      <p v-if="entries.length === 0 && readonly" class="empty">
+        No transmission on this frequency yet in this session.
+      </p>
+      <p v-else-if="entries.length === 0" class="empty">
+        Hold <kbd>SPACE</kbd> and speak an instruction, e.g. “{{ example }}”.
       </p>
     </div>
   </section>

@@ -10,5 +10,9 @@ export const useWeatherStore = defineStore('weather', () => {
     current.value = weather;
   }
 
-  return { current, set };
+  function clear(): void {
+    current.value = null;
+  }
+
+  return { current, set, clear };
 });

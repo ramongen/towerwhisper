@@ -19,16 +19,25 @@ import { useRadioVoice } from '../composables/useRadioVoice';
 import { useSocket } from '../composables/useSocket';
 import { useAlertStore } from '../stores/useAlertStore';
 import { useCommsStore } from '../stores/useCommsStore';
+import { useAuthStore } from '../stores/useAuthStore';
 import { useDemoStore } from '../stores/useDemoStore';
+import { useSectorStore } from '../stores/useSectorStore';
 import { useTrafficStore } from '../stores/useTrafficStore';
 
+/**
+ * The controller's position: radar, comms, alerts, strips, PTT. A supervisor watching a
+ * sector sees the same screen read-only (no PTT, no resolving, no demo shortcuts).
+ */
 const { connected, emitSelect } = useSocket();
+const { current: sector, readonly } = storeToRefs(useSectorStore());
+const auth = useAuthStore();
+const unassigned = computed(() => auth.user?.role === 'atc' && !auth.user.sectorId);
 const traffic = useTrafficStore();
 const { aircraft, selectedCallsign } = storeToRefs(traffic);
 const { levelByCallsign } = storeToRefs(useAlertStore());
 const demo = useDemoStore();
 const { faults, overlayVisible } = storeToRefs(demo);
-const { drawerOpen } = useDemoShortcuts();
+const { drawerOpen } = useDemoShortcuts(computed(() => !readonly.value));
 
 function closeOverlay(): void {
   void demo.trigger('stats-overlay', { visible: false }).catch(() => undefined);
@@ -70,11 +79,24 @@ function toggleSelect(callsign: string): void {
 
 <template>
   <div class="controller">
-    <TopBar :connected="connected" />
+    <TopBar :connected="connected">
+      <template #start>
+        <slot name="back" />
+      </template>
+    </TopBar>
 
     <div class="main">
       <section class="radar" aria-label="Radar">
-        <RadarScope />
+        <RadarScope v-if="sector" :key="sector.id" />
+        <div v-else-if="unassigned" class="joining" role="status">
+          <span class="mono">NO SECTOR ASSIGNED</span>
+          <span class="joining-sub"
+            >Ask a supervisor to assign you a sector; this screen opens it at once.</span
+          >
+        </div>
+        <div v-else class="joining" role="status">
+          <span class="mono">CONNECTING TO SECTOR…</span>
+        </div>
         <div class="top-left">
           <WeatherPanel />
           <p class="mono legend">
@@ -91,7 +113,7 @@ function toggleSelect(callsign: string): void {
             @close="traffic.select(null)"
           />
         </div>
-        <PttBar class="ptt" />
+        <PttBar v-if="!readonly" class="ptt" />
       </section>
 
       <aside class="aside">
@@ -112,7 +134,11 @@ function toggleSelect(callsign: string): void {
       />
     </section>
 
-    <aside v-if="drawerOpen" class="drawer" aria-label="Demo control (press D to close)">
+    <aside
+      v-if="drawerOpen && !readonly"
+      class="drawer"
+      aria-label="Demo control (press D to close)"
+    >
       <DemoPanel />
     </aside>
 
@@ -142,6 +168,26 @@ function toggleSelect(callsign: string): void {
   min-width: 0;
   overflow: hidden;
   border-right: var(--border-width) solid var(--color-border);
+}
+
+.joining {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-size: 14px;
+  letter-spacing: 0.1em;
+  color: var(--color-text-muted);
+  background: var(--color-radar-bg);
+}
+
+.joining-sub {
+  font-size: 15px;
+  letter-spacing: 0;
+  color: var(--color-text-secondary);
 }
 
 .top-left {

@@ -1,4 +1,4 @@
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref, type Ref } from 'vue';
 import { SHORTCUTS } from '../components/demoFaults';
 import { useDemoStore } from '../stores/useDemoStore';
 
@@ -6,11 +6,12 @@ import { useDemoStore } from '../stores/useDemoStore';
  * Big-screen shortcuts (spec section 11): D opens the demo drawer, 1-9 arm a fault in
  * "once" mode, R resets the scenario, S shows / hides the results. Space stays PTT.
  */
-export function useDemoShortcuts() {
+export function useDemoShortcuts(enabled: Readonly<Ref<boolean>>) {
   const demo = useDemoStore();
   const drawerOpen = ref(false);
 
   function onKey(event: KeyboardEvent): void {
+    if (!enabled.value) return;
     const target = event.target as HTMLElement | null;
     if (target && ['INPUT', 'TEXTAREA', 'SELECT'].includes(target.tagName)) return;
     if (event.ctrlKey || event.metaKey || event.altKey || event.repeat) return;

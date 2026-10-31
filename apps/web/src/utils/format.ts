@@ -71,3 +71,25 @@ export function chips(c: Clearance | null): ChipData[] {
   if (c.frequency) out.push({ key: 'frequency', text: `FREQ ${c.frequency.mhz}` });
   return out;
 }
+
+/** 42 -> '42 s', 190 -> '3 min 10 s', 7300 -> '2 h 02 min'; null -> '—'. */
+export function duration(seconds: number | null | undefined): string {
+  if (seconds === null || seconds === undefined) return '—';
+  const s = Math.round(seconds);
+  if (s < 60) return `${s} s`;
+  if (s < 3600) return `${Math.floor(s / 60)} min${s % 60 ? ` ${s % 60} s` : ''}`;
+  return `${Math.floor(s / 3600)} h ${String(Math.floor((s % 3600) / 60)).padStart(2, '0')} min`;
+}
+
+/** Session clock: 3725 -> '01:02:05'. */
+export function clock(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds));
+  return `${String(Math.floor(s / 3600)).padStart(2, '0')}:${formatAge(s % 3600)}`;
+}
+
+/** '31 Oct 14:20' in UTC, for lists of sessions. */
+export function utcDateTime(date: Date | string | number): string {
+  const d = new Date(date);
+  const month = d.toLocaleString('en-GB', { month: 'short', timeZone: 'UTC' });
+  return `${d.getUTCDate()} ${month} ${d.toISOString().slice(11, 16)}`;
+}

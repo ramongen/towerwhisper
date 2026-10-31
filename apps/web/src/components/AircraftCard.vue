@@ -195,7 +195,9 @@ const route = computed(() => {
       </div>
 
       <div v-if="details.runways.length" class="block">
-        <h3 class="section-title">RUNWAY AT LRCV</h3>
+        <h3 class="section-title">
+          RUNWAY AT {{ details.flightPlan?.destination ?? 'DESTINATION' }}
+        </h3>
         <div
           v-for="r in details.runways"
           :key="r.runway"

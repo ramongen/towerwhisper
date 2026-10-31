@@ -1,12 +1,16 @@
 <script setup lang="ts">
 import type { Alert } from '@towerwhisper/shared';
+import { storeToRefs } from 'pinia';
 import { computed } from 'vue';
+import { useSectorStore } from '../stores/useSectorStore';
 import { ago, alertLabel, utcTime } from '../utils/format';
 
 const props = defineProps<{ alert: Alert; now: number }>();
 defineEmits<{ resolve: [alert: Alert]; select: [callsign: string] }>();
 
 const ended = computed(() => !!props.alert.endedAt);
+/** A supervisor watching the sector sees the alert; only its controller resolves it. */
+const { readonly } = storeToRefs(useSectorStore());
 const outcome = computed(() =>
   props.alert.outcome === 'resolved' ? 'RESOLVED' : `CLEARED · ${props.alert.endReason ?? ''}`,
 );
@@ -84,7 +88,10 @@ const outcome = computed(() =>
         </svg>
         {{ outcome }}
       </span>
-      <button v-else type="button" class="resolve" @click="$emit('resolve', alert)">RESOLVE</button>
+      <button v-else-if="!readonly" type="button" class="resolve" @click="$emit('resolve', alert)">
+        RESOLVE
+      </button>
+      <span v-else class="outcome mono">AWAITING CONTROLLER</span>
     </div>
   </article>
 </template>

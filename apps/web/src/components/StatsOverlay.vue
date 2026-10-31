@@ -3,11 +3,13 @@ import { storeToRefs } from 'pinia';
 import { computed, onBeforeUnmount, onMounted } from 'vue';
 import { useNow } from '../composables/useNow';
 import { useDemoStore } from '../stores/useDemoStore';
+import { useSectorStore } from '../stores/useSectorStore';
 import { formatAge } from '../utils/format';
 
 defineEmits<{ close: [] }>();
 
 const demo = useDemoStore();
+const sectorName = computed(() => useSectorStore().current?.name.toUpperCase() ?? '');
 const { stats, session } = storeToRefs(demo);
 const now = useNow();
 
@@ -71,7 +73,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
     <div class="dialog" role="dialog" aria-modal="true" aria-labelledby="stats-title">
       <div class="head">
         <h2 id="stats-title">Demo results</h2>
-        <span class="mono meta">SESSION {{ sessionClock }} · CRAIOVA APPROACH</span>
+        <span class="mono meta">SESSION {{ sessionClock }} · {{ sectorName }}</span>
       </div>
       <div class="tiles">
         <div v-for="t in tiles" :key="t.label" class="tile">

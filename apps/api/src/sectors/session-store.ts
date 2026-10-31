@@ -18,6 +18,8 @@ import {
 } from '../database/entities';
 import type { FaultInjection } from '../demo/fault.service';
 
+const SESSION_ENDED = 'session ended';
+
 /**
  * Postgres writes for every sector session: the session, its transmissions and clearances,
  * alerts, fault events and recorded radar frames (replay and supervisor statistics).
@@ -43,11 +45,23 @@ export class SessionStore {
     );
   }
 
-  endSession(id: string): Promise<void> {
-    return this.persist(() => this.sessions.update(id, { endedAt: new Date() }));
+  /** The session ended: so did the alerts still open in it. */
+  async endSession(id: string): Promise<void> {
+    await this.persist(() => this.sessions.update(id, { endedAt: new Date() }));
+    await this.persist(() =>
+      this.alerts
+        .createQueryBuilder()
+        .update()
+        .set({ endedAt: () => 'now()', outcome: 'cleared', endReason: SESSION_ENDED })
+        .where('session_id = :id AND ended_at IS NULL', { id })
+        .execute(),
+    );
   }
 
-  /** On startup: sessions left open by a previous run ended when it stopped. */
+  /**
+   * On startup: sessions left open by a previous run ended when it stopped (at their last
+   * radar frame), and so did their open alerts.
+   */
   async closeOpenSessions(): Promise<void> {
     await this.persist(() =>
       this.sessions
@@ -56,6 +70,18 @@ export class SessionStore {
         .set({
           endedAt: () =>
             `COALESCE((SELECT MAX(f.at) FROM traffic_frames f WHERE f.session_id = sessions.id), started_at)`,
+        })
+        .where('ended_at IS NULL')
+        .execute(),
+    );
+    await this.persist(() =>
+      this.alerts
+        .createQueryBuilder()
+        .update()
+        .set({
+          endedAt: () => `(SELECT s.ended_at FROM sessions s WHERE s.id = alerts.session_id)`,
+          outcome: 'cleared',
+          endReason: SESSION_ENDED,
         })
         .where('ended_at IS NULL')
         .execute(),

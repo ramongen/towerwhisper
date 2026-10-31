@@ -4,6 +4,7 @@ import { storeToRefs } from 'pinia';
 import { onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
 import { useAlertStore, type AlertLevel } from '../stores/useAlertStore';
 import { useDemoStore } from '../stores/useDemoStore';
+import { useSectorStore } from '../stores/useSectorStore';
 import { radarFeed, useTrafficStore } from '../stores/useTrafficStore';
 import { api } from '../utils/api';
 import { formatAge, heading, levelLine } from '../utils/format';
@@ -11,9 +12,8 @@ import { loadTerrain, parseStops, type Terrain } from '../utils/terrain';
 import { readTokens } from '../utils/tokens';
 import { levelsFromTokens, recolourTile } from '../utils/weatherRadar';
 
-/** Craiova (LRCV): the centre of the scope. */
-const LRCV = { lat: 44.31806, lon: 23.88861 };
-const COS_LAT0 = Math.cos((LRCV.lat * Math.PI) / 180);
+type Runway = AirspaceResponse['runways'][number];
+
 const RANGE_NM = 40;
 const RING_NM = 10;
 /** Margin (NM) around the outer ring at zoom 1, so the compass labels fit. */
@@ -36,8 +36,12 @@ const HIT_RADIUS_PX = 22;
 const ROSE_RADIUS_PX = 78;
 /** A middle-button press that moves less than this is not a pan. */
 const DRAG_THRESHOLD_PX = 3;
-/** The map data (relief, radar) covers this far from the airport; panning stays inside it. */
-const COVERAGE_NM = { x: 200, y: 94 };
+/**
+ * The relief data is built around Craiova and covers this far from it; panning stays inside.
+ * Other sectors pan within a fixed area round their airport (relief where it exists).
+ */
+const LRCV_COVERAGE_NM = { x: 200, y: 94 };
+const SECTOR_COVERAGE_NM = { x: 90, y: 70 };
 const RADAR_REFRESH_MS = 5 * 60 * 1000;
 /** Spot heights shown at zoom 1 (peaks are sorted highest first; more appear zoomed in). */
 const PEAKS_AT_ZOOM_1 = 40;
@@ -65,6 +69,16 @@ function savedMode(): MapMode {
 
 const traffic = useTrafficStore();
 const { selectedCallsign } = storeToRefs(traffic);
+const sector = useSectorStore();
+
+/**
+ * The centre of the scope: the sector's airport. The scope is re-created when the sector
+ * changes (keyed by sector), so these stay fixed for its lifetime.
+ */
+const ORIGIN = sector.current?.airport ?? { lat: 44.31806, lon: 23.88861, icao: 'LRCV', name: '' };
+const COS_LAT0 = Math.cos((ORIGIN.lat * Math.PI) / 180);
+const COVERAGE_NM = ORIGIN.icao === 'LRCV' ? LRCV_COVERAGE_NM : SECTOR_COVERAGE_NM;
+const scopeLabel = `Radar scope around ${ORIGIN.name || ORIGIN.icao}; click an aircraft to select it, middle-drag to pan, wheel to zoom`;
 const alerts = useAlertStore();
 const demo = useDemoStore();
 
@@ -137,6 +151,8 @@ let pxPerNm = 10;
 let frame = 0;
 let resizeObserver: ResizeObserver | null = null;
 let airspace: AirspaceResponse | null = null;
+/** Fixes in label priority order: approach fixes, then nearest to the airport. */
+let fixOrder: AirspaceResponse['fixes'] | null = null;
 let terrain: Terrain = { levels: [], peaks: [], heat: null };
 /** Live precipitation radar tiles of the latest frame, by 'x/y'. */
 /** Recoloured in airborne weather-radar colours once loaded. */
@@ -159,7 +175,7 @@ function nmToScreen(xNm: number, yNm: number): { x: number; y: number } {
 }
 
 function toScreen(lat: number, lon: number): { x: number; y: number } {
-  return nmToScreen((lon - LRCV.lon) * 60 * COS_LAT0, (lat - LRCV.lat) * 60);
+  return nmToScreen((lon - ORIGIN.lon) * 60 * COS_LAT0, (lat - ORIGIN.lat) * 60);
 }
 
 function screenToNm(x: number, y: number): { x: number; y: number } {
@@ -399,11 +415,12 @@ function drawCompass(ctx: CanvasRenderingContext2D): void {
   ctx.textBaseline = 'alphabetic';
 }
 
-/** Runway 08/26 between its real thresholds, the ILS 26 extended centreline, the CRV VOR. */
+/**
+ * Runways between their thresholds (each pair of opposite directions is one strip: 08/26,
+ * or 08L/26R and 08R/26L), the ILS extended centrelines, the VOR.
+ */
 function drawAirport(ctx: CanvasRenderingContext2D): void {
   if (!airspace) return;
-  const [a, b] = airspace.runways.map((r) => toScreen(r.threshold.lat, r.threshold.lon));
-  if (!a || !b) return;
 
   // ILS: dashed extended centreline from the threshold, out along the approach.
   for (const rwy of airspace.runways) {
@@ -427,37 +444,46 @@ function drawAirport(ctx: CanvasRenderingContext2D): void {
     ctx.fillStyle = colors.muted;
     // Under the centreline, half way out, clear of the approach fix labels.
     const label = out(CENTRELINE_NM / 2);
-    ctx.fillText(
-      `ILS ${rwy.id} · ${rwy.ils.ident} ${rwy.ils.frequencyMhz}`,
-      label.x - 50,
-      label.y + 18,
-    );
+    const ident = rwy.ils.frequencyMhz ? ` · ${rwy.ils.ident} ${rwy.ils.frequencyMhz}` : '';
+    ctx.fillText(`ILS ${rwy.id}${ident}`, label.x - 50, label.y + 18);
   }
 
-  // The runway itself, stretched around its middle so it stays visible zoomed out.
-  const mx = (a.x + b.x) / 2;
-  const my = (a.y + b.y) / 2;
-  const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
-  const scale = Math.max(1, RUNWAY_MIN_PX / len);
-  const p = { x: mx + (a.x - mx) * scale, y: my + (a.y - my) * scale };
-  const q = { x: mx + (b.x - mx) * scale, y: my + (b.y - my) * scale };
-  ctx.strokeStyle = colors.runway;
-  ctx.lineWidth = 5;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(p.x, p.y);
-  ctx.lineTo(q.x, q.y);
-  ctx.stroke();
-  ctx.lineCap = 'butt';
+  // Each strip, stretched around its middle so it stays visible zoomed out.
+  let centre = { x: 0, y: 0 };
+  for (const [first, second] of runwayStrips(airspace.runways)) {
+    const a = toScreen(first.threshold.lat, first.threshold.lon);
+    const b = toScreen(second.threshold.lat, second.threshold.lon);
+    const mx = (a.x + b.x) / 2;
+    const my = (a.y + b.y) / 2;
+    centre = { x: mx, y: my };
+    const len = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+    const scale = Math.max(1, RUNWAY_MIN_PX / len);
+    const p = { x: mx + (a.x - mx) * scale, y: my + (a.y - my) * scale };
+    const q = { x: mx + (b.x - mx) * scale, y: my + (b.y - my) * scale };
+    ctx.strokeStyle = colors.runway;
+    ctx.lineWidth = 5;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+    ctx.lineTo(q.x, q.y);
+    ctx.stroke();
+    ctx.lineCap = 'butt';
 
-  ctx.font = `12px ${colors.font}`;
-  ctx.fillStyle = colors.muted;
-  const [first, second] = airspace.runways;
-  ctx.fillText(first.id, p.x - 22, p.y - 10); // the threshold of runway 08 is its west end
-  ctx.fillText(second.id, q.x + 6, q.y - 10);
+    // Each designator just beyond the end it is painted on.
+    ctx.font = `12px ${colors.font}`;
+    ctx.fillStyle = colors.muted;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const ux = (q.x - p.x) / (Math.hypot(q.x - p.x, q.y - p.y) || 1);
+    const uy = (q.y - p.y) / (Math.hypot(q.x - p.x, q.y - p.y) || 1);
+    ctx.fillText(first.id, p.x - ux * 16, p.y - uy * 16);
+    ctx.fillText(second.id, q.x + ux * 16, q.y + uy * 16);
+    ctx.textAlign = 'start';
+    ctx.textBaseline = 'alphabetic';
+  }
   ctx.fillStyle = colors.labelStrong;
   ctx.font = `700 12px ${colors.font}`;
-  ctx.fillText(airspace.airport.icao, mx - 16, my + 24);
+  ctx.fillText(airspace.airport.icao, centre.x - 16, centre.y + 28);
 
   // VOR/DME: a hexagon with its ident and frequency.
   for (const nav of airspace.navaids) {
@@ -480,11 +506,47 @@ function drawAirport(ctx: CanvasRenderingContext2D): void {
   }
 }
 
+/** Opposite runway directions paired into strips: [08, 26], [08L, 26R], [08R, 26L]. */
+function runwayStrips(runways: AirspaceResponse['runways']): [Runway, Runway][] {
+  const strips: [Runway, Runway][] = [];
+  const used = new Set<string>();
+  for (const r of runways) {
+    if (used.has(r.id)) continue;
+    const other = runways.find(
+      (o) =>
+        !used.has(o.id) &&
+        o.id !== r.id &&
+        Math.abs(((o.headingDeg - r.headingDeg + 540) % 360) - 180) > 170 &&
+        Math.hypot(o.threshold.lat - r.threshold.lat, o.threshold.lon - r.threshold.lon) < 0.06 &&
+        sameStrip(r, o),
+    );
+    if (!other) continue;
+    used.add(r.id);
+    used.add(other.id);
+    strips.push([r, other]);
+  }
+  return strips;
+}
+
+/** 08L pairs with 26R (left seen from one end is right from the other); 08 with 26. */
+function sameStrip(a: Runway, b: Runway): boolean {
+  const side = (id: string) => id.replace(/^\d+/, '');
+  const flip: Record<string, string> = { L: 'R', R: 'L', C: 'C', '': '' };
+  return flip[side(a.id)] === side(b.id);
+}
+
 /** Published points: approach fixes (IAF / IF) stand out; far ones are labelled when zoomed in. */
 function drawFixes(ctx: CanvasRenderingContext2D): void {
   if (!airspace) return;
   const origin = { lat: airspace.airport.lat, lon: airspace.airport.lon };
-  for (const fix of airspace.fixes) {
+  // Labels are placed by priority (approach fixes, then the nearest) and skipped where they
+  // would overlap one already placed: a busy terminal area (LROP) stays readable, and more
+  // names appear as you zoom in.
+  const placed: { x: number; y: number; w: number; h: number }[] = [];
+  const free = (r: { x: number; y: number; w: number; h: number }) =>
+    !placed.some((p) => r.x < p.x + p.w && p.x < r.x + r.w && r.y < p.y + p.h && p.y < r.y + r.h);
+  const ordered = fixOrder ?? airspace.fixes;
+  for (const fix of ordered) {
     const { x, y } = toScreen(fix.lat, fix.lon);
     if (x < -40 || y < -40 || x > width + 40 || y > height + 40) continue;
     const distanceNm = Math.hypot(
@@ -502,9 +564,13 @@ function drawFixes(ctx: CanvasRenderingContext2D): void {
     ctx.closePath();
     ctx.stroke();
     if (approach || distanceNm <= FIX_LABEL_NM || view.zoom >= FIX_LABEL_ZOOM) {
+      const text = approach ? `${fix.name} ${fix.role}` : fix.name;
       ctx.font = `${approach ? '700 ' : ''}11px ${colors.font}`;
+      const box = { x: x + 7, y: y + 4, w: ctx.measureText(text).width + 4, h: 14 };
+      if (!approach && !free(box)) continue;
+      placed.push(box);
       ctx.fillStyle = approach ? colors.labelStrong : colors.label;
-      ctx.fillText(approach ? `${fix.name} ${fix.role}` : fix.name, x + 9, y + 15);
+      ctx.fillText(text, x + 9, y + 15);
     }
   }
 }
@@ -529,7 +595,7 @@ function drawRoute(ctx: CanvasRenderingContext2D, now: number): void {
   }
 
   const start = interpolated(a, now);
-  const points = [start, ...route.remaining, LRCV].map((p) => toScreen(p.lat, p.lon));
+  const points = [start, ...route.remaining, ORIGIN].map((p) => toScreen(p.lat, p.lon));
   ctx.strokeStyle = colors.selected;
   ctx.lineWidth = 1.5;
   ctx.setLineDash([8, 6]);
@@ -843,10 +909,15 @@ function resetView(): void {
 async function loadMap(): Promise<void> {
   try {
     airspace = await api<AirspaceResponse>('GET', '/airspace');
+    const origin = airspace.airport;
+    const rank = (f: AirspaceResponse['fixes'][number]) =>
+      (f.role ? -1000 : 0) +
+      Math.hypot((f.lon - origin.lon) * 60 * COS_LAT0, (f.lat - origin.lat) * 60);
+    fixOrder = [...airspace.fixes].sort((a, b) => rank(a) - rank(b));
   } catch {
     // The scope works without fixes; they come back on the next load.
   }
-  terrain = await loadTerrain(LRCV, COS_LAT0, parseStops(colors.heatStops));
+  terrain = await loadTerrain(ORIGIN, COS_LAT0, parseStops(colors.heatStops));
 }
 
 onMounted(() => {
@@ -875,7 +946,7 @@ onBeforeUnmount(() => {
       ref="canvas"
       :class="{ panning }"
       role="img"
-      aria-label="Radar scope around Craiova airport; click an aircraft to select it, middle-drag to pan, wheel to zoom"
+      :aria-label="scopeLabel"
       @click="onClick"
       @pointerdown="onPointerDown"
       @pointermove="onPointerMove"

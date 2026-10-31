@@ -65,13 +65,56 @@ cp .env.example .env        # optional: add API keys, or leave empty for no-keys
 docker compose up --build
 ```
 
-Open <http://localhost:8080> (controller screen) and `http://<laptop-ip>:8080/demo` on a phone
-(demo panel). The microphone only works on `localhost` or HTTPS. If port 8080 is taken (Oracle XE
-listens there, for example), set `WEB_PORT=8081` in `.env`.
+Open <http://localhost:8080> and sign in, and `http://<laptop-ip>:8080/demo` on a phone (demo
+panel, no login). The microphone only works on `localhost` or HTTPS. If port 8080 is taken (Oracle
+XE listens there, for example), set `WEB_PORT=8081` in `.env`.
+
+### Accounts
+
+The first start (empty database) creates two accounts; the login page also offers them in one
+click:
+
+| Email                         | Password   | Role       | Lands on                                        |
+| ----------------------------- | ---------- | ---------- | ----------------------------------------------- |
+| `atc@towerwhisper.app`        | `passpass` | ATC        | the Craiova Approach position (radar, PTT)      |
+| `supervisor@towerwhisper.app` | `passpass` | Supervisor | the dashboard: every sector, statistics, replay |
+
+Set `AUTH_SECRET` in `.env` (any long random string) outside a local demo; without it a development
+secret signs the tokens and the API says so at startup.
+
+### Sectors
+
+Five ROMATSA approach sectors run side by side, each with its own live session (traffic, comms,
+alerts, demo faults, recording): **Craiova** (LRCV, the hand-made demo scenario, AIP data),
+**București** (LROP, parallel runways 08L/26R and 08R/26L), **Sibiu** (LRSB), **Timișoara** (LRTR)
+and **Cluj** (LRCL). The four new ones get six generated arrivals each along the airport's real STAR
+points from AIP ENR 4.4, joining the ILS by themselves about 4 minutes apart; their runways are
+derived from published aerodrome data (approximate), and the CF/LB/RB approach points are
+simulated. A controller works the sector set on the account and goes straight to it at login.
+
+### Supervisor
+
+- **Overview** — a live card per sector (controller signed in, aircraft, active alerts with their
+  reasons, session statistics) with **Watch live** and **Replay**; below, statistics over 1 h /
+  24 h / 7 d / 30 d for all sectors or one: alerts raised, resolved by controllers, mean and median
+  time to resolve, alert rate per hour of session, alerts over time by severity, how alerts ended,
+  time-to-resolve distribution, alerts by type, rate by sector, controllers, latest alerts.
+- **Watch live** — the sector's own screen, read-only: radar, aircraft details, weather, comms with
+  the pilot voice, alerts. Nothing can be transmitted or resolved; another sector is one click away.
+- **Replay** — any recorded session of a sector on a timeline: radar (recorded every 2 s and
+  interpolated), transcripts, pilot voice and the controller's own PTT recordings, alerts as they
+  were. Play at 1–16×, scrub, or jump with ← / → (voices play at 1× and 2×).
+- **Accounts** — create accounts, switch a role between ATC and Supervisor, set the sector an ATC
+  works (an open screen moves at once), set a password, delete.
+
+The `/demo` panel lists every sector's session with who is signed in; pick the one to drive.
+
+Phones and screens smaller than 1100 × 600 get a "desktop only" page instead of the console
+(nothing else is loaded); `/demo` is the exception.
 
 ### Demo flow
 
-1. Select an aircraft on the radar (optional), hold **Space** and say
+1. Sign in as `atc@towerwhisper.app`. Select an aircraft on the radar (optional), hold **Space** and say
    _"TAROM 301, descend altitude 4000 feet, turn left heading 080"_.
 2. The transcript and the parsed chips appear; ~1.5 s later the pilot reads back over the radio
    filter and the readback check shows **READBACK OK** or raises an alert.
@@ -144,9 +187,11 @@ the LLM parser is disabled. `GET /api/health` reports the active mode.
 ## Repository layout
 
 ```text
-apps/web/          Vue 3 SPA — "/" controller screen, "/demo" demo panel
-apps/api/          NestJS — one folder per module (session, simulation, voice, parser,
-                   pilot, safety, demo, realtime, transmissions), scenarios/, test/phrases.json
+apps/web/          Vue 3 SPA — "/login", "/atc" controller position, "/supervisor" dashboard,
+                   live view, replay and accounts, "/demo" demo panel
+apps/api/          NestJS — auth/, sectors/ (one SectorRuntime per sector, registry, recording),
+                   simulation, voice, parser, pilot, safety, demo, realtime, supervisor,
+                   transmissions; scenarios/, test/phrases.json
 packages/shared/   domain types, WebSocket events, REST bodies, FaultConfig
 ```
 
