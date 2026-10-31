@@ -35,6 +35,9 @@ export class PhraseNormalizer {
     s = s.replace(/(\d)\.(\d)/g, '$1decimalpoint$2'); // keep 121.3 through punctuation removal
     s = s.replace(/[^a-z0-9\s-]/g, ' ').replace(/-/g, ' ');
     s = s.replace(/decimalpoint/g, '.');
+    // Whisper writes "niner" as "9r" / "9er" / "9ir" ("heading 2 6 9R"): back to 9. Not after
+    // "runway", where 9R is a runway side (runway 0 9R).
+    s = s.replace(/(?<!\b(?:runway|rwy)[\s\d]*)\b(\d*9)(?:er|ir|r)\b/g, '$1');
 
     const tokens = this.mergeSpokenNumbers(s.split(/\s+/).filter(Boolean));
     let out = tokens.join(' ');

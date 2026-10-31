@@ -294,11 +294,23 @@ export class SectorRuntime {
     return { transmissionId: id, transcript, clearance };
   }
 
-  /** "TAROM 301, WIZZ 44, ..." + ATC vocabulary, so Whisper spells callsigns and terms right. */
+  /**
+   * ATC vocabulary, the fixes in use and "TAROM 301, WIZZ 44, ...", so Whisper spells terms,
+   * fixes and callsigns right. Whisper keeps only the last ~224 tokens of a prompt: the
+   * airspace has nearly 200 published points, so only the approach fixes and those on the
+   * flight plans of the traffic go in, and the callsigns come last, where nothing cuts them.
+   * Names are written "Tarom 301", "Ozzet": a prompt in capitals makes Whisper answer in
+   * capitals and abbreviate ("DESCEND ALT"); the parser ignores case anyway.
+   */
   vocabularyPrompt(): string {
-    const callsigns = this.simulation.getAircraft().map((a) => a.telephony);
-    const fixes = this.simulation.getFixes().map((f) => f.name);
-    return `${callsigns.join(', ')}. ${STT_VOCABULARY}, direct ${fixes.join(', ')}.`;
+    const aircraft = this.simulation.getAircraft();
+    const fixes = new Set(this.sector.airspace.fixes.filter((f) => f.role).map((f) => f.name));
+    for (const a of aircraft) {
+      for (const w of this.simulation.getFlightPlan(a.callsign)?.route ?? []) fixes.add(w.name);
+    }
+    const callsigns = aircraft.map((a) => a.telephony);
+    const names = (list: string[]) => list.map(capitalized).join(', ');
+    return `${STT_VOCABULARY}, direct ${names([...fixes])}. ${names(callsigns)}.`;
   }
 
   /** GET /aircraft/:callsign — type data, flight plan and runway compatibility. */
@@ -517,4 +529,9 @@ export class SectorRuntime {
 function mean(values: number[]): number | null {
   if (values.length === 0) return null;
   return Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 100) / 100;
+}
+
+/** 'TAROM 301' -> 'Tarom 301', 'OZZET' -> 'Ozzet'; words with digits ('2RP') stay as they are. */
+function capitalized(name: string): string {
+  return name.replace(/\b([A-Z])([A-Z]+)\b/g, (_, first: string, rest: string) => first + rest.toLowerCase());
 }

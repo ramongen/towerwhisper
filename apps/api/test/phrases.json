@@ -980,5 +980,54 @@
         "runway": "26R"
       }
     }
+  },
+  {
+    "input": "Tarom 301, descend altitude 3,000 feet, turn left heading 2 6 9R.",
+    "speaker": "atc",
+    "expected": {
+      "callsign": "ROT301",
+      "altitude": {
+        "valueFt": 3000,
+        "action": "descend",
+        "flightLevel": false
+      },
+      "heading": {
+        "valueDeg": 269,
+        "turn": "left"
+      }
+    }
+  },
+  {
+    "input": "TAROM 301, turn right heading 269er",
+    "speaker": "atc",
+    "expected": {
+      "callsign": "ROT301",
+      "heading": {
+        "valueDeg": 269,
+        "turn": "right"
+      }
+    }
+  },
+  {
+    "input": "Wizz 44, heading 0 9ir 0",
+    "speaker": "atc",
+    "expected": {
+      "callsign": "WZZ44",
+      "heading": {
+        "valueDeg": 90,
+        "turn": "any"
+      }
+    }
+  },
+  {
+    "input": "WIZZ 44, cleared ILS approach runway zero niner right",
+    "speaker": "atc",
+    "expected": {
+      "callsign": "WZZ44",
+      "approach": {
+        "type": "ILS",
+        "runway": "09R"
+      }
+    }
   }
 ]
