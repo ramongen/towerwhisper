@@ -9,20 +9,31 @@ const MAX_NOISE_GAIN = 0.35;
 const SQUELCH_S = 0.07;
 const SQUELCH_GAIN = 0.4;
 
+/** Browser-voice pitch per speaker, so a typed controller call does not sound like the pilot. */
+const SPEECH_PITCH = { pilot: 1, atc: 0.8 } as const;
+
+export type RadioSpeaker = keyof typeof SPEECH_PITCH;
+
 let queue: Promise<void> = Promise.resolve();
 const decoded = new Map<string, AudioBuffer>();
 
 /**
- * Plays pilot audio through Web Audio: band-pass ~300-3000 Hz, light distortion, hiss at
+ * Plays radio audio through Web Audio: band-pass ~300-3000 Hz, light distortion, hiss at
  * the demo-panel noise level, squelch clicks at both ends. Transmissions never overlap:
  * each waits for the previous one. Without audio, speechSynthesis is the offline fallback
- * (it cannot go through the filter, so the hiss plays alongside it).
+ * (it cannot go through the filter, so the hiss plays alongside it); the controller then
+ * gets a different voice from the pilot's.
  */
 export function useRadioVoice() {
-  function play(audioUrl: string | null, text: string, noise: number): Promise<void> {
+  function play(
+    audioUrl: string | null,
+    text: string,
+    noise: number,
+    speaker: RadioSpeaker = 'pilot',
+  ): Promise<void> {
     queue = queue
-      .then(() => (audioUrl ? playFile(audioUrl, noise) : speak(text, noise)))
-      .catch((error: Error) => console.warn('Pilot audio failed:', error.message));
+      .then(() => (audioUrl ? playFile(audioUrl, noise) : speak(text, noise, speaker)))
+      .catch((error: Error) => console.warn('Radio audio failed:', error.message));
     return queue;
   }
 
@@ -62,7 +73,7 @@ async function playFile(url: string, noise: number): Promise<void> {
 }
 
 /** Offline fallback: browser speech plus radio hiss. */
-async function speak(text: string, noise: number): Promise<void> {
+async function speak(text: string, noise: number, speaker: RadioSpeaker): Promise<void> {
   if (!('speechSynthesis' in window) || !text.trim()) return;
   const ctx = audioContext();
   squelch(ctx, ctx.currentTime);
@@ -71,12 +82,22 @@ async function speak(text: string, noise: number): Promise<void> {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = 'en-US';
     utterance.rate = 1.1;
+    utterance.pitch = SPEECH_PITCH[speaker];
+    if (speaker === 'atc') {
+      const voice = controllerVoice();
+      if (voice) utterance.voice = voice;
+    }
     utterance.onend = () => resolve();
     utterance.onerror = () => resolve();
     speechSynthesis.speak(utterance);
   });
   hiss.stop();
   squelch(ctx, ctx.currentTime);
+}
+
+/** An English voice other than the default one (which the pilot uses), when there is one. */
+function controllerVoice(): SpeechSynthesisVoice | undefined {
+  return speechSynthesis.getVoices().find((v) => v.lang.startsWith('en') && !v.default);
 }
 
 function startHiss(

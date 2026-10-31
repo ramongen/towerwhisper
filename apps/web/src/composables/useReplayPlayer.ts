@@ -16,8 +16,8 @@ const VOICE_NOISE = 0.25;
 /**
  * Plays a recorded session back through the same stores the live screens use: the radar
  * picture interpolated between recorded frames, the comms up to the cursor, the alerts that
- * were active at that moment. Pilot readbacks and the controller's PTT recordings are played
- * as the cursor passes them (at 1x and 2x).
+ * were active at that moment. Every transmission is heard as the cursor passes it (at 1x and
+ * 2x): the controller's own PTT recording or the pilot's audio, or a browser voice when typed.
  */
 export function useReplayPlayer() {
   const traffic = useTrafficStore();
@@ -126,11 +126,10 @@ export function useReplayPlayer() {
     while (shownComms < s.comms.length && commsTimes[shownComms] <= t.value) {
       const entry = s.comms[shownComms];
       comms.add(entry, true);
-      // Pilots always speak (recorded TTS, or the browser voice as live); the controller is
-      // heard when the transmission was spoken, not typed.
-      const audible = entry.speaker === 'pilot' || !!entry.audioUrl;
-      if (speak && voiceActive.value && audible) {
-        void voice.play(entry.audioUrl ?? null, entry.transcript, VOICE_NOISE);
+      // Both sides are heard: the recording when there is one (the controller's own PTT
+      // voice, the pilot's TTS), otherwise the browser voice reads the transcript.
+      if (speak && voiceActive.value) {
+        void voice.play(entry.audioUrl ?? null, entry.transcript, VOICE_NOISE, entry.speaker);
       }
       shownComms++;
     }
