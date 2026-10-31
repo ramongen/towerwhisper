@@ -13,7 +13,7 @@ export class AppModeService implements OnModuleInit {
 
   readonly hasOpenAiKey: boolean;
   readonly hasAnthropicKey: boolean;
-  /** Base URL of the local Whisper service (docker compose profile "whisper"), if any. */
+  /** Base URL of the local Whisper service (always on in Docker Compose), if any. */
   readonly whisperUrl: string | null;
   readonly stt: SttProvider;
   readonly mode: AppMode;
@@ -21,7 +21,9 @@ export class AppModeService implements OnModuleInit {
   constructor(config: ConfigService) {
     this.hasOpenAiKey = Boolean(config.get<string>('OPENAI_API_KEY')?.trim());
     this.hasAnthropicKey = Boolean(config.get<string>('ANTHROPIC_API_KEY')?.trim());
-    this.whisperUrl = config.get<string>('WHISPER_URL')?.trim().replace(/\/$/, '') || null;
+    const whisper = config.get<string>('WHISPER_URL')?.trim().replace(/\/$/, '') ?? '';
+    // "off" (or none / false) turns local Whisper off where Compose would set it by default.
+    this.whisperUrl = whisper && !/^(off|none|false)$/i.test(whisper) ? whisper : null;
     this.stt = this.whisperUrl ? 'local-whisper' : this.hasOpenAiKey ? 'openai' : 'none';
     this.mode = this.stt === 'none' ? 'no-keys' : 'full';
   }

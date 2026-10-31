@@ -3,11 +3,15 @@
 #   .\start.ps1              first free port from 8080 (or from WEB_PORT in .env)
 #   .\start.ps1 -Port 9000   first free port from 9000
 #   .\start.ps1 -Logs        then follow the logs (Ctrl+C stops following, not the app)
+#   .\start.ps1 -Cpu         speech-to-text on the CPU even when there is a GPU
 #
-# From cmd.exe or a double-click: start.cmd. Stop with: docker compose down
+# Speech-to-text (local Whisper) runs on the NVIDIA GPU when Docker can use one, else on the
+# CPU: nothing to set in .env. From cmd.exe or a double-click: start.cmd.
+# Stop with: docker compose down
 param(
   [int]$Port = 0,
-  [switch]$Logs
+  [switch]$Logs,
+  [switch]$Cpu
 )
 
 # Native commands report through exit codes; with 'Stop', Windows PowerShell 5.1 would turn
@@ -19,6 +23,8 @@ try { [Console]::OutputEncoding = [System.Text.Encoding]::UTF8 } catch {}
 $PortTries = 50
 $DockerWaitS = 180
 $AppWaitS = 240
+# How long to wait for Whisper's model before printing the links anyway (s).
+$WhisperWaitS = 60
 
 function Say([string]$text, [string]$color = 'Gray') { Write-Host $text -ForegroundColor $color }
 function Fail([string]$text) { Say ''; Say "  x $text" 'Red'; Say ''; exit 1 }
@@ -52,6 +58,31 @@ function Get-EnvPort {
   $line = Get-Content '.env' | Where-Object { $_ -match '^\s*WEB_PORT\s*=\s*(\d+)\s*$' } | Select-Object -First 1
   if ($line -and $line -match '(\d+)') { return [int]$Matches[1] }
   return 0
+}
+
+# A value from .env, or the default when it is missing or empty.
+function Get-EnvValue([string]$name, [string]$default) {
+  if (Test-Path '.env') {
+    $line = Get-Content '.env' | Where-Object { $_ -match "^\s*$name\s*=\s*(\S+)\s*$" } | Select-Object -First 1
+    if ($line -and $line -match '=\s*(\S+)\s*$') { return $Matches[1] }
+  }
+  return $default
+}
+
+# An NVIDIA driver on this machine, and Docker able to hand the GPU to a container.
+function Test-Gpu {
+  if (-not (Get-Command nvidia-smi -ErrorAction SilentlyContinue)) { return $false }
+  nvidia-smi -L *> $null
+  if ($LASTEXITCODE -ne 0) { return $false }
+  Say '  · NVIDIA driver found: checking that Docker can use the GPU...'
+  docker run --rm --gpus all alpine:3.20 true *> $null
+  return $LASTEXITCODE -eq 0
+}
+
+# The Whisper container has loaded its model and answers.
+function Test-WhisperReady {
+  $log = docker @composeArgs logs whisper 2> $null | Out-String
+  return $log -match 'Application startup complete'
 }
 
 function Get-LanIp {
@@ -88,6 +119,20 @@ if (-not (Test-Docker)) {
 }
 Say '  · Docker is running'
 
+# Speech-to-text: Whisper on the GPU when Docker can use one (an NVIDIA driver and Docker GPU
+# support), else on the CPU. Nothing to configure; -Cpu forces the CPU.
+$gpu = $false
+if (-not $Cpu) {
+  $gpu = Test-Gpu
+}
+$composeArgs = @('compose', '-f', 'docker-compose.yml')
+if ($gpu) {
+  $composeArgs += @('-f', 'docker-compose.gpu.yml')
+  Say '  · NVIDIA GPU available to Docker: speech-to-text on the GPU'
+} else {
+  Say '  · no GPU available to Docker: speech-to-text on the CPU'
+}
+
 # 2. The port: the one the stack already uses, else the first free one.
 $current = docker compose port web 80 2> $null
 if ($LASTEXITCODE -eq 0 -and $current -match ':(\d+)\s*$') {
@@ -108,7 +153,15 @@ if ($LASTEXITCODE -eq 0 -and $current -match ':(\d+)\s*$') {
 $env:WEB_PORT = "$chosen"
 Say '  · building and starting the containers (the first build takes a few minutes)...'
 Say ''
-docker compose up --build -d
+docker @composeArgs up --build -d
+if ($LASTEXITCODE -ne 0 -and $gpu) {
+  # The GPU looked usable but the container could not get it: same stack, Whisper on the CPU.
+  Say ''
+  Say '  · Whisper could not start on the GPU: starting it on the CPU instead' 'DarkYellow'
+  $gpu = $false
+  $composeArgs = @('compose', '-f', 'docker-compose.yml')
+  docker @composeArgs up --build -d
+}
 if ($LASTEXITCODE -ne 0) { Fail 'docker compose up failed: see the messages above.' }
 
 # 4. Wait until the app answers through nginx.
@@ -123,9 +176,22 @@ while (-not $health) {
   $waited += 2
 }
 
+# Whisper loads its model on start (the first start downloads it): give it a little time.
+$whisperReady = Test-WhisperReady
+for ($i = 0; -not $whisperReady -and $i -lt $WhisperWaitS; $i += 3) {
+  Start-Sleep -Seconds 3
+  $whisperReady = Test-WhisperReady
+}
+
 # 5. Where to go.
 $lan = Get-LanIp
-$voice = switch ($health.stt) { 'local-whisper' { 'local Whisper' } 'openai' { 'OpenAI Whisper' } default { 'typed instructions (no speech-to-text configured)' } }
+$model = if ($gpu) { Get-EnvValue 'WHISPER_MODEL' 'large-v3' } else { Get-EnvValue 'WHISPER_CPU_MODEL' 'small.en' }
+$state = if ($whisperReady) { 'ready' } else { 'loading model...' }
+$voice = switch ($health.stt) {
+  'local-whisper' { "Whisper on $(if ($gpu) { 'GPU' } else { 'CPU' }) ($model) · $state" }
+  'openai' { 'OpenAI Whisper' }
+  default { 'typed instructions (no speech-to-text)' }
+}
 $rows = @(
   @('Controller / supervisor', $url),
   @('Demo panel (phone)', $(if ($lan) { "http://${lan}:$chosen/demo" } else { "$url/demo" })),
@@ -150,6 +216,10 @@ foreach ($r in $rows) {
 Say "  └$line┘" 'Cyan'
 Say ''
 Say "  Open $url in Chrome or Edge (the microphone needs localhost or HTTPS)." 'White'
+if ($health.stt -eq 'local-whisper' -and -not $whisperReady) {
+  Say '  Whisper is still loading its model (the first start downloads it): push-to-talk works in' 'DarkYellow'
+  Say '  a few minutes; typing works now. Progress: docker compose logs -f whisper' 'DarkYellow'
+}
 Say '  Logs: docker compose logs -f      Stop: docker compose down' 'DarkGray'
 Say ''
 

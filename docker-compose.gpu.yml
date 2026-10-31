@@ -1,0 +1,16 @@
+# Whisper on an NVIDIA GPU, with the large model. Added on top of docker-compose.yml by the
+# start scripts when Docker can use a GPU (start.ps1 / start.sh check it), or by hand:
+#   docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build
+services:
+  whisper:
+    image: onerahmet/openai-whisper-asr-webservice:v1.10.0-gpu
+    environment:
+      ASR_MODEL: ${WHISPER_MODEL:-large-v3}
+      ASR_QUANTIZATION: float16
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]

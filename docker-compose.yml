@@ -20,6 +20,8 @@ services:
     environment:
       DATABASE_URL: postgres://towerwhisper:${POSTGRES_PASSWORD:-towerwhisper}@db:5432/towerwhisper
       PORT: 3000
+      # The whisper service below; WHISPER_URL=off in .env turns local speech-to-text off.
+      WHISPER_URL: ${WHISPER_URL:-http://whisper:9000}
     volumes:
       - audio:/app/data/audio
     depends_on:
@@ -30,34 +32,13 @@ services:
       retries: 30
     restart: unless-stopped
 
-  # Local speech-to-text: Whisper large-v3 (faster-whisper) on an NVIDIA GPU.
-  # Optional: enabled with COMPOSE_PROFILES=whisper (see .env.example). The model is
-  # downloaded into the whisper-models volume on the first start (~3 GB).
+  # Local speech-to-text (faster-whisper), always on: the voice works with no key and no .env.
+  # Here on the CPU with a small model (small.en, ~0.5 GB, 2-3 s per call), which runs on any
+  # machine. On a machine with an NVIDIA GPU the start scripts add docker-compose.gpu.yml,
+  # which moves it to the GPU with large-v3. The model is downloaded into the whisper-models
+  # volume on the first start.
   whisper:
-    image: onerahmet/openai-whisper-asr-webservice:v1.10.0-gpu
-    profiles: ['whisper']
-    environment:
-      ASR_ENGINE: faster_whisper
-      ASR_MODEL: ${WHISPER_MODEL:-large-v3}
-      ASR_QUANTIZATION: float16
-      ASR_MODEL_PATH: /models
-    volumes:
-      - whisper-models:/models
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    restart: unless-stopped
-
-  # Same service on the CPU, for laptops without an NVIDIA GPU. Enabled with
-  # COMPOSE_PROFILES=whisper-cpu; answers on the same "whisper" host name, so WHISPER_URL
-  # does not change. Use a small model here (small.en by default): large-v3 is too slow on a CPU.
-  whisper-cpu:
     image: onerahmet/openai-whisper-asr-webservice:v1.10.0
-    profiles: ['whisper-cpu']
     environment:
       ASR_ENGINE: faster_whisper
       ASR_MODEL: ${WHISPER_CPU_MODEL:-small.en}
@@ -65,9 +46,6 @@ services:
       ASR_MODEL_PATH: /models
     volumes:
       - whisper-models:/models
-    networks:
-      default:
-        aliases: [whisper]
     restart: unless-stopped
 
   web:

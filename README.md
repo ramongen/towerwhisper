@@ -189,22 +189,23 @@ pnpm --filter web dev               # Vite on :5173, proxies /api and /socket.io
 
 Checks: `pnpm -r typecheck`, `pnpm -r lint`, `pnpm --filter api test`.
 
-### Local speech-to-text (Whisper large-v3 on your GPU)
+### Local speech-to-text (Whisper, GPU or CPU, nothing to configure)
 
-With an NVIDIA GPU and Docker Desktop GPU support, put these in `.env` and run
-`docker compose up --build`:
+The `whisper` container (faster-whisper) is part of the stack, so push-to-talk works with no API
+key and nothing in `.env`. The start scripts check whether Docker can use an NVIDIA GPU (driver
+present and a test container with `--gpus all` runs): if so they add `docker-compose.gpu.yml`
+(`large-v3`, float16 on CUDA), otherwise Whisper runs on the CPU (`small.en`, int8, 2-3 s per
+call); if the GPU start fails they fall back to the CPU by themselves. `-Cpu` / `--cpu` forces the
+CPU. Plain `docker compose up` uses the CPU; for the GPU by hand:
+`docker compose -f docker-compose.yml -f docker-compose.gpu.yml up --build`.
 
-```bash
-COMPOSE_PROFILES=whisper
-WHISPER_URL=http://whisper:9000
-WHISPER_MODEL=large-v3          # or large-v3-turbo for even lower latency
-```
+The model is downloaded into a volume on the first start (CPU ~0.5 GB, GPU ~3 GB); until it is
+loaded, typed instructions work and the start script says so. Models: `WHISPER_MODEL` (GPU) and
+`WHISPER_CPU_MODEL` (CPU) in `.env`. PTT audio never leaves the laptop; the OpenAI API is only a
+fallback when a key is set. The top bar shows the active source (`STT WHISPER LOCAL`,
+`STT WHISPER API`, `TEXT MODE`).
 
-The `whisper` container (faster-whisper, float16 on CUDA) downloads the model into a volume on the
-first start. PTT audio then never leaves the laptop; the OpenAI API is only a fallback when a key
-is set. The top bar shows the active source (`STT WHISPER LOCAL`, `STT WHISPER API`, `TEXT MODE`).
-
-Without any speech-to-text (no `WHISPER_URL`, no `OPENAI_API_KEY`) the app runs in **no-keys mode**: PTT is replaced by
+With `WHISPER_URL=off` and no `OPENAI_API_KEY` the app runs in **no-keys mode**: PTT is replaced by
 a text input with the scripted phrases, the pilot voice comes from `apps/api/assets/tts-cache`, and
 the LLM parser is disabled. `GET /api/health` reports the active mode.
 

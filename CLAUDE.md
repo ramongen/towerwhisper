@@ -174,6 +174,8 @@ Keep these in one `constants.ts` per module, not inline:
 
 ## No-keys mode
 
+Speech-to-text needs no key in Docker: the `whisper` service (local faster-whisper) always runs, on
+the NVIDIA GPU when the start scripts find one (`docker-compose.gpu.yml`), else on the CPU.
 If `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` are missing, the app must still start and the full demo
 must still work:
 
