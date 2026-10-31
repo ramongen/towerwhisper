@@ -34,7 +34,14 @@ const pickedCallsign = ref<string>('');
 
 const target = computed(() => faults.value?.target.mode ?? 'selected');
 const demoLimits = computed(() => (faults.value?.commsLimits.cautionS ?? 1800) < 120);
-const noisePercent = computed(() => Math.round((faults.value?.radioNoise ?? 0) * 100));
+const serverNoise = computed(() => Math.round((faults.value?.radioNoise ?? 0) * 100));
+/**
+ * The slider's own value while it is dragged (and until the server confirms it). The panel
+ * re-renders on every traffic update; binding the slider straight to the server value
+ * snapped the thumb back mid-drag.
+ */
+const noiseDraft = ref<number | null>(null);
+const noisePercent = computed(() => noiseDraft.value ?? serverNoise.value);
 const callsigns = computed(() => aircraft.value.map((a) => a.callsign));
 
 async function run(action: () => Promise<unknown>, done?: string): Promise<void> {
@@ -101,9 +108,16 @@ function ageTo(level: 'caution' | 'warning'): void {
   void fire('age-comms', { ageS }, `age-${level}`);
 }
 
-function setNoise(event: Event): void {
-  const value = Number((event.target as HTMLInputElement).value) / 100;
-  void patch({ radioNoise: value });
+function dragNoise(event: Event): void {
+  noiseDraft.value = Number((event.target as HTMLInputElement).value);
+}
+
+async function setNoise(event: Event): Promise<void> {
+  const percent = Number((event.target as HTMLInputElement).value);
+  noiseDraft.value = percent;
+  await patch({ radioNoise: percent / 100 });
+  // A newer drag may have started meanwhile: keep that one.
+  if (noiseDraft.value === percent) noiseDraft.value = null;
 }
 
 async function reset(): Promise<void> {
@@ -283,6 +297,7 @@ const avgDetection = computed(() =>
           max="100"
           step="5"
           :value="noisePercent"
+          @input="dragNoise"
           @change="setNoise"
         />
       </div>
