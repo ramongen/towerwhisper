@@ -1,14 +1,14 @@
 {
   "name": "craiova-arrivals",
   "airport": "LRCV",
-  "note": "Arrivals for ILS RWY 26 along real ATS routes (AIP Romania): T139, T226, T285, Z938, Z944 to the IAFs TITEK, PEMOK, PANZU, then the IF OZZET. Start points are spaced so that, left alone, they reach the final approach about 2.5-3 min apart.",
+  "note": "Arrivals for ILS RWY 26 along real ATS routes (AIP Romania): T139, T226, T285, Z938, Z944 to the IAFs TITEK, PEMOK, PANZU, then the IF OZZET. Start points (some beyond the 40 NM ring) are spaced so that, left alone, they reach the final approach about 4 min apart.",
   "aircraft": [
     {
       "callsign": "ROT301",
       "telephony": "TAROM 301",
       "type": "AT76",
-      "lat": 44.5298,
-      "lon": 23.0963,
+      "lat": 44.6118,
+      "lon": 22.0218,
       "altitudeFt": 7000,
       "headingDeg": 96,
       "speedKt": 210,
@@ -23,7 +23,11 @@
         "cruiseLevel": 170,
         "declaredLandingWeightKg": 21500,
         "destination": "LRCV",
-        "route": ["OVDOT", "TITEK", "OZZET"],
+        "route": [
+          "OVDOT",
+          "TITEK",
+          "OZZET"
+        ],
         "nextWaypoint": "TITEK"
       }
     },
@@ -47,7 +51,12 @@
         "cruiseLevel": 330,
         "declaredLandingWeightKg": 75800,
         "destination": "LRCV",
-        "route": ["ABRUT", "VAMON", "PEMOK", "OZZET"],
+        "route": [
+          "ABRUT",
+          "VAMON",
+          "PEMOK",
+          "OZZET"
+        ],
         "nextWaypoint": "VAMON"
       }
     },
@@ -55,8 +64,8 @@
       "callsign": "ROT612",
       "telephony": "TAROM 612",
       "type": "B738",
-      "lat": 43.6889,
-      "lon": 24.2392,
+      "lat": 43.5706,
+      "lon": 24.2739,
       "altitudeFt": 10000,
       "headingDeg": 348,
       "speedKt": 260,
@@ -71,7 +80,11 @@
         "cruiseLevel": 360,
         "declaredLandingWeightKg": 63200,
         "destination": "LRCV",
-        "route": ["TIMUR", "PANZU", "OZZET"],
+        "route": [
+          "TIMUR",
+          "PANZU",
+          "OZZET"
+        ],
         "nextWaypoint": "PANZU"
       }
     },
@@ -79,8 +92,8 @@
       "callsign": "LOT2RP",
       "telephony": "LOT 2RP",
       "type": "E195",
-      "lat": 45.0794,
-      "lon": 24.9025,
+      "lat": 45.2431,
+      "lon": 25.4905,
       "altitudeFt": 14000,
       "headingDeg": 249,
       "speedKt": 290,
@@ -95,7 +108,12 @@
         "cruiseLevel": 370,
         "declaredLandingWeightKg": 43100,
         "destination": "LRCV",
-        "route": ["ENIMA", "BIVBU", "PEMOK", "OZZET"],
+        "route": [
+          "ENIMA",
+          "BIVBU",
+          "PEMOK",
+          "OZZET"
+        ],
         "nextWaypoint": "BIVBU"
       }
     },
@@ -103,8 +121,8 @@
       "callsign": "RYR8KQ",
       "telephony": "RYANAIR 8KQ",
       "type": "B38M",
-      "lat": 44.9818,
-      "lon": 23.4146,
+      "lat": 45.2748,
+      "lon": 23.319,
       "altitudeFt": 16000,
       "headingDeg": 167,
       "speedKt": 300,
@@ -119,7 +137,11 @@
         "cruiseLevel": 390,
         "declaredLandingWeightKg": 66900,
         "destination": "LRCV",
-        "route": ["LAMIT", "TITEK", "OZZET"],
+        "route": [
+          "LAMIT",
+          "TITEK",
+          "OZZET"
+        ],
         "nextWaypoint": "TITEK"
       }
     },
@@ -127,8 +149,8 @@
       "callsign": "DLH9TC",
       "telephony": "LUFTHANSA 9TC",
       "type": "CRJ9",
-      "lat": 43.7084,
-      "lon": 24.8065,
+      "lat": 43.5454,
+      "lon": 25.6541,
       "altitudeFt": 9000,
       "headingDeg": 285,
       "speedKt": 240,
@@ -143,7 +165,12 @@
         "cruiseLevel": 290,
         "declaredLandingWeightKg": 33200,
         "destination": "LRCV",
-        "route": ["SOMOV", "NAVOD", "PANZU", "OZZET"],
+        "route": [
+          "SOMOV",
+          "NAVOD",
+          "PANZU",
+          "OZZET"
+        ],
         "nextWaypoint": "NAVOD"
       }
     }
