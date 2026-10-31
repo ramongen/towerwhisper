@@ -39,8 +39,9 @@ export function useSocket() {
 
     socket.on(ServerEvent.TrafficUpdate, traffic.setAircraft);
     socket.on(ServerEvent.ProbeResult, setProbe);
-    socket.on(ServerEvent.CommsTransmission, comms.add);
-    socket.on(ServerEvent.CommsReadback, comms.add);
+    socket.on(ServerEvent.CommsTransmission, (entry) => comms.add(entry));
+    socket.on(ServerEvent.CommsReadback, (entry) => comms.add(entry));
+    socket.on(ServerEvent.CommsHistory, comms.addHistory);
     socket.on(ServerEvent.AlertRaised, alerts.raise);
     socket.on(ServerEvent.AlertCleared, ({ id }) => alerts.clear(id));
     socket.on(ServerEvent.DemoFaults, demo.setFaults);

@@ -86,7 +86,13 @@ export class TransmissionService {
       fixes: this.simulation.getFixes().map((f) => f.name),
     });
 
-    this.realtime.broadcastTransmission({ id, speaker: 'atc', transcript: text, clearance });
+    this.realtime.broadcastTransmission({
+      id,
+      at: new Date().toISOString(),
+      speaker: 'atc',
+      transcript: text,
+      clearance,
+    });
     if (!clearance) {
       this.logger.log(`Unparsed transmission: "${text}"`);
       return { transmissionId: id, transcript: text, clearance: null };

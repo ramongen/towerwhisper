@@ -39,9 +39,6 @@ const limits = computed(() => faults.value?.commsLimits ?? { cautionS: 900, warn
 const limitText = (s: number) =>
   limits.value.cautionS < 120 ? `${s} S` : `${Math.round(s / 60)} MIN`;
 
-/** Only readbacks that arrive live are spoken (not the history replayed on reconnect). */
-const LIVE_READBACK_MS = 3000;
-
 // Demo faults with target "selected" follow the radar selection.
 watch(selectedCallsign, (callsign) => emitSelect(callsign));
 
@@ -54,7 +51,8 @@ watch(
   (length) => {
     if (length < spoken) spoken = 0; // session reset
     for (const entry of comms.entries.slice(spoken)) {
-      if (entry.speaker === 'pilot' && Date.now() - entry.receivedAt < LIVE_READBACK_MS) {
+      // Only live readbacks are spoken; the history sent after a refresh stays silent.
+      if (entry.speaker === 'pilot' && !entry.replayed) {
         void voice.play(entry.audioUrl, entry.transcript, faults.value?.radioNoise ?? 0.3);
       }
     }

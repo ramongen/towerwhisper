@@ -2,9 +2,11 @@ import type { CommsReadbackPayload, CommsTransmissionPayload } from '@towerwhisp
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
 
-/** A comms entry plus the local time it arrived (the payloads carry no timestamp). */
+/** A comms entry, its time, and whether it came from the history replayed on connect. */
 export type CommsEntryData = (CommsTransmissionPayload | CommsReadbackPayload) & {
   receivedAt: number;
+  /** true for entries from comms:history: shown, never played again. */
+  replayed: boolean;
 };
 export type PttState = 'ready' | 'transmitting' | 'transcribing' | 'error';
 
@@ -15,9 +17,14 @@ export const useCommsStore = defineStore('comms', () => {
   const pttMessage = ref<string | null>(null);
   const frequencyBusy = ref(false);
 
-  function add(entry: CommsTransmissionPayload | CommsReadbackPayload): void {
-    if (entries.value.some((e) => e.id === entry.id)) return; // replay after reconnect
-    entries.value.push({ ...entry, receivedAt: Date.now() });
+  function add(entry: CommsTransmissionPayload | CommsReadbackPayload, replayed = false): void {
+    if (entries.value.some((e) => e.id === entry.id)) return; // already shown before a reconnect
+    entries.value.push({ ...entry, receivedAt: Date.parse(entry.at) || Date.now(), replayed });
+  }
+
+  /** The recent comms sent on (re)connect, oldest first. */
+  function addHistory(history: (CommsTransmissionPayload | CommsReadbackPayload)[]): void {
+    for (const entry of history) add(entry, true);
   }
 
   function setPttState(state: PttState, message: string | null = null): void {
@@ -39,6 +46,7 @@ export const useCommsStore = defineStore('comms', () => {
     pttMessage,
     frequencyBusy,
     add,
+    addHistory,
     setPttState,
     setFrequencyBusy,
     clear,

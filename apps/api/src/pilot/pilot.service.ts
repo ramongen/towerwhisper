@@ -77,6 +77,7 @@ export class PilotService {
     this.simulation.touchContact(readback.callsign);
     this.realtime.broadcastReadback({
       id: randomUUID(),
+      at: new Date().toISOString(),
       speaker: 'pilot',
       callsign: readback.callsign,
       transcript: readback.text,

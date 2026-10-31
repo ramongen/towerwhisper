@@ -9,14 +9,21 @@ import AlertCard from './AlertCard.vue';
 const { sorted, active } = storeToRefs(useAlertStore());
 const now = useNow();
 
+/** An alert older than this when first seen was raised before the page loaded. */
+const FRESH_ALERT_MS = 5000;
+
 // A sound when an alert appears or escalates (caution -> warning).
 const heard = new Map<string, string>();
 watch(
   active,
   (list) => {
     for (const alert of list) {
-      if (heard.get(alert.id) !== alert.severity && !alert.acknowledgedAt)
-        playAlertSound(alert.severity);
+      const before = heard.get(alert.id);
+      // New and just raised, or escalated while on screen. Alerts that were already active
+      // when the page loaded (sent again after a refresh) stay silent.
+      const fresh = Date.now() - Date.parse(alert.raisedAt) < FRESH_ALERT_MS;
+      const sound = before === undefined ? fresh : before !== alert.severity;
+      if (sound && !alert.acknowledgedAt) playAlertSound(alert.severity);
       heard.set(alert.id, alert.severity);
     }
   },

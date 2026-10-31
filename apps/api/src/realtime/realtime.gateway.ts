@@ -70,10 +70,10 @@ export class RealtimeGateway implements OnModuleInit, OnGatewayConnection, OnGat
     client.emit(ServerEvent.StatsOverlay, { visible: this.faults.isOverlayVisible() });
     const weather = this.weather.get();
     if (weather) client.emit(ServerEvent.WeatherUpdate, weather);
-    for (const event of this.history) {
-      if (event.kind === 'transmission') client.emit(ServerEvent.CommsTransmission, event.payload);
-      else client.emit(ServerEvent.CommsReadback, event.payload);
-    }
+    client.emit(
+      ServerEvent.CommsHistory,
+      this.history.map((event) => event.payload),
+    );
     for (const alert of this.alerts.list()) client.emit(ServerEvent.AlertRaised, alert);
   }
 

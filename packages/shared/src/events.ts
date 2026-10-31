@@ -20,6 +20,7 @@ export const ServerEvent = {
   TrafficUpdate: 'traffic:update',
   CommsTransmission: 'comms:transmission',
   CommsReadback: 'comms:readback',
+  CommsHistory: 'comms:history',
   ClearanceIssued: 'clearance:issued',
   AlertRaised: 'alert:raised',
   AlertCleared: 'alert:cleared',
@@ -36,6 +37,8 @@ export type ReadbackCheck = 'ok' | 'mismatch' | 'incomplete';
 /** comms:transmission — after every PTT. `clearance` is null when the phrase could not be parsed. */
 export interface CommsTransmissionPayload {
   id: string;
+  /** Server time of the transmission (ISO). */
+  at: string;
   speaker: 'atc';
   transcript: string;
   clearance: Clearance | null;
@@ -44,6 +47,8 @@ export interface CommsTransmissionPayload {
 /** comms:readback — after every readback. `audioUrl` is null when no audio exists (text only). */
 export interface CommsReadbackPayload {
   id: string;
+  /** Server time of the readback (ISO). */
+  at: string;
   speaker: 'pilot';
   callsign: string;
   transcript: string;
@@ -91,6 +96,8 @@ export interface ServerToClientEvents {
   'traffic:update': (aircraft: Aircraft[]) => void;
   'comms:transmission': (payload: CommsTransmissionPayload) => void;
   'comms:readback': (payload: CommsReadbackPayload) => void;
+  /** On connect: recent comms, oldest first. Shown, never played again. */
+  'comms:history': (entries: (CommsTransmissionPayload | CommsReadbackPayload)[]) => void;
   'clearance:issued': (clearance: Clearance) => void;
   'alert:raised': (alert: Alert) => void;
   'alert:cleared': (payload: AlertClearedPayload) => void;
