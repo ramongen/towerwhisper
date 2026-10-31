@@ -1,12 +1,12 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import type { AlertType, DemoTriggerResponse, FaultConfig } from '@towerwhisper/shared';
+import type { AlertType, DemoTriggerResponse, FaultConfig, Targets } from '@towerwhisper/shared';
 import { DEFAULT_COMMS_CAUTION_MIN, DEFAULT_COMMS_WARNING_MIN } from '../safety/constants';
 import { toLatLon, toXy, velocity } from '../simulation/geo';
 import { SimulationService } from '../simulation/simulation.service';
 import {
   CONFLICT_INTRUDER,
-  CONFLICT_SPAWN_DISTANCE_NM,
+  CONFLICT_MEET_S,
   CONFLICT_SPAWN_OFFSET_DEG,
   DEFAULT_RADIO_NOISE,
   EXPECTED_ALERTS,
@@ -194,16 +194,18 @@ export class FaultService {
     const subject = aircraft.find((a) => a.callsign === callsign);
     if (!subject) throw new BadRequestException('No aircraft to conflict with');
 
-    // Start ahead of the subject, slightly off its track, flying back towards it at its level.
-    const bearing = subject.headingDeg + CONFLICT_SPAWN_OFFSET_DEG;
-    const ahead = velocity(bearing, 3600); // 1 NM/s unit vector
-    const origin = toXy(subject);
+    // Where the subject will be in CONFLICT_MEET_S, following its turn and its climb or
+    // descent; the intruder starts nearly head-on and arrives there at the same moment.
+    const meet = projectAhead(subject, CONFLICT_MEET_S);
+    const from = (meet.headingDeg + 180 + CONFLICT_SPAWN_OFFSET_DEG) % 360;
+    const back = velocity(from, 3600); // 1 NM/s unit vector
+    const distanceNm = (CONFLICT_INTRUDER.speedKt / 3600) * CONFLICT_MEET_S;
     const position = toLatLon({
-      x: origin.x + ahead.x * CONFLICT_SPAWN_DISTANCE_NM,
-      y: origin.y + ahead.y * CONFLICT_SPAWN_DISTANCE_NM,
+      x: meet.x + back.x * distanceNm,
+      y: meet.y + back.y * distanceNm,
     });
-    const heading = Math.round((bearing + 180) % 360);
-    const altitudeFt = Math.round((subject.target.altitudeFt ?? subject.altitudeFt) / 100) * 100;
+    const heading = Math.round((from + 180) % 360);
+    const altitudeFt = Math.round(meet.altitudeFt / 100) * 100;
     this.simulation.spawn({
       ...CONFLICT_INTRUDER,
       ...position,
@@ -252,6 +254,50 @@ export class FaultService {
   private emitChange(): void {
     for (const l of this.changeListeners) l(this.config);
   }
+}
+
+/** Turn rate and vertical rate used to guess where an aircraft will be (standard rates). */
+const PROJECT_TURN_DEG_S = 3;
+const PROJECT_VERTICAL_FPM = 1800;
+const PROJECT_STEP_S = 1;
+
+/** Where an aircraft will be after a number of seconds, flying its cleared heading, level and speed. */
+function projectAhead(
+  a: {
+    lat: number;
+    lon: number;
+    headingDeg: number;
+    speedKt: number;
+    altitudeFt: number;
+    target: Targets;
+  },
+  seconds: number,
+): { x: number; y: number; headingDeg: number; altitudeFt: number } {
+  let { x, y } = toXy(a);
+  let hdg = a.headingDeg;
+  let alt = a.altitudeFt;
+  let turn = a.target.turnDir ?? 'any';
+  for (let t = 0; t < seconds; t += PROJECT_STEP_S) {
+    const target = a.target.headingDeg;
+    if (target !== undefined) {
+      const right = (((target - hdg) % 360) + 360) % 360;
+      const left = (((hdg - target) % 360) + 360) % 360;
+      const sign = turn === 'left' ? -1 : turn === 'right' ? 1 : right <= left ? 1 : -1;
+      const remaining = sign > 0 ? right : left;
+      const step = Math.min(PROJECT_TURN_DEG_S * PROJECT_STEP_S, remaining);
+      hdg = (hdg + sign * step + 360) % 360;
+      if (step === remaining) turn = 'any';
+    }
+    if (a.target.altitudeFt !== undefined) {
+      const diff = a.target.altitudeFt - alt;
+      alt +=
+        Math.sign(diff) * Math.min(Math.abs(diff), (PROJECT_VERTICAL_FPM / 60) * PROJECT_STEP_S);
+    }
+    const v = velocity(hdg, a.speedKt);
+    x += v.x * PROJECT_STEP_S;
+    y += v.y * PROJECT_STEP_S;
+  }
+  return { x, y, headingDeg: hdg, altitudeFt: alt };
 }
 
 const READBACK_KINDS = [

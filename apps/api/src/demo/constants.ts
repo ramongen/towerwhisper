@@ -11,8 +11,9 @@ export const WRONG_VERTICAL_FT = 2000;
 
 export const DEFAULT_RADIO_NOISE = 0.35;
 
-/** "Spawn conflict": the intruder starts this far ahead of the target, flying towards it. */
-export const CONFLICT_SPAWN_DISTANCE_NM = 14;
+/** "Spawn conflict": the intruder and the target reach the same point this long after the trigger. */
+export const CONFLICT_MEET_S = 120;
+/** The intruder comes from almost straight ahead, this many degrees off. */
 export const CONFLICT_SPAWN_OFFSET_DEG = 15;
 export const CONFLICT_INTRUDER = {
   callsign: 'BMS12',

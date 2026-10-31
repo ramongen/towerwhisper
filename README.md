@@ -72,7 +72,7 @@ listens there, for example), set `WEB_PORT=8081` in `.env`.
 ### Demo flow
 
 1. Select an aircraft on the radar (optional), hold **Space** and say
-   _"TAROM 301, descend altitude 3000 feet, turn left heading 120"_.
+   _"TAROM 301, descend altitude 4000 feet, turn left heading 080"_.
 2. The transcript and the parsed chips appear; ~1.5 s later the pilot reads back over the radio
    filter and the readback check shows **READBACK OK** or raises an alert.
 3. Arm a fault on the phone (`/demo`) or on the big screen and transmit again:
@@ -89,6 +89,21 @@ Other keys on the controller screen: **D** demo drawer, **S** results overlay, *
 The demo panel also ages comms timers (`NO_CONTACT` amber / red, 15/30 min or 15/30 s), spawns a
 conflicting BLUE AIR 12 (`CONFLICT_PREDICTED`), steps on the next readback, and sets radio noise and
 time speed.
+
+A new alert pops up (CLOSE / SELECT aircraft); in the alert panel, **RESOLVE** (with a
+confirmation) moves it to the HISTORY tab, which is kept until a scenario reset.
+
+Landing at LRCV (runway 26, ILS from the east): vector an arrival onto the localizer, e.g.
+_"WIZZ 44, descend altitude 4000 feet, turn left heading 240, cleared ILS approach runway two six"_.
+It slows down on final and, about 8 NM out, asks _"request landing clearance"_. Answer
+_"WIZZ 44, cleared to land runway two six"_ and it lands and leaves the scope; without a clearance
+it goes around at 1.5 NM. Aircraft without vectors fly their filed route to TITEK / PEMOK / PANZU
+and hold at OZZET.
+
+The scope has three backgrounds (top centre): **CONTOURS**, **TERRAIN** (relief heatmap with spot
+heights in feet) and **WX RADAR** (live precipitation in airborne weather-radar colours). Click an
+aircraft for its type, weights, flight plan and runway compatibility, and a heading rose around it;
+middle-drag pans, the wheel zooms.
 
 Pilot audio for the scripted phrases can be generated once into `apps/api/assets/tts-cache` (then
 committed) so the no-keys demo has a voice: `OPENAI_API_KEY=sk-... pnpm --filter api tts:cache`.
