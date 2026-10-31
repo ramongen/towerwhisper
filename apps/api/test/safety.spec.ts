@@ -215,3 +215,56 @@ describe('ClearanceProbe', () => {
     expect(probe.probe('ROT301', {}, [west, east]).conflicts).toEqual([]);
   });
 });
+
+describe('AlertRegistry resolve and history', () => {
+  const noContact = (severity: 'caution' | 'warning') => ({
+    type: 'NO_CONTACT' as const,
+    severity,
+    callsigns: ['DLH9TC'],
+    message: 'No communication with DLH9TC',
+    details: {},
+  });
+
+  it('keeps a resolved condition quiet until it clears, and alerts again when it gets worse', () => {
+    const registry = new AlertRegistry();
+    const first = registry.raise('NO_CONTACT:DLH9TC', noContact('caution'))!;
+    expect(registry.resolve(first.id)?.outcome).toBe('resolved');
+    expect(registry.raise('NO_CONTACT:DLH9TC', noContact('caution'))).toBeNull();
+    expect(registry.raise('NO_CONTACT:DLH9TC', noContact('warning'))?.severity).toBe('warning');
+  });
+
+  it('a condition that cleared after a resolve can alert again', () => {
+    const registry = new AlertRegistry();
+    const first = registry.raise('NO_CONTACT:DLH9TC', noContact('caution'))!;
+    registry.resolve(first.id);
+    registry.clear('NO_CONTACT:DLH9TC', 'transmission with the aircraft');
+    expect(registry.raise('NO_CONTACT:DLH9TC', noContact('caution'))).not.toBeNull();
+  });
+
+  it('a new bad readback alerts again after the previous one was resolved', () => {
+    const registry = new AlertRegistry();
+    const draft = {
+      type: 'HEARBACK_MISMATCH' as const,
+      severity: 'warning' as const,
+      callsigns: ['ROT301'],
+      message: 'm',
+      details: {},
+    };
+    registry.resolve(registry.raise('HEARBACK_MISMATCH:ROT301', draft)!.id);
+    expect(registry.raise('HEARBACK_MISMATCH:ROT301', draft)).not.toBeNull();
+  });
+
+  it('keeps resolved and cleared alerts in the history until reset', () => {
+    const registry = new AlertRegistry();
+    registry.resolve(registry.raise('NO_CONTACT:DLH9TC', noContact('caution'))!.id);
+    registry.raise('LEVEL_BUST:ROT301', {
+      ...noContact('warning'),
+      type: 'LEVEL_BUST',
+      callsigns: ['ROT301'],
+    });
+    registry.clear('LEVEL_BUST:ROT301', 'aircraft conforming again');
+    expect(registry.history().map((a) => a.outcome)).toEqual(['resolved', 'cleared']);
+    registry.reset();
+    expect(registry.history()).toEqual([]);
+  });
+});

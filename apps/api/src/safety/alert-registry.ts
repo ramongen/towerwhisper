@@ -1,30 +1,46 @@
 import { Injectable } from '@nestjs/common';
-import type { Alert } from '@towerwhisper/shared';
+import type { Alert, AlertOutcome } from '@towerwhisper/shared';
 import { randomUUID } from 'node:crypto';
-import { ALERT_UPDATE_MIN_INTERVAL_MS } from './constants';
+import { ALERT_UPDATE_MIN_INTERVAL_MS, CONDITION_ALERT_TYPES } from './constants';
 
-export type AlertDraft = Omit<Alert, 'id' | 'raisedAt' | 'acknowledgedAt'>;
+export type AlertDraft = Omit<Alert, 'id' | 'raisedAt' | 'endedAt' | 'outcome' | 'endReason'>;
 
 export interface AlertListener {
   raised(alert: Alert): void;
+  /** The alert ended (resolved by the controller, or the condition went away). */
   cleared(alert: Alert, reason: string): void;
 }
 
+const SEVERITY_RANK = { caution: 1, warning: 2 } as const;
+
 /**
- * Active alerts, one per key (e.g. 'LEVEL_BUST:ROT301'). Raising an existing key updates
- * the same alert (NO_CONTACT caution -> warning keeps its id). Pure in-memory bookkeeping:
- * listeners outside the safety module persist and broadcast.
+ * Active alerts, one per key (e.g. 'LEVEL_BUST:ROT301'), and the history of ended ones.
+ * Raising an existing key updates the same alert (NO_CONTACT caution -> warning keeps its
+ * id). Pure in-memory bookkeeping: listeners outside the safety module persist and broadcast.
+ *
+ * When the controller resolves an alert whose condition is still true (an aircraft still
+ * without contact, still off its level), it is not raised again until the condition has
+ * gone away, unless it gets worse (caution -> warning).
  */
 @Injectable()
 export class AlertRegistry {
   private readonly active = new Map<string, { alert: Alert; emittedAt: number }>();
+  /** Resolved condition alerts whose condition has not cleared yet. */
+  private readonly suppressed = new Map<string, Alert>();
+  private ended: Alert[] = [];
   private readonly listeners: AlertListener[] = [];
 
   subscribe(listener: AlertListener): void {
     this.listeners.push(listener);
   }
 
-  raise(key: string, draft: AlertDraft): Alert {
+  raise(key: string, draft: AlertDraft): Alert | null {
+    const resolved = this.suppressed.get(key);
+    if (resolved) {
+      if (SEVERITY_RANK[draft.severity] <= SEVERITY_RANK[resolved.severity]) return null;
+      this.suppressed.delete(key); // worse than what the controller resolved: alert again
+    }
+
     const existing = this.active.get(key);
     if (existing) {
       const { alert } = existing;
@@ -34,7 +50,6 @@ export class AlertRegistry {
       alert.message = draft.message;
       alert.details = draft.details;
       alert.callsigns = draft.callsigns;
-      if (escalated) alert.acknowledgedAt = undefined; // a new level needs a new ACK
       const due = Date.now() - existing.emittedAt >= ALERT_UPDATE_MIN_INTERVAL_MS;
       if (escalated || (changed && due)) this.emitRaised(key, alert);
       return alert;
@@ -44,41 +59,61 @@ export class AlertRegistry {
     return alert;
   }
 
+  /** The condition went away: end the alert (and forget a resolution of it). */
   clear(key: string, reason: string): void {
+    this.suppressed.delete(key);
     const entry = this.active.get(key);
-    if (!entry) return;
-    this.active.delete(key);
-    for (const l of this.listeners) l.cleared(entry.alert, reason);
+    if (entry) this.end(key, entry.alert, 'cleared', reason);
   }
 
-  /** Clears every alert whose key matches. */
+  /** Clears every alert (active or resolved-and-suppressed) whose key matches. */
   clearWhere(predicate: (key: string, alert: Alert) => boolean, reason: string): void {
+    for (const [key, alert] of [...this.suppressed]) {
+      if (predicate(key, alert)) this.suppressed.delete(key);
+    }
     for (const [key, { alert }] of [...this.active]) {
       if (predicate(key, alert)) this.clear(key, reason);
     }
+  }
+
+  /** The controller marks an active alert as resolved. */
+  resolve(id: string): Alert | null {
+    for (const [key, { alert }] of this.active) {
+      if (alert.id !== id) continue;
+      if (CONDITION_ALERT_TYPES.includes(alert.type)) this.suppressed.set(key, alert);
+      this.end(key, alert, 'resolved', 'resolved by the controller');
+      return alert;
+    }
+    return null;
   }
 
   has(key: string): boolean {
     return this.active.has(key);
   }
 
-  acknowledge(id: string): Alert | null {
-    for (const { alert } of this.active.values()) {
-      if (alert.id === id) {
-        alert.acknowledgedAt = new Date().toISOString();
-        return alert;
-      }
-    }
-    return null;
-  }
-
   list(): Alert[] {
     return [...this.active.values()].map((e) => e.alert);
+  }
+
+  /** Alerts that ended in this session, oldest first. */
+  history(): Alert[] {
+    return this.ended;
   }
 
   /** Scenario reset: forget everything without emitting (screens clear themselves). */
   reset(): void {
     this.active.clear();
+    this.suppressed.clear();
+    this.ended = [];
+  }
+
+  private end(key: string, alert: Alert, outcome: AlertOutcome, reason: string): void {
+    this.active.delete(key);
+    alert.endedAt = new Date().toISOString();
+    alert.outcome = outcome;
+    alert.endReason = reason;
+    this.ended.push(alert);
+    for (const l of this.listeners) l.cleared(alert, reason);
   }
 
   private emitRaised(key: string, alert: Alert): void {

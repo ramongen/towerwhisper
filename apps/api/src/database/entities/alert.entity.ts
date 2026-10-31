@@ -32,6 +32,10 @@ export class AlertEntity {
   @Column({ name: 'raised_at', type: 'timestamptz' })
   raisedAt: Date;
 
-  @Column({ name: 'acknowledged_at', type: 'timestamptz', nullable: true })
-  acknowledgedAt: Date | null;
+  @Column({ name: 'ended_at', type: 'timestamptz', nullable: true })
+  endedAt: Date | null;
+
+  /** 'resolved' by the controller or 'cleared' when the condition went away. */
+  @Column('text', { nullable: true })
+  outcome: Alert['outcome'] | null;
 }

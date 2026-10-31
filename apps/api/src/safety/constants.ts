@@ -1,3 +1,5 @@
+import type { AlertType } from '@towerwhisper/shared';
+
 // Thresholds for the deterministic safety checks. Never call an LLM or network service from src/safety/.
 
 /** Readback Check: NO_RESPONSE when no readback arrives within this time. */
@@ -47,3 +49,15 @@ export const PROBE_INTERVAL_S = 2;
 
 /** An alert whose message changes (seconds to bust, comms age) is re-sent at most this often. */
 export const ALERT_UPDATE_MIN_INTERVAL_MS = 1000;
+
+/**
+ * Alerts that describe a lasting condition. Once resolved by the controller they stay quiet
+ * until the condition clears (or gets worse); event alerts (a bad readback) can come again.
+ */
+export const CONDITION_ALERT_TYPES: AlertType[] = [
+  'NO_CONTACT',
+  'WRONG_TURN',
+  'WRONG_VERTICAL',
+  'LEVEL_BUST',
+  'CONFLICT_PREDICTED',
+];

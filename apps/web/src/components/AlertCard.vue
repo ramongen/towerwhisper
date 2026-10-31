@@ -1,30 +1,22 @@
 <script setup lang="ts">
 import type { Alert } from '@towerwhisper/shared';
-import { ref } from 'vue';
-import { useAlertStore } from '../stores/useAlertStore';
-import { ago, alertLabel } from '../utils/format';
+import { computed } from 'vue';
+import { ago, alertLabel, utcTime } from '../utils/format';
 
 const props = defineProps<{ alert: Alert; now: number }>();
-const alerts = useAlertStore();
-const acking = ref(false);
+defineEmits<{ resolve: [alert: Alert]; select: [callsign: string] }>();
 
-async function ack(): Promise<void> {
-  acking.value = true;
-  try {
-    await alerts.acknowledge(props.alert.id);
-  } catch {
-    // The alert may have cleared meanwhile; nothing to do.
-  } finally {
-    acking.value = false;
-  }
-}
+const ended = computed(() => !!props.alert.endedAt);
+const outcome = computed(() =>
+  props.alert.outcome === 'resolved' ? 'RESOLVED' : `CLEARED · ${props.alert.endReason ?? ''}`,
+);
 </script>
 
 <template>
   <article
     class="alert-card"
-    :class="[alert.severity, { acked: alert.acknowledgedAt }]"
-    role="alert"
+    :class="[alert.severity, { ended }]"
+    :role="ended ? undefined : 'alert'"
     :aria-label="`${alert.severity}: ${alertLabel(alert.type)} ${alert.callsigns.join(' ')}`"
   >
     <div class="head">
@@ -60,14 +52,39 @@ async function ack(): Promise<void> {
         <line x1="12" y1="16.5" x2="12" y2="16.6" />
       </svg>
       <span class="type mono">{{ alertLabel(alert.type) }}</span>
-      <span class="callsigns mono">{{ alert.callsigns.join(' · ') }}</span>
+      <button
+        v-for="cs in alert.callsigns"
+        :key="cs"
+        type="button"
+        class="callsign mono"
+        :title="`Select ${cs} on the radar`"
+        @click="$emit('select', cs)"
+      >
+        {{ cs }}
+      </button>
       <span class="spacer" />
-      <span class="ago">{{ ago(alert.raisedAt, now) }}</span>
+      <span class="ago">{{ ended ? utcTime(alert.endedAt!) : ago(alert.raisedAt, now) }}</span>
     </div>
     <p class="message">{{ alert.message }}</p>
     <div class="actions">
-      <span v-if="alert.acknowledgedAt" class="acked-label">ACKNOWLEDGED</span>
-      <button v-else type="button" class="ack" :disabled="acking" @click="ack">ACK</button>
+      <span v-if="ended" class="outcome mono" :class="alert.outcome">
+        <svg
+          v-if="alert.outcome === 'resolved'"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M5 12l5 5 9-10" />
+        </svg>
+        {{ outcome }}
+      </span>
+      <button v-else type="button" class="resolve" @click="$emit('resolve', alert)">RESOLVE</button>
     </div>
   </article>
 </template>
@@ -94,9 +111,18 @@ async function ack(): Promise<void> {
   border-color: var(--color-caution);
 }
 
-.alert-card.acked {
+/* History: same card, quiet. */
+.alert-card.ended {
+  padding: 10px 14px;
+  color: var(--color-text-muted);
   background: transparent;
+  border-color: var(--color-border-strong);
   border-style: dashed;
+}
+
+.alert-card.ended .message {
+  font-size: 15px;
+  color: var(--color-text-secondary);
 }
 
 .head {
@@ -111,10 +137,19 @@ async function ack(): Promise<void> {
   letter-spacing: 0.05em;
 }
 
-.callsigns {
+.callsign {
+  padding: 0 4px;
   font-size: 15px;
   font-weight: 700;
   color: var(--color-text);
+  background: transparent;
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius-sm);
+}
+
+.callsign:hover {
+  border-color: var(--color-atc);
+  color: var(--color-atc);
 }
 
 .spacer {
@@ -138,7 +173,7 @@ async function ack(): Promise<void> {
   justify-content: flex-end;
 }
 
-.ack {
+.resolve {
   height: 36px;
   padding: 0 18px;
   border-radius: var(--radius);
@@ -150,10 +185,20 @@ async function ack(): Promise<void> {
   letter-spacing: 0.06em;
 }
 
-.acked-label {
-  font-size: 13px;
+.outcome {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 12px;
   font-weight: 700;
-  letter-spacing: 0.06em;
-  color: var(--color-text-muted);
+  letter-spacing: 0.04em;
+}
+
+.outcome.resolved {
+  color: var(--color-ok);
 }
 </style>

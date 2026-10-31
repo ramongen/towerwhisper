@@ -5,7 +5,7 @@ import { useAlertStore } from '../stores/useAlertStore';
 
 const { active } = storeToRefs(useAlertStore());
 
-const pending = computed(() => active.value.filter((a) => !a.acknowledgedAt));
+const pending = active;
 const warnings = computed(() => pending.value.filter((a) => a.severity === 'warning').length);
 </script>
 
@@ -34,7 +34,7 @@ const warnings = computed(() => pending.value.filter((a) => a.severity === 'warn
       <line x1="12" y1="17.5" x2="12" y2="17.6" />
     </svg>
     <span class="mono count">{{ pending.length }}</span>
-    <span class="mono label">{{ pending.length === 1 ? 'ALERT' : 'ALERTS' }} NOT ACKNOWLEDGED</span>
+    <span class="mono label">{{ pending.length === 1 ? 'ALERT' : 'ALERTS' }} TO RESOLVE</span>
   </div>
 </template>
 

@@ -1,10 +1,10 @@
 import { Body, Controller, Get, HttpCode, Param, Post } from '@nestjs/common';
 import type {
-  AckAlertResponse,
   CreateSessionRequest,
   CreateSessionResponse,
   CurrentSessionResponse,
   ResetSessionResponse,
+  ResolveAlertResponse,
   SessionStats,
 } from '@towerwhisper/shared';
 import { DEFAULT_SCENARIO } from './constants';
@@ -40,9 +40,9 @@ export class SessionController {
 export class AlertsController {
   constructor(private readonly sessions: SessionService) {}
 
-  @Post(':id/ack')
+  @Post(':id/resolve')
   @HttpCode(200)
-  ack(@Param('id') id: string): Promise<AckAlertResponse> {
-    return this.sessions.acknowledge(id);
+  resolve(@Param('id') id: string): ResolveAlertResponse {
+    return this.sessions.resolveAlert(id);
   }
 }

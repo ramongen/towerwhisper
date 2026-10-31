@@ -1,11 +1,15 @@
-import type { AckAlertResponse, Alert } from '@towerwhisper/shared';
+import type { Alert, AlertClearedPayload, ResolveAlertResponse } from '@towerwhisper/shared';
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
 import { api } from '../utils/api';
 
 export type AlertLevel = Alert['severity'];
 
-/** Active alerts (newest first) and history. Alerts are raised and cleared by the backend only. */
+/**
+ * Active alerts and the alerts that ended (resolved by the controller or cleared by the
+ * system). Both come from the backend, so the history survives a page refresh; only a
+ * scenario reset empties it.
+ */
 export const useAlertStore = defineStore('alerts', () => {
   const active = ref<Alert[]>([]);
   const history = ref<Alert[]>([]);
@@ -14,27 +18,32 @@ export const useAlertStore = defineStore('alerts', () => {
     // The backend may re-send an alert with the same id (e.g. NO_CONTACT caution -> warning).
     const existing = active.value.find((a) => a.id === alert.id);
     if (existing) {
-      // An escalation comes without acknowledgedAt (JSON drops undefined): it needs a new ACK.
-      Object.assign(existing, alert, { acknowledgedAt: alert.acknowledgedAt });
+      Object.assign(existing, alert);
       return;
     }
     active.value = [alert, ...active.value];
   }
 
-  function clear(id: string): void {
+  function clear({ id, reason, outcome, at }: AlertClearedPayload): void {
     const alert = active.value.find((a) => a.id === id);
-    if (alert) history.value.push(alert);
     active.value = active.value.filter((a) => a.id !== id);
+    if (alert && !history.value.some((a) => a.id === id)) {
+      history.value = [...history.value, { ...alert, endedAt: at, outcome, endReason: reason }];
+    }
+  }
+
+  function setHistory(ended: Alert[]): void {
+    history.value = ended;
   }
 
   function clearAll(): void {
     active.value = [];
+    history.value = [];
   }
 
-  async function acknowledge(id: string): Promise<void> {
-    const { acknowledgedAt } = await api<AckAlertResponse>('POST', `/alerts/${id}/ack`);
-    const alert = active.value.find((a) => a.id === id);
-    if (alert) alert.acknowledgedAt = acknowledgedAt;
+  /** The controller resolved the alert; the backend confirms with alert:cleared. */
+  async function resolve(id: string): Promise<void> {
+    await api<ResolveAlertResponse>('POST', `/alerts/${id}/resolve`);
   }
 
   /** Worst alert level per callsign: drives the radar symbol and the flight strip edge. */
@@ -48,14 +57,27 @@ export const useAlertStore = defineStore('alerts', () => {
     return levels;
   });
 
-  /** Unacknowledged first, then newest first. */
+  /** Warnings first, then newest first. */
   const sorted = computed(() =>
     [...active.value].sort((a, b) => {
-      if (!a.acknowledgedAt !== !b.acknowledgedAt) return a.acknowledgedAt ? 1 : -1;
       if (a.severity !== b.severity) return a.severity === 'warning' ? -1 : 1;
       return Date.parse(b.raisedAt) - Date.parse(a.raisedAt);
     }),
   );
 
-  return { active, history, sorted, levelByCallsign, raise, clear, clearAll, acknowledge };
+  /** Newest ended alert first. */
+  const pastNewestFirst = computed(() => [...history.value].reverse());
+
+  return {
+    active,
+    history,
+    sorted,
+    pastNewestFirst,
+    levelByCallsign,
+    raise,
+    clear,
+    setHistory,
+    clearAll,
+    resolve,
+  };
 });

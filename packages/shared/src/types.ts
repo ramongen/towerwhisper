@@ -84,8 +84,13 @@ export interface Alert {
   message: string; // 'ROT301 cleared 3000 ft, read back 5000 ft'
   details: Record<string, unknown>;
   raisedAt: string;
-  acknowledgedAt?: string;
+  /** Set when the alert ended: resolved by the controller, or cleared because the condition went away. */
+  endedAt?: string;
+  outcome?: AlertOutcome;
+  endReason?: string;
 }
+
+export type AlertOutcome = 'resolved' | 'cleared';
 
 export interface LatLon {
   lat: number;

@@ -2,6 +2,7 @@
 import { storeToRefs } from 'pinia';
 import { computed, onMounted, watch } from 'vue';
 import AircraftCard from '../components/AircraftCard.vue';
+import AlertModal from '../components/AlertModal.vue';
 import AlertStack from '../components/AlertStack.vue';
 import CommsPanel from '../components/CommsPanel.vue';
 import DemoPanel from '../components/DemoPanel.vue';
@@ -114,6 +115,8 @@ function toggleSelect(callsign: string): void {
     <aside v-if="drawerOpen" class="drawer" aria-label="Demo control (press D to close)">
       <DemoPanel />
     </aside>
+
+    <AlertModal />
 
     <StatsOverlay v-if="overlayVisible" @close="closeOverlay" />
   </div>

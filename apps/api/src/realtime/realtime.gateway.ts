@@ -57,7 +57,12 @@ export class RealtimeGateway implements OnModuleInit, OnGatewayConnection, OnGat
     this.alerts.subscribe({
       raised: (alert) => this.server?.emit(ServerEvent.AlertRaised, alert),
       cleared: (alert, reason) =>
-        this.server?.emit(ServerEvent.AlertCleared, { id: alert.id, reason }),
+        this.server?.emit(ServerEvent.AlertCleared, {
+          id: alert.id,
+          reason,
+          outcome: alert.outcome ?? 'cleared',
+          at: alert.endedAt ?? new Date().toISOString(),
+        }),
     });
     this.faults.onChange((config) => this.server?.emit(ServerEvent.DemoFaults, config));
     this.faults.onOverlay((visible) => this.server?.emit(ServerEvent.StatsOverlay, { visible }));
@@ -74,6 +79,7 @@ export class RealtimeGateway implements OnModuleInit, OnGatewayConnection, OnGat
       ServerEvent.CommsHistory,
       this.history.map((event) => event.payload),
     );
+    client.emit(ServerEvent.AlertHistory, this.alerts.history());
     for (const alert of this.alerts.list()) client.emit(ServerEvent.AlertRaised, alert);
   }
 

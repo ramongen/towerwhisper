@@ -43,7 +43,8 @@ export function useSocket() {
     socket.on(ServerEvent.CommsReadback, (entry) => comms.add(entry));
     socket.on(ServerEvent.CommsHistory, comms.addHistory);
     socket.on(ServerEvent.AlertRaised, alerts.raise);
-    socket.on(ServerEvent.AlertCleared, ({ id }) => alerts.clear(id));
+    socket.on(ServerEvent.AlertCleared, alerts.clear);
+    socket.on(ServerEvent.AlertHistory, alerts.setHistory);
     socket.on(ServerEvent.DemoFaults, demo.setFaults);
     socket.on(ServerEvent.FrequencyBusy, ({ busy }) => comms.setFrequencyBusy(busy));
     socket.on(ServerEvent.WeatherUpdate, weather.set);

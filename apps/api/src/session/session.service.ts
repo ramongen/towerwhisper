@@ -74,7 +74,7 @@ export class SessionService implements OnModuleInit {
     this.parserAccuracy = this.measureParser();
     this.alerts.subscribe({
       raised: (alert) => this.onAlertRaised(alert),
-      cleared: () => undefined,
+      cleared: (alert) => this.onAlertEnded(alert),
     });
     this.faults.onInjected((injection) => this.onInjected(injection));
     this.realtime.onComms((event) => void this.persistComms(event));
@@ -121,14 +121,21 @@ export class SessionService implements OnModuleInit {
     };
   }
 
-  /** POST /alerts/:id/ack */
-  async acknowledge(alertId: string): Promise<{ id: string; acknowledgedAt: string }> {
-    const alert = this.alerts.acknowledge(alertId);
+  /** POST /alerts/:id/resolve (persisted by the alert listener) */
+  resolveAlert(alertId: string): { id: string; resolvedAt: string } {
+    const alert = this.alerts.resolve(alertId);
     if (!alert) throw new NotFoundException('No active alert with this id');
-    await this.persist(() =>
-      this.alertRows.update(alertId, { acknowledgedAt: new Date(alert.acknowledgedAt!) }),
+    return { id: alert.id, resolvedAt: alert.endedAt! };
+  }
+
+  /** Keeps the end of every alert (resolved or cleared) with its row. */
+  private onAlertEnded(alert: Alert): void {
+    void this.persist(() =>
+      this.alertRows.update(alert.id, {
+        endedAt: alert.endedAt ? new Date(alert.endedAt) : new Date(),
+        outcome: alert.outcome ?? null,
+      }),
     );
-    return { id: alert.id, acknowledgedAt: alert.acknowledgedAt! };
   }
 
   /**
@@ -206,7 +213,8 @@ export class SessionService implements OnModuleInit {
         message: alert.message,
         details: alert.details,
         raisedAt: new Date(alert.raisedAt),
-        acknowledgedAt: alert.acknowledgedAt ? new Date(alert.acknowledgedAt) : null,
+        endedAt: null,
+        outcome: null,
       }),
     );
   }

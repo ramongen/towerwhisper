@@ -4,6 +4,7 @@ import type {
   Aircraft,
   AirportWeather,
   Alert,
+  AlertOutcome,
   AppMode,
   Clearance,
   LatLon,
@@ -24,6 +25,7 @@ export const ServerEvent = {
   ClearanceIssued: 'clearance:issued',
   AlertRaised: 'alert:raised',
   AlertCleared: 'alert:cleared',
+  AlertHistory: 'alert:history',
   ProbeResult: 'probe:result',
   DemoFaults: 'demo:faults',
   FrequencyBusy: 'frequency:busy',
@@ -57,9 +59,12 @@ export interface CommsReadbackPayload {
   check: ReadbackCheck;
 }
 
+/** alert:cleared — the alert ended; the screens move it to the history. */
 export interface AlertClearedPayload {
   id: string;
   reason: string;
+  outcome: AlertOutcome;
+  at: string;
 }
 
 /** One predicted loss of separation found by the Clearance Probe (bonus). */
@@ -101,6 +106,8 @@ export interface ServerToClientEvents {
   'clearance:issued': (clearance: Clearance) => void;
   'alert:raised': (alert: Alert) => void;
   'alert:cleared': (payload: AlertClearedPayload) => void;
+  /** On connect: alerts that ended in this session, oldest first (kept until a scenario reset). */
+  'alert:history': (alerts: Alert[]) => void;
   'probe:result': (payload: ProbeResultPayload) => void;
   'demo:faults': (config: FaultConfig) => void;
   'frequency:busy': (payload: FrequencyBusyPayload) => void;
@@ -219,10 +226,10 @@ export interface DemoTriggerResponse {
 /** GET /weather -> AirportWeather, or 204 when no source answered yet. */
 export type WeatherResponse = AirportWeather;
 
-/** POST /alerts/:id/ack */
-export interface AckAlertResponse {
+/** POST /alerts/:id/resolve — the controller marks an active alert as resolved. */
+export interface ResolveAlertResponse {
   id: string;
-  acknowledgedAt: string;
+  resolvedAt: string;
 }
 
 /** GET /sessions/:id/stats */
