@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 import type { Aircraft, FaultConfig } from '@towerwhisper/shared';
 import { AlertRegistry, alertKey } from './alert-registry';
 
@@ -7,7 +6,6 @@ import { AlertRegistry, alertKey } from './alert-registry';
  * at the second, cleared on the next transmission to or from the aircraft. The age comes
  * from the simulation clock, so it follows the demo time scale.
  */
-@Injectable()
 export class CommsWatchdog {
   constructor(private readonly alerts: AlertRegistry) {}
 

@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 import type { Alert, AlertOutcome } from '@towerwhisper/shared';
 import { randomUUID } from 'node:crypto';
 import { ALERT_UPDATE_MIN_INTERVAL_MS, CONDITION_ALERT_TYPES } from './constants';
@@ -22,7 +21,6 @@ const SEVERITY_RANK = { caution: 1, warning: 2 } as const;
  * without contact, still off its level), it is not raised again until the condition has
  * gone away, unless it gets worse (caution -> warning).
  */
-@Injectable()
 export class AlertRegistry {
   private readonly active = new Map<string, { alert: Alert; emittedAt: number }>();
   /** Resolved condition alerts whose condition has not cleared yet. */

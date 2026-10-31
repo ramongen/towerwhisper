@@ -1,15 +1,22 @@
 import {
   Controller,
   Get,
+  Headers,
   HttpStatus,
   NotFoundException,
   Param,
   ParseIntPipe,
   Res,
 } from '@nestjs/common';
-import type { WeatherRadarResponse, WeatherResponse } from '@towerwhisper/shared';
+import {
+  SECTOR_HEADER,
+  type WeatherRadarResponse,
+  type WeatherResponse,
+} from '@towerwhisper/shared';
+import type { AuthUser } from '../auth/auth.service';
+import { CurrentUser, Public } from '../auth/decorators';
+import { SectorRegistry } from '../sectors/sector-registry';
 import { RadarService } from './radar.service';
-import { WeatherService } from './weather.service';
 
 /** The two Express response methods we use (no @types/express dependency). */
 interface JsonResponse {
@@ -22,18 +29,20 @@ interface JsonResponse {
 @Controller('weather')
 export class WeatherController {
   constructor(
-    private readonly weather: WeatherService,
+    private readonly sectors: SectorRegistry,
     private readonly radar: RadarService,
   ) {}
 
   /** GET /api/weather/radar — the latest precipitation radar frame. */
   @Get('radar')
+  @Public()
   radarInfo(): WeatherRadarResponse {
     return this.radar.info();
   }
 
   /** GET /api/weather/radar/tiles/:z/:x/:y.png — one radar tile of our area. */
   @Get('radar/tiles/:z/:x/:y.png')
+  @Public()
   async radarTile(
     @Param('z', ParseIntPipe) z: number,
     @Param('x', ParseIntPipe) x: number,
@@ -47,10 +56,14 @@ export class WeatherController {
     res.status(HttpStatus.OK).end(png);
   }
 
-  /** GET /api/weather — the latest observation, or 204 while none has arrived. */
+  /** GET /api/weather — the sector airport's latest observation, or 204 while none has arrived. */
   @Get()
-  get(@Res() res: JsonResponse): void {
-    const current: WeatherResponse | null = this.weather.get();
+  get(
+    @Res() res: JsonResponse,
+    @CurrentUser() user: AuthUser,
+    @Headers(SECTOR_HEADER) sector: string | undefined,
+  ): void {
+    const current: WeatherResponse | null = this.sectors.forRequest(user, sector).weather.get();
     if (current) res.status(HttpStatus.OK).json(current);
     else res.status(HttpStatus.NO_CONTENT).end();
   }

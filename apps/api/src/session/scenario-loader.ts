@@ -1,8 +1,7 @@
-import { Injectable } from '@nestjs/common';
 import type { Aircraft, FlightPlan, Waypoint } from '@towerwhisper/shared';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { AIRSPACE } from '../airspace/airspace';
+import { CRAIOVA, type Airspace } from '../airspace/airspace';
 
 /** Flight plan as written in the scenario file: fixes by name. */
 interface FiledPlan extends Omit<FlightPlan, 'route'> {
@@ -32,14 +31,13 @@ interface ScenarioFile extends Omit<Scenario, 'aircraft' | 'fixes'> {
 /** apps/api/scenarios, both from src/ (ts-jest, nest start) and from dist/ (production). */
 const SCENARIOS_DIR = join(__dirname, '..', '..', 'scenarios');
 
-@Injectable()
 export class ScenarioLoader {
-  load(name: string): Scenario {
+  load(name: string, airspace: Airspace = CRAIOVA): Scenario {
     const file = JSON.parse(
       readFileSync(join(SCENARIOS_DIR, `${name}.json`), 'utf-8'),
     ) as ScenarioFile;
     const fixes = new Map<string, Waypoint>(
-      AIRSPACE.fixes.map((f) => [f.name, { name: f.name, lat: f.lat, lon: f.lon }]),
+      airspace.fixes.map((f) => [f.name, { name: f.name, lat: f.lat, lon: f.lon }]),
     );
     const fix = (fixName: string): Waypoint => {
       const found = fixes.get(fixName);

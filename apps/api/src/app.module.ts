@@ -1,20 +1,13 @@
 import { Global, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { AirportModule } from './airport/airport.module';
 import { AppModeService } from './app-mode.service';
+import { AuthModule } from './auth/auth.module';
 import { ENTITIES } from './database/entities';
-import { DemoControlModule } from './demo/demo.module';
 import { HealthController } from './health.controller';
 import { ParserModule } from './parser/parser.module';
-import { PilotModule } from './pilot/pilot.module';
-import { RealtimeModule } from './realtime/realtime.module';
-import { SafetyModule } from './safety/safety.module';
-import { SessionModule } from './session/session.module';
-import { SimulationModule } from './simulation/simulation.module';
-import { TransmissionsModule } from './transmissions/transmissions.module';
+import { SectorsModule } from './sectors/sectors.module';
 import { VoiceModule } from './voice/voice.module';
-import { WeatherModule } from './weather/weather.module';
 
 const DEFAULT_DATABASE_URL = 'postgres://towerwhisper:towerwhisper@localhost:5432/towerwhisper';
 
@@ -39,17 +32,10 @@ class AppModeModule {}
       }),
     }),
     AppModeModule,
-    SessionModule,
-    SimulationModule,
-    VoiceModule,
+    AuthModule,
     ParserModule,
-    PilotModule,
-    SafetyModule,
-    DemoControlModule,
-    RealtimeModule,
-    TransmissionsModule,
-    WeatherModule,
-    AirportModule,
+    VoiceModule,
+    SectorsModule,
   ],
   controllers: [HealthController],
 })

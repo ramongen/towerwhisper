@@ -38,4 +38,11 @@ export class AlertEntity {
   /** 'resolved' by the controller or 'cleared' when the condition went away. */
   @Column('text', { nullable: true })
   outcome: Alert['outcome'] | null;
+
+  @Column({ name: 'end_reason', type: 'text', nullable: true })
+  endReason: string | null;
+
+  /** The controller who resolved it. */
+  @Column({ name: 'resolved_by', type: 'uuid', nullable: true })
+  resolvedBy: string | null;
 }

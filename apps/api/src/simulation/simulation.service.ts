@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import type {
   Aircraft,
   FaultConfig,
@@ -7,7 +7,7 @@ import type {
   Targets,
   Waypoint,
 } from '@towerwhisper/shared';
-import { AIRSPACE, runway } from '../airspace/airspace';
+import type { Airspace } from '../airspace/airspace';
 import type { ScenarioAircraft } from '../session/scenario-loader';
 import { AircraftKinematics, finalApproachPosition, type SimAircraft } from './aircraft-kinematics';
 import {
@@ -19,7 +19,6 @@ import {
   MISSED_APPROACH,
   TICK_MS,
 } from './constants';
-import { toLatLon, toXy } from './geo';
 
 export type TickListener = (aircraft: Aircraft[], simNowMs: number) => void;
 
@@ -36,10 +35,10 @@ export type SimEvent =
  *
  * Simulation time runs at the demo-panel time scale (pause, 1x, 2x, 4x). It starts at the
  * wall clock when the scenario loads, so `lastContactAt` looks like a real timestamp.
+ * One per sector: the sector runtime starts and stops its loop.
  */
-@Injectable()
-export class SimulationService implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(SimulationService.name);
+export class SimulationService {
+  private readonly logger: Logger;
   private aircraft = new Map<string, SimAircraft>();
   private flightPlans = new Map<string, FlightPlan>();
   private fixes = new Map<string, Waypoint>();
@@ -49,14 +48,21 @@ export class SimulationService implements OnModuleInit, OnModuleDestroy {
   private simNow = Date.now();
   private timeScale: FaultConfig['timeScale'] = 1;
 
-  constructor(private readonly kinematics: AircraftKinematics) {}
-
-  onModuleInit(): void {
-    this.timer = setInterval(() => this.tick(), TICK_MS);
+  constructor(private readonly kinematics: AircraftKinematics) {
+    this.logger = new Logger(`Simulation ${kinematics.airspace.airport.icao}`);
   }
 
-  onModuleDestroy(): void {
+  get airspace(): Airspace {
+    return this.kinematics.airspace;
+  }
+
+  start(): void {
+    if (!this.timer) this.timer = setInterval(() => this.tick(), TICK_MS);
+  }
+
+  stop(): void {
     clearInterval(this.timer);
+    this.timer = undefined;
   }
 
   /** Replaces all traffic with the scenario's initial state; every comms timer starts at 0. */
@@ -96,7 +102,7 @@ export class SimulationService implements OnModuleInit, OnModuleDestroy {
       altitudeFt: Math.max(GO_AROUND_ALTITUDE_FT, Math.round(a.altitudeFt / 100) * 100),
       speedKt: GO_AROUND_SPEED_KT,
     };
-    a.route = missedApproachRoute(rwy);
+    a.route = missedApproachRoute(this.airspace, rwy);
     a.routeIndex = 0;
     a.nextWaypoint = a.route[0].name;
     a.locCaptured = false;
@@ -222,7 +228,7 @@ export class SimulationService implements OnModuleInit, OnModuleDestroy {
   private landingPhase(a: SimAircraft): void {
     const rwy = a.target.approach?.runway;
     if (!rwy || !a.locCaptured) return;
-    const { alongTrack } = finalApproachPosition(a, rwy);
+    const { alongTrack } = finalApproachPosition(this.airspace, a, rwy);
     if (a.target.landingCleared) {
       if (alongTrack < LANDED_NM) {
         this.logger.log(`${a.callsign} landed runway ${rwy}`);
@@ -293,20 +299,20 @@ export class SimulationService implements OnModuleInit, OnModuleDestroy {
  * ahead, right turn onto crosswind, downwind parallel to the runway, then the intermediate
  * fix (OZZET for runway 26) where the approach starts again.
  */
-export function missedApproachRoute(id: RunwayId): Waypoint[] {
-  const rwy = runway(id);
-  const t = toXy(rwy.threshold);
+export function missedApproachRoute(airspace: Airspace, id: RunwayId): Waypoint[] {
+  const rwy = airspace.runway(id);
+  const t = airspace.geo.toXy(rwy.threshold);
   const rad = (rwy.trueBearingDeg * Math.PI) / 180;
   const along = { x: Math.sin(rad), y: Math.cos(rad) }; // runway direction
   const right = { x: Math.cos(rad), y: -Math.sin(rad) }; // 90 degrees right of it
   const at = (name: string, ahead: number, side: number): Waypoint => ({
     name,
-    ...toLatLon({
+    ...airspace.geo.toLatLon({
       x: t.x + along.x * ahead + right.x * side,
       y: t.y + along.y * ahead + right.y * side,
     }),
   });
-  const intermediate = AIRSPACE.fixes.find((f) => f.role === 'IF');
+  const intermediate = airspace.intermediateFix();
   const finalStart = intermediate
     ? { name: intermediate.name, lat: intermediate.lat, lon: intermediate.lon }
     : at('FINAL', -MISSED_APPROACH.finalNm, 0);

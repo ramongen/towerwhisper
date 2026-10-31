@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 import type { Clearance, ReadbackCheck } from '@towerwhisper/shared';
 import { AlertRegistry, alertKey } from './alert-registry';
 import { NO_RESPONSE_AFTER_S } from './constants';
@@ -20,7 +19,6 @@ interface PendingReadback {
  * Compares a parsed readback with the instruction it answers, and raises
  * HEARBACK_MISMATCH (red), READBACK_INCOMPLETE (amber) or, from tick(), NO_RESPONSE (amber).
  */
-@Injectable()
 export class ReadbackChecker {
   private readonly pending = new Map<string, PendingReadback>();
 

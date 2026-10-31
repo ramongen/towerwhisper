@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 import type { Aircraft, AlertType, Clearance } from '@towerwhisper/shared';
 import { AlertRegistry, alertKey, type AlertDraft } from './alert-registry';
 import {
@@ -31,7 +30,6 @@ interface Watch {
  * execution faults are caught like real ones. A deviation must last 4 s (simulation time)
  * before an alert; the alert clears itself when the aircraft conforms again.
  */
-@Injectable()
 export class ConformanceMonitor {
   private readonly watches = new Map<string, Watch>();
 

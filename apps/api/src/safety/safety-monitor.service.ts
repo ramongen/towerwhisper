@@ -1,4 +1,3 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
 import type { Aircraft } from '@towerwhisper/shared';
 import { FaultService } from '../demo/fault.service';
 import { SimulationService } from '../simulation/simulation.service';
@@ -8,9 +7,8 @@ import { ConformanceMonitor } from './conformance-monitor';
 import { PROBE_INTERVAL_S } from './constants';
 import { ReadbackChecker } from './readback-checker';
 
-/** Runs the per-tick safety checks on every simulation tick. */
-@Injectable()
-export class SafetyMonitorService implements OnModuleInit {
+/** Runs the per-tick safety checks of one sector on every simulation tick. */
+export class SafetyMonitorService {
   private lastProbeMs = 0;
 
   constructor(
@@ -20,9 +18,7 @@ export class SafetyMonitorService implements OnModuleInit {
     private readonly conformance: ConformanceMonitor,
     private readonly watchdog: CommsWatchdog,
     private readonly probe: ClearanceProbe,
-  ) {}
-
-  onModuleInit(): void {
+  ) {
     this.simulation.onTick((aircraft, simNowMs) => this.tick(aircraft, simNowMs));
   }
 

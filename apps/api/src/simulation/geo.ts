@@ -1,20 +1,31 @@
 import type { LatLon } from '@towerwhisper/shared';
-import { LRCV } from '../session/constants';
-
-/** Local flat-earth approximation around LRCV (good enough within ~50 NM). x = east, y = north, in NM. */
-const COS_LAT0 = Math.cos((LRCV.lat * Math.PI) / 180);
 
 export interface Xy {
   x: number;
   y: number;
 }
 
-export function toXy(p: LatLon): Xy {
-  return { x: (p.lon - LRCV.lon) * 60 * COS_LAT0, y: (p.lat - LRCV.lat) * 60 };
-}
+/**
+ * Local flat-earth approximation around an airport (good enough within ~50 NM).
+ * x = east, y = north, in NM from the origin. Each sector has its own, centred on its airport.
+ */
+export class Geo {
+  private readonly cosLat0: number;
 
-export function toLatLon(p: Xy): LatLon {
-  return { lat: LRCV.lat + p.y / 60, lon: LRCV.lon + p.x / (60 * COS_LAT0) };
+  constructor(private readonly origin: LatLon) {
+    this.cosLat0 = Math.cos((origin.lat * Math.PI) / 180);
+  }
+
+  toXy(p: LatLon): Xy {
+    return { x: (p.lon - this.origin.lon) * 60 * this.cosLat0, y: (p.lat - this.origin.lat) * 60 };
+  }
+
+  toLatLon(p: Xy): LatLon {
+    return {
+      lat: this.origin.lat + p.y / 60,
+      lon: this.origin.lon + p.x / (60 * this.cosLat0),
+    };
+  }
 }
 
 /** Velocity in NM/s for a heading (degrees true) and ground speed (kt). */
@@ -32,4 +43,9 @@ export function headingDelta(current: number, target: number): number {
 
 export function normalizeHeading(deg: number): number {
   return ((deg % 360) + 360) % 360;
+}
+
+/** Bearing (degrees true) from one point to another, in a local projection. */
+export function bearing(from: Xy, to: Xy): number {
+  return normalizeHeading((Math.atan2(to.x - from.x, to.y - from.y) * 180) / Math.PI);
 }

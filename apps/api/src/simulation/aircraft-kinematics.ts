@@ -1,7 +1,6 @@
-import { Injectable } from '@nestjs/common';
 import type { Aircraft, RunwayId, Waypoint } from '@towerwhisper/shared';
 import { AIRCRAFT_TYPES } from '../airport/constants';
-import { AIRSPACE, ILS_RUNWAY, runway } from '../airspace/airspace';
+import { CRAIOVA, type Airspace } from '../airspace/airspace';
 import {
   ALIGNED_CROSS_TRACK_NM,
   ALIGNED_HEADING_DEG,
@@ -23,7 +22,7 @@ import {
   VERTICAL_RATE_MIN_FPM,
   WAYPOINT_REACHED_NM,
 } from './constants';
-import { headingDelta, normalizeHeading, toLatLon, toXy, velocity } from './geo';
+import { headingDelta, normalizeHeading, velocity } from './geo';
 
 /** Aircraft plus simulator-only state that is never sent to the browser. */
 export interface SimAircraft extends Aircraft {
@@ -52,8 +51,9 @@ export interface SimAircraft extends Aircraft {
  * changes, and a simple ILS (localizer capture, then 3° glide slope). Without an assigned
  * heading the aircraft flies its flight plan and holds over the last fix.
  */
-@Injectable()
 export class AircraftKinematics {
+  constructor(readonly airspace: Airspace = CRAIOVA) {}
+
   step(a: SimAircraft, dtS: number): void {
     if (dtS <= 0) {
       a.turnRateDegS = 0;
@@ -66,8 +66,8 @@ export class AircraftKinematics {
     this.changeSpeed(a, dtS);
 
     const v = velocity(a.headingDeg, a.speedKt);
-    const p = toXy(a);
-    const next = toLatLon({ x: p.x + v.x * dtS, y: p.y + v.y * dtS });
+    const p = this.airspace.geo.toXy(a);
+    const next = this.airspace.geo.toLatLon({ x: p.x + v.x * dtS, y: p.y + v.y * dtS });
     a.lat = next.lat;
     a.lon = next.lon;
   }
@@ -75,7 +75,11 @@ export class AircraftKinematics {
   /** Distance (NM) from the threshold of the cleared runway, or null without an approach. */
   distanceToThreshold(a: SimAircraft): number | null {
     if (!a.target.approach) return null;
-    const { alongTrack, crossTrack } = finalApproachPosition(a, a.target.approach.runway);
+    const { alongTrack, crossTrack } = finalApproachPosition(
+      this.airspace,
+      a,
+      a.target.approach.runway,
+    );
     return Math.hypot(alongTrack, crossTrack);
   }
 
@@ -83,9 +87,9 @@ export class AircraftKinematics {
     const approach = a.target.approach;
     a.approachHeadingDeg = undefined;
     if (!approach) return;
-    const course = runway(approach.runway).trueBearingDeg;
+    const course = this.airspace.runway(approach.runway).trueBearingDeg;
     // alongTrack: NM before the threshold; crossTrack: + = left of the inbound course
-    const { alongTrack, crossTrack } = finalApproachPosition(a, approach.runway);
+    const { alongTrack, crossTrack } = finalApproachPosition(this.airspace, a, approach.runway);
     if (alongTrack < 0) return; // past the threshold: not on this approach
 
     const pointingInbound = Math.abs(headingDelta(a.headingDeg, course)) < 100;
@@ -117,7 +121,8 @@ export class AircraftKinematics {
       // 3 degree glide path above the threshold, and slowing down for landing.
       const distance = this.distanceToThreshold(a) ?? 0;
       const glideFt =
-        AIRSPACE.airport.elevationFt + Math.round((distance * GLIDE_SLOPE_FT_PER_NM) / 100) * 100;
+        this.airspace.airport.elevationFt +
+        Math.round((distance * GLIDE_SLOPE_FT_PER_NM) / 100) * 100;
       if (a.target.altitudeFt === undefined || glideFt < a.target.altitudeFt)
         a.target.altitudeFt = glideFt;
       const scheduled =
@@ -142,18 +147,19 @@ export class AircraftKinematics {
       a.holding = false;
       return;
     }
-    const p = toXy(a);
+    const geo = this.airspace.geo;
+    const p = geo.toXy(a);
     let next = a.route[a.routeIndex];
-    while (next && distance(p, toXy(next)) < WAYPOINT_REACHED_NM) {
+    while (next && distance(p, geo.toXy(next)) < WAYPOINT_REACHED_NM) {
       a.routeIndex++;
       next = a.route[a.routeIndex];
     }
     if (next) {
-      const q = toXy(next);
+      const q = geo.toXy(next);
       a.navHeadingDeg = normalizeHeading((Math.atan2(q.x - p.x, q.y - p.y) * 180) / Math.PI);
       a.nextWaypoint = next.name;
       a.holding = false;
-      this.descendOnProfile(a, distanceToGo(a, p));
+      this.descendOnProfile(a, distanceToGo(this.airspace, a, p));
     } else if (a.route.length > 0) {
       this.endOfRoute(a, p);
     } else {
@@ -168,7 +174,8 @@ export class AircraftKinematics {
    */
   private descendOnProfile(a: SimAircraft, distanceToGoNm: number): void {
     if (a.altitudeAssigned) return;
-    const profileFt = Math.round((glidePathFt(distanceToGoNm) + PROFILE_MARGIN_FT) / 100) * 100;
+    const profileFt =
+      Math.round((glidePathFt(this.airspace, distanceToGoNm) + PROFILE_MARGIN_FT) / 100) * 100;
     if (a.target.altitudeFt === undefined || profileFt < a.target.altitudeFt) {
       a.target.altitudeFt = profileFt;
     }
@@ -183,10 +190,11 @@ export class AircraftKinematics {
     const last = a.route[a.route.length - 1];
     a.nextWaypoint = last.name;
     if (a.target.approach) return; // already on an approach: flyApproach steers
-    const toThresholdNm = distance(p, toXy(runway(ILS_RUNWAY).threshold));
-    const joinFt = glidePathFt(toThresholdNm) + JOIN_GLIDE_TOLERANCE_FT;
+    const ils = this.airspace.ilsRunway;
+    const toThresholdNm = distance(p, this.airspace.geo.toXy(this.airspace.runway(ils).threshold));
+    const joinFt = glidePathFt(this.airspace, toThresholdNm) + JOIN_GLIDE_TOLERANCE_FT;
     if (a.altitudeFt <= joinFt) {
-      a.target.approach = { type: 'ILS', runway: ILS_RUNWAY };
+      a.target.approach = { type: 'ILS', runway: ils };
       a.locCaptured = false;
       a.holding = false;
       a.navHeadingDeg = undefined;
@@ -266,12 +274,13 @@ export class AircraftKinematics {
  * course (AIP): NM still to fly to the threshold, and NM left (+) / right (-) of the course.
  */
 export function finalApproachPosition(
+  airspace: Airspace,
   a: { lat: number; lon: number },
   id: RunwayId,
 ): { alongTrack: number; crossTrack: number } {
-  const rwy = runway(id);
-  const t = toXy(rwy.threshold);
-  const p = toXy(a);
+  const rwy = airspace.runway(id);
+  const t = airspace.geo.toXy(rwy.threshold);
+  const p = airspace.geo.toXy(a);
   const rad = (rwy.trueBearingDeg * Math.PI) / 180;
   const dx = p.x - t.x;
   const dy = p.y - t.y;
@@ -282,20 +291,20 @@ export function finalApproachPosition(
 }
 
 /** Altitude (ft) of the 3 degree glide path this far (NM) from the threshold. */
-function glidePathFt(distanceNm: number): number {
-  return AIRSPACE.airport.elevationFt + distanceNm * GLIDE_SLOPE_FT_PER_NM;
+function glidePathFt(airspace: Airspace, distanceNm: number): number {
+  return airspace.airport.elevationFt + distanceNm * GLIDE_SLOPE_FT_PER_NM;
 }
 
 /** NM along the rest of the route, then from its last fix to the ILS runway threshold. */
-function distanceToGo(a: SimAircraft, p: { x: number; y: number }): number {
+function distanceToGo(airspace: Airspace, a: SimAircraft, p: { x: number; y: number }): number {
   let total = 0;
   let from = p;
   for (const fix of a.route.slice(a.routeIndex)) {
-    const q = toXy(fix);
+    const q = airspace.geo.toXy(fix);
     total += distance(from, q);
     from = q;
   }
-  return total + distance(from, toXy(runway(ILS_RUNWAY).threshold));
+  return total + distance(from, airspace.geo.toXy(airspace.runway(airspace.ilsRunway).threshold));
 }
 
 function distance(a: { x: number; y: number }, b: { x: number; y: number }): number {

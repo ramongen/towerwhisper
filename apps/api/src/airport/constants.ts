@@ -1,17 +1,4 @@
-import type { AircraftTypeInfo, AirspaceResponse } from '@towerwhisper/shared';
-import { AIRSPACE } from '../airspace/airspace';
-
-/** Craiova International (LRCV), from AIP Romania AD 2 LRCV: runway 08/26, 2500 x 45 m, ILS 26. */
-export const AIRPORT: AirspaceResponse['airport'] = AIRSPACE.airport;
-
-export const RUNWAYS: AirspaceResponse['runways'] = AIRSPACE.runways.map((r) => ({
-  id: r.id,
-  headingDeg: r.trueBearingDeg,
-  threshold: r.threshold,
-  lengthM: r.lengthM,
-  widthM: r.widthM,
-  ils: r.ils ? { ident: r.ils.ident, frequencyMhz: r.ils.frequencyMhz } : null,
-}));
+import type { AircraftTypeInfo } from '@towerwhisper/shared';
 
 /** Landing distance factors of the simplified planning model. */
 export const WET_RUNWAY_FACTOR = 1.15;

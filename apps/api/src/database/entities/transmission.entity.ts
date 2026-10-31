@@ -29,6 +29,18 @@ export class TransmissionEntity {
   @Column('text')
   transcript: string;
 
+  /** The aircraft (pilot calls; the parsed callsign for ATC). */
+  @Column('text', { nullable: true })
+  callsign: string | null;
+
+  /** The controller who transmitted (ATC transmissions). */
+  @Column({ name: 'user_id', type: 'uuid', nullable: true })
+  userId: string | null;
+
+  /** The comms entry as broadcast, for the replay. */
+  @Column('jsonb', { nullable: true })
+  payload: Record<string, unknown> | null;
+
   @Column({ name: 'stt_latency_ms', type: 'integer', nullable: true })
   sttLatencyMs: number | null;
 

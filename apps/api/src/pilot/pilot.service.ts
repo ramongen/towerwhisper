@@ -1,9 +1,8 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
-import type { Clearance } from '@towerwhisper/shared';
+import { Logger } from '@nestjs/common';
+import type { Clearance, CommsReadbackPayload } from '@towerwhisper/shared';
 import { randomUUID } from 'node:crypto';
 import { FaultService } from '../demo/fault.service';
 import { ParserService } from '../parser/parser.service';
-import { RealtimeGateway } from '../realtime/realtime.gateway';
 import { ConformanceMonitor } from '../safety/conformance-monitor';
 import { ReadbackChecker, compare } from '../safety/readback-checker';
 import { SimulationService, type SimEvent } from '../simulation/simulation.service';
@@ -21,11 +20,10 @@ import { executionFaultApplies, faultyTargets, targetsFor } from './targets';
  * the readback goes through the same parser and the ReadbackChecker, then 2-3 s later
  * the aircraft starts the manoeuvre. Demo faults change what is said or flown.
  * On the final approach the pilot also calls unprompted: to ask for landing clearance, and
- * when going around because it did not come.
+ * when going around because it did not come. One per sector.
  */
-@Injectable()
-export class PilotService implements OnModuleInit {
-  private readonly logger = new Logger(PilotService.name);
+export class PilotService {
+  private readonly logger: Logger;
   private readonly timers = new Set<NodeJS.Timeout>();
 
   constructor(
@@ -36,10 +34,12 @@ export class PilotService implements OnModuleInit {
     private readonly faults: FaultService,
     private readonly readbackChecker: ReadbackChecker,
     private readonly conformance: ConformanceMonitor,
-    private readonly realtime: RealtimeGateway,
-  ) {}
-
-  onModuleInit(): void {
+    /** Puts a pilot transmission on the sector's frequency (screens, recording). */
+    private readonly broadcast: (payload: CommsReadbackPayload) => void,
+    /** Who the pilot calls for landing clearance: 'Craiova Tower'. */
+    private readonly towerCallsign: string,
+  ) {
+    this.logger = new Logger(`Pilot ${simulation.airspace.airport.icao}`);
     this.simulation.onEvent((event) => void this.onSimEvent(event));
   }
 
@@ -81,7 +81,7 @@ export class PilotService implements OnModuleInit {
     const audioUrl = hasWords ? await this.tts.synthesize(readback.text, readback.callsign) : null;
 
     this.simulation.touchContact(readback.callsign);
-    this.realtime.broadcastReadback({
+    this.broadcast({
       id: randomUUID(),
       at: new Date().toISOString(),
       speaker: 'pilot',
@@ -111,13 +111,17 @@ export class PilotService implements OnModuleInit {
     const fault = this.faults.executionFaultFor(callsign);
     if (fault && executionFaultApplies(fault, instruction)) {
       this.faults.consumeExecutionFault(callsign);
-      const targets = faultyTargets(fault, instruction, aircraft);
+      const targets = faultyTargets(fault, instruction, aircraft, this.simulation.airspace);
       this.logger.log(`${callsign}: execution fault ${fault.kind}`);
       if (targets) this.simulation.setTargets(callsign, targets, instruction.id);
       return;
     }
     if (instruction.goAround) this.simulation.goAround(callsign, 'instructed');
-    this.simulation.setTargets(callsign, targetsFor(instruction), instruction.id);
+    this.simulation.setTargets(
+      callsign,
+      targetsFor(instruction, this.simulation.airspace),
+      instruction.id,
+    );
   }
 
   /** Calls the pilot makes without being asked (no readback check). */
@@ -126,7 +130,7 @@ export class PilotService implements OnModuleInit {
     const telephony = aircraft?.telephony ?? event.callsign;
     let text: string | null = null;
     if (event.type === 'landing-request') {
-      text = callText(telephony, event.runway, event.distanceNm);
+      text = callText(this.towerCallsign, telephony, event.runway, event.distanceNm);
     } else if (event.type === 'go-around' && event.reason === 'no landing clearance') {
       text = 'Going around, no landing clearance, ' + telephony;
     }
@@ -134,7 +138,7 @@ export class PilotService implements OnModuleInit {
 
     const audioUrl = await this.tts.synthesize(text, event.callsign);
     this.simulation.touchContact(event.callsign);
-    this.realtime.broadcastReadback({
+    this.broadcast({
       id: randomUUID(),
       at: new Date().toISOString(),
       speaker: 'pilot',
@@ -158,9 +162,10 @@ export class PilotService implements OnModuleInit {
 }
 
 /** 'Craiova Tower, WIZZ 44, established ILS runway 26, 8 miles, request landing clearance' */
-function callText(telephony: string, runway: string, distanceNm: number): string {
+function callText(tower: string, telephony: string, runway: string, distanceNm: number): string {
   return (
-    'Craiova Tower, ' +
+    tower +
+    ', ' +
     telephony +
     ', established runway ' +
     runway +

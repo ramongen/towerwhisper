@@ -1,7 +1,6 @@
-import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { Logger } from '@nestjs/common';
 import type { AirportWeather, FlightCategory, RunwayId, RunwayWind } from '@towerwhisper/shared';
-import { AIRSPACE, ILS_RUNWAY, runway } from '../airspace/airspace';
-import { LRCV } from '../session/constants';
+import { CRAIOVA, type Airspace } from '../airspace/airspace';
 import {
   CATEGORY_LIMITS,
   METAR_URL,
@@ -43,22 +42,25 @@ interface OpenMeteoJson {
 }
 
 /**
- * Live weather at the airport we control. Fetched in the background and cached, so a slow or
+ * Live weather at the sector's airport. Fetched in the background and cached, so a slow or
  * failing weather API never delays anything else; the last good observation stays on screen.
  */
-@Injectable()
-export class WeatherService implements OnModuleInit, OnModuleDestroy {
-  private readonly logger = new Logger(WeatherService.name);
+export class WeatherService {
+  private readonly logger: Logger;
   private current: AirportWeather | null = null;
   private timer?: NodeJS.Timeout;
   private readonly listeners: ((weather: AirportWeather) => void)[] = [];
 
-  onModuleInit(): void {
+  constructor(private readonly airspace: Airspace) {
+    this.logger = new Logger(`Weather ${airspace.airport.icao}`);
+  }
+
+  start(): void {
     void this.refresh();
     this.timer = setInterval(() => void this.refresh(), WEATHER_REFRESH_MS);
   }
 
-  onModuleDestroy(): void {
+  stop(): void {
     clearInterval(this.timer);
   }
 
@@ -84,13 +86,13 @@ export class WeatherService implements OnModuleInit, OnModuleDestroy {
 
   private async fromMetar(): Promise<AirportWeather | null> {
     try {
-      const response = await fetch(`${METAR_URL}?ids=${LRCV.icao}&format=json`, {
+      const response = await fetch(`${METAR_URL}?ids=${this.airspace.airport.icao}&format=json`, {
         signal: AbortSignal.timeout(WEATHER_TIMEOUT_MS),
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const [m] = (await response.json()) as MetarJson[];
       if (!m?.rawOb) throw new Error('no METAR in the answer');
-      return decodeMetar(m);
+      return decodeMetar(m, this.airspace);
     } catch (error) {
       this.logger.warn(`METAR unavailable: ${(error as Error).message}`);
       return null;
@@ -100,8 +102,8 @@ export class WeatherService implements OnModuleInit, OnModuleDestroy {
   private async fromModel(): Promise<AirportWeather | null> {
     try {
       const params = new URLSearchParams({
-        latitude: String(LRCV.lat),
-        longitude: String(LRCV.lon),
+        latitude: String(this.airspace.airport.lat),
+        longitude: String(this.airspace.airport.lon),
         current:
           'temperature_2m,dew_point_2m,wind_speed_10m,wind_direction_10m,wind_gusts_10m,pressure_msl,visibility,precipitation',
         wind_speed_unit: 'kn',
@@ -117,8 +119,8 @@ export class WeatherService implements OnModuleInit, OnModuleDestroy {
       const windSpeedKt = Math.round(c.wind_speed_10m);
       const gust = Math.round(c.wind_gusts_10m);
       const visibilityM = Math.min(UNLIMITED_VISIBILITY_M, Math.round(c.visibility));
-      return finish({
-        icao: LRCV.icao,
+      return finish(this.airspace, {
+        icao: this.airspace.airport.icao,
         source: 'model',
         observedAt: new Date(`${c.time}Z`).toISOString(),
         raw: null,
@@ -141,7 +143,7 @@ export class WeatherService implements OnModuleInit, OnModuleDestroy {
   }
 }
 
-export function decodeMetar(m: MetarJson): AirportWeather {
+export function decodeMetar(m: MetarJson, airspace: Airspace = CRAIOVA): AirportWeather {
   const clouds = (m.clouds ?? [])
     .filter((c) => c.base !== null && c.base !== undefined)
     .map((c) => ({ cover: c.cover, baseFt: c.base as number }));
@@ -158,8 +160,8 @@ export function decodeMetar(m: MetarJson): AirportWeather {
   const ceilingFt = ceiling?.baseFt ?? null;
   const reported = m.fltCat as FlightCategory | undefined;
 
-  return finish({
-    icao: LRCV.icao,
+  return finish(airspace, {
+    icao: airspace.airport.icao,
     source: 'metar',
     observedAt: m.obsTime ? new Date(m.obsTime * 1000).toISOString() : new Date().toISOString(),
     raw: m.rawOb ?? null,
@@ -182,16 +184,17 @@ export function decodeMetar(m: MetarJson): AirportWeather {
 
 /** Adds what is derived from the observation: runway wind components, preferred runway, wet runway. */
 function finish(
+  airspace: Airspace,
   w: Omit<AirportWeather, 'runwayWind' | 'preferredRunway' | 'wetRunway' | 'fetchedAt'>,
 ): AirportWeather {
-  const runwayWind = AIRSPACE.runways.map(({ id }) =>
-    componentsFor(id, w.windDirDeg, w.windSpeedKt),
+  const runwayWind = airspace.runways.map(({ id }) =>
+    componentsFor(id, w.windDirDeg, w.windSpeedKt, airspace),
   );
   const best = [...runwayWind].sort((a, b) => b.headwindKt - a.headwindKt)[0];
   return {
     ...w,
     runwayWind,
-    preferredRunway: best && best.headwindKt > 0 ? best.runway : ILS_RUNWAY,
+    preferredRunway: best && best.headwindKt > 0 ? best.runway : airspace.ilsRunway,
     wetRunway: /RA|DZ|SN|SG|PL|GR|GS|UP|SH|TS/.test(w.weather ?? ''),
     fetchedAt: new Date().toISOString(),
   };
@@ -202,10 +205,11 @@ export function componentsFor(
   id: RunwayId,
   windDirDeg: number | null,
   speedKt: number,
+  airspace: Airspace = CRAIOVA,
 ): RunwayWind {
   if (windDirDeg === null) return { runway: id, headwindKt: -speedKt, crosswindKt: speedKt };
   // METAR wind is true north; so is the runway bearing from the AIP.
-  const angle = ((windDirDeg - runway(id).trueBearingDeg) * Math.PI) / 180;
+  const angle = ((windDirDeg - airspace.runway(id).trueBearingDeg) * Math.PI) / 180;
   return {
     runway: id,
     headwindKt: Math.round(speedKt * Math.cos(angle)),

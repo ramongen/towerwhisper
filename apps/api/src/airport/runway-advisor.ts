@@ -1,10 +1,10 @@
 import type { AircraftTypeInfo, AirportWeather, RunwayAssessment } from '@towerwhisper/shared';
-import { ILS_RUNWAY } from '../airspace/airspace';
+import { CRAIOVA, type Airspace } from '../airspace/airspace';
 import { componentsFor } from '../weather/weather.service';
-import { MAX_TAILWIND_KT, RUNWAYS, TAILWIND_FACTOR_PER_KT, WET_RUNWAY_FACTOR } from './constants';
+import { MAX_TAILWIND_KT, TAILWIND_FACTOR_PER_KT, WET_RUNWAY_FACTOR } from './constants';
 
 /**
- * Which runway direction of LRCV suits this aircraft at its declared landing weight, in the
+ * Which runway direction of the sector's airport suits this aircraft at its declared landing weight, in the
  * current wind. A simplified planning model (landing distance scales with weight, +15% wet,
  * +2.5% per knot of tailwind), clearly advisory: it never raises an alert.
  */
@@ -12,15 +12,18 @@ export function assessRunways(
   type: AircraftTypeInfo,
   landingWeightKg: number,
   weather: AirportWeather | null,
+  airspace: Airspace = CRAIOVA,
 ): RunwayAssessment[] {
   const weightFactor = landingWeightKg / type.mlwKg;
   const wet = weather?.wetRunway ?? false;
 
-  const assessments = RUNWAYS.map((rwy): RunwayAssessment => {
+  const assessments = airspace.toResponse().runways.map((rwy): RunwayAssessment => {
     const notes: string[] = [];
     let compatible = true;
 
-    const wind = weather ? componentsFor(rwy.id, weather.windDirDeg, weather.windSpeedKt) : null;
+    const wind = weather
+      ? componentsFor(rwy.id, weather.windDirDeg, weather.windSpeedKt, airspace)
+      : null;
     const gust = weather?.windGustKt ?? null;
     const tailwind = wind ? Math.max(0, -wind.headwindKt) : 0;
 
@@ -48,7 +51,7 @@ export function assessRunways(
     if (wind) {
       const crosswind = Math.max(
         wind.crosswindKt,
-        gust ? componentsFor(rwy.id, weather!.windDirDeg, gust).crosswindKt : 0,
+        gust ? componentsFor(rwy.id, weather!.windDirDeg, gust, airspace).crosswindKt : 0,
       );
       if (tailwind > MAX_TAILWIND_KT) {
         compatible = false;
@@ -63,7 +66,9 @@ export function assessRunways(
     } else {
       notes.push('wind unknown');
     }
-    notes.push(rwy.ils ? `ILS ${rwy.ils.ident} ${rwy.ils.frequencyMhz}` : 'no ILS (RNP / VOR)');
+    notes.push(
+      rwy.ils ? `ILS ${rwy.ils.ident} ${rwy.ils.frequencyMhz}`.trim() : 'no ILS (RNP / VOR)',
+    );
 
     return {
       runway: rwy.id,
@@ -80,7 +85,8 @@ export function assessRunways(
   const best = assessments
     .filter((a) => a.compatible)
     .sort(
-      (a, b) => (b.headwindKt ?? 0) - (a.headwindKt ?? 0) || (a.runway === ILS_RUNWAY ? -1 : 1),
+      (a, b) =>
+        (b.headwindKt ?? 0) - (a.headwindKt ?? 0) || (a.runway === airspace.ilsRunway ? -1 : 1),
     )[0];
   if (best) best.recommended = true;
   return assessments;

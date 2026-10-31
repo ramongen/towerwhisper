@@ -21,13 +21,13 @@ const RULES = {
   // 'reduce speed 220', 'speed 220 knots', 'reduce 220 knots'
   speed: /\b(?:(?:reduce|increase|maintain)\s+(?:speed\s+)?(?:to\s+)?|speed\s+)(\d{3})\b/,
   // 'cleared ils approach rwy26', 'cleared ils rwy26', 'ils 26', 'cleared rnp approach rwy08'
-  approach: /\b(ils|rnp|vor)(?:\s+approach)?\s+(?:rwy)?(\d{2})\b/,
+  approach: /\b(ils|rnp|vor)(?:\s+approach)?\s+(?:rwy)?(\d{2}[lrc]?)\b/,
   // 'contact bucharest 121.3', '121.3' (VHF airband 118.000-136.975)
   frequency: /\b(1[1-3]\d\.\d{1,3})\b/,
   // 'proceed direct kovad', 'direct to kovad' (the fix name is checked by ParserService)
   direct: /\bdirect(?:\s+to)?\s+([a-z]{4,6})\b/,
   // 'cleared to land rwy26', 'cleared to land'
-  landing: /\bcleared\s+to\s+land(?:\s+rwy(\d{2}))?\b/,
+  landing: /\bcleared\s+to\s+land(?:\s+rwy(\d{2}[lrc]?))?\b/,
   // 'go around', 'going around'
   goAround: /\bgo(?:ing)?\s+around\b/,
 };
@@ -60,7 +60,11 @@ export class RuleParser {
     if (spd) fields.speed = { valueKt: Number(spd[1]) };
 
     const app = RULES.approach.exec(normalized);
-    if (app) fields.approach = { type: app[1].toUpperCase() as ApproachType, runway: app[2] };
+    if (app)
+      fields.approach = {
+        type: app[1].toUpperCase() as ApproachType,
+        runway: app[2].toUpperCase(),
+      };
 
     const freq = RULES.frequency.exec(normalized);
     if (freq) fields.frequency = { mhz: freq[1] };
@@ -69,7 +73,7 @@ export class RuleParser {
     if (direct) fields.direct = { fix: direct[1].toUpperCase() };
 
     const landing = RULES.landing.exec(normalized);
-    if (landing) fields.landing = { runway: landing[1] ?? null };
+    if (landing) fields.landing = { runway: landing[1]?.toUpperCase() ?? null };
 
     if (RULES.goAround.test(normalized)) fields.goAround = true;
 

@@ -1,12 +1,12 @@
 import type { Aircraft, Clearance, FaultConfig, Targets } from '@towerwhisper/shared';
-import { isRunwayId, runway } from '../airspace/airspace';
+import { CRAIOVA, type Airspace } from '../airspace/airspace';
 import { DEFAULT_OVERSHOOT_FT, WRONG_VERTICAL_FT } from '../demo/constants';
 import { MIN_TARGET_ALTITUDE_FT } from './constants';
 
 type ExecutionFault = NonNullable<FaultConfig['execution']>;
 
 /** What the simulator should fly for a clearance: exactly the cleared values. */
-export function targetsFor(clearance: Clearance): Targets {
+export function targetsFor(clearance: Clearance, airspace: Airspace = CRAIOVA): Targets {
   const targets: Targets = {};
   if (clearance.altitude) targets.altitudeFt = clearance.altitude.valueFt;
   if (clearance.heading) {
@@ -14,7 +14,7 @@ export function targetsFor(clearance: Clearance): Targets {
     targets.turnDir = clearance.heading.turn;
   }
   if (clearance.speed) targets.speedKt = clearance.speed.valueKt;
-  if (clearance.approach && isRunwayId(clearance.approach.runway)) {
+  if (clearance.approach && airspace.isRunwayId(clearance.approach.runway)) {
     targets.approach = { type: clearance.approach.type, runway: clearance.approach.runway };
   }
   // Direct-to: back to own navigation (the simulator clears the assigned heading).
@@ -23,8 +23,8 @@ export function targetsFor(clearance: Clearance): Targets {
   if (clearance.landing) {
     targets.landingCleared = true;
     const rwy = clearance.landing.runway;
-    if (rwy && isRunwayId(rwy) && !targets.approach) {
-      targets.approach = { type: runway(rwy).ils ? 'ILS' : 'RNP', runway: rwy };
+    if (rwy && airspace.isRunwayId(rwy) && !targets.approach) {
+      targets.approach = { type: airspace.runway(rwy).ils ? 'ILS' : 'RNP', runway: rwy };
     }
   }
   return targets;
@@ -52,8 +52,9 @@ export function faultyTargets(
   fault: ExecutionFault,
   clearance: Clearance,
   aircraft: Aircraft,
+  airspace: Airspace = CRAIOVA,
 ): Targets | null {
-  const targets = targetsFor(clearance);
+  const targets = targetsFor(clearance, airspace);
   switch (fault.kind) {
     case 'turn_wrong_way': {
       const cleared = clearance.heading!;

@@ -1,6 +1,6 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import type { WeatherRadarResponse } from '@towerwhisper/shared';
-import { LRCV } from '../session/constants';
+import { SECTORS } from '../sectors/sectors';
 import {
   RADAR_AREA_DEG,
   RADAR_COLOR_SCHEME,
@@ -25,7 +25,7 @@ const tileY = (lat: number, z: number) => {
 
 /**
  * Live precipitation radar (RainViewer public composite, no key) for the "WX radar" map mode.
- * The API serves the tiles of our area only, cached, so the browser never calls a third party
+ * The API serves the tiles around our sectors' airports only, cached, so the browser never calls a third party
  * and a slow radar service never slows the scope. Advisory only.
  */
 @Injectable()
@@ -35,12 +35,16 @@ export class RadarService implements OnModuleInit, OnModuleDestroy {
   private readonly tiles = new Map<string, { png: Buffer; at: number }>();
   private timer?: NodeJS.Timeout;
 
-  readonly area = {
-    xMin: tileX(LRCV.lon - RADAR_AREA_DEG.lon, RADAR_ZOOM),
-    xMax: tileX(LRCV.lon + RADAR_AREA_DEG.lon, RADAR_ZOOM),
-    yMin: tileY(LRCV.lat + RADAR_AREA_DEG.lat, RADAR_ZOOM),
-    yMax: tileY(LRCV.lat - RADAR_AREA_DEG.lat, RADAR_ZOOM),
-  };
+  readonly area = (() => {
+    const lats = SECTORS.map((s) => s.airspace.airport.lat);
+    const lons = SECTORS.map((s) => s.airspace.airport.lon);
+    return {
+      xMin: tileX(Math.min(...lons) - RADAR_AREA_DEG.lon, RADAR_ZOOM),
+      xMax: tileX(Math.max(...lons) + RADAR_AREA_DEG.lon, RADAR_ZOOM),
+      yMin: tileY(Math.max(...lats) + RADAR_AREA_DEG.lat, RADAR_ZOOM),
+      yMax: tileY(Math.min(...lats) - RADAR_AREA_DEG.lat, RADAR_ZOOM),
+    };
+  })();
 
   onModuleInit(): void {
     void this.refresh();

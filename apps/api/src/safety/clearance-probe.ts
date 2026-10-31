@@ -1,4 +1,3 @@
-import { Injectable } from '@nestjs/common';
 import type {
   Aircraft,
   LatLon,
@@ -15,8 +14,6 @@ import {
 } from './constants';
 
 const DEG = Math.PI / 180;
-/** One fixed longitude scale for every aircraft (Craiova latitude), so positions are comparable. */
-const COS_REF = Math.cos(44.32 * DEG);
 /** Probe-only motion model: standard turn, mid-range vertical rate. */
 const PROBE_TURN_DEG_S = 3;
 const PROBE_VERTICAL_FPM = 1800;
@@ -32,28 +29,35 @@ interface Point {
  * aircraft. CONFLICT_PREDICTED when it is under 3 NM and 1000 ft. Used for a new clearance
  * (before the aircraft executes it) and periodically on current traffic.
  */
-@Injectable()
 export class ClearanceProbe {
-  constructor(private readonly alerts: AlertRegistry) {}
+  /** One fixed longitude scale for every aircraft (the sector's latitude), so positions compare. */
+  private readonly cosRef: number;
+
+  constructor(
+    private readonly alerts: AlertRegistry,
+    refLat = 44.32,
+  ) {
+    this.cosRef = Math.cos(refLat * DEG);
+  }
 
   /** What happens if `callsign` flies `targets`: its path and the conflicts it would create. */
   probe(callsign: string, targets: Targets, aircraft: Aircraft[]): ProbeResultPayload {
     const subject = aircraft.find((a) => a.callsign === callsign);
     if (!subject) return { callsign, path: [], conflicts: [] };
-    const own = project({ ...subject, target: { ...subject.target, ...targets } });
+    const own = project({ ...subject, target: { ...subject.target, ...targets } }, this.cosRef);
     const conflicts: ProbeConflict[] = [];
     for (const other of aircraft) {
       if (other.callsign === callsign) continue;
-      const c = closestApproach(own, project(other));
+      const c = closestApproach(own, project(other, this.cosRef));
       if (c) conflicts.push({ callsign: other.callsign, ...c });
     }
-    const path = own.filter((_, i) => i % 2 === 0).map(toLatLon);
+    const path = own.filter((_, i) => i % 2 === 0).map((p) => toLatLon(p, this.cosRef));
     return { callsign, path, conflicts };
   }
 
   /** Raises / clears CONFLICT_PREDICTED for every pair on their current targets. */
   scan(aircraft: Aircraft[]): void {
-    const paths = new Map(aircraft.map((a) => [a.callsign, project(a)]));
+    const paths = new Map(aircraft.map((a) => [a.callsign, project(a, this.cosRef)]));
     const found = new Set<string>();
     for (let i = 0; i < aircraft.length; i++) {
       for (let j = i + 1; j < aircraft.length; j++) {
@@ -90,9 +94,9 @@ export class ClearanceProbe {
 }
 
 /** Positions every PROBE_STEP_S seconds, in NM (x east, y north). */
-function project(a: Aircraft): Point[] {
+function project(a: Aircraft, cosRef: number): Point[] {
   const points: Point[] = [];
-  let x = a.lon * 60 * COS_REF;
+  let x = a.lon * 60 * cosRef;
   let y = a.lat * 60;
   let hdg = a.headingDeg;
   let alt = a.altitudeFt;
@@ -144,7 +148,7 @@ function closestApproach(a: Point[], b: Point[]): Omit<ProbeConflict, 'callsign'
   return null;
 }
 
-function toLatLon(p: Point): LatLon {
+function toLatLon(p: Point, cosRef: number): LatLon {
   const lat = p.y / 60;
-  return { lat, lon: p.x / (60 * COS_REF) };
+  return { lat, lon: p.x / (60 * cosRef) };
 }

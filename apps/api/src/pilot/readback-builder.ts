@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
 import type { Aircraft, Clearance, FaultConfig } from '@towerwhisper/shared';
+import { CRAIOVA, type Airspace } from '../airspace/airspace';
 import { DEFAULT_ALTITUDE_OFFSET_FT } from '../demo/constants';
 import { STEPPED_ON_MARK } from './constants';
 
@@ -18,8 +18,9 @@ export interface Readback {
  * Builds the pilot readback from fixed templates, so the demo is deterministic. A readback
  * fault from the demo panel alters the template output; nothing else changes.
  */
-@Injectable()
 export class ReadbackBuilder {
+  constructor(private readonly airspace: Airspace = CRAIOVA) {}
+
   build(
     instruction: Clearance,
     aircraft: Aircraft[],
@@ -57,11 +58,11 @@ export class ReadbackBuilder {
       case 'wrong_runway':
         // The other runway direction, in the approach or the landing clearance.
         if (c.approach) {
-          c.approach.runway = c.approach.runway === '26' ? '08' : '26';
+          c.approach.runway = this.airspace.otherRunway(c.approach.runway);
           faultApplied = true;
         }
         if (c.landing?.runway) {
-          c.landing.runway = c.landing.runway === '26' ? '08' : '26';
+          c.landing.runway = this.airspace.otherRunway(c.landing.runway);
           faultApplied = true;
         }
         break;

@@ -8,6 +8,10 @@ export class SessionEntity {
   @Column('text')
   scenario: string;
 
+  /** The sector this session ran in (src/sectors/sectors.ts). */
+  @Column({ name: 'sector_id', type: 'text', default: 'craiova-app' })
+  sectorId: string;
+
   @CreateDateColumn({ name: 'started_at', type: 'timestamptz' })
   startedAt: Date;
 

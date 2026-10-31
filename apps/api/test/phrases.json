@@ -959,5 +959,26 @@
         "flightLevel": false
       }
     }
+  },
+  {
+    "input": "TAROM 301, cleared ILS approach runway two six left",
+    "speaker": "atc",
+    "expected": {
+      "callsign": "ROT301",
+      "approach": {
+        "type": "ILS",
+        "runway": "26L"
+      }
+    }
+  },
+  {
+    "input": "WIZZ 44, cleared to land runway two six right",
+    "speaker": "atc",
+    "expected": {
+      "callsign": "WZZ44",
+      "landing": {
+        "runway": "26R"
+      }
+    }
   }
 ]

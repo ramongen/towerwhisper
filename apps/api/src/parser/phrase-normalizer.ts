@@ -23,6 +23,7 @@ const SMALL_NUMBERS: Record<string, number> = {
  *   'TAROM 301, descend altitude three thousand feet' -> 'tarom 301 descend altitude 3000 feet'
  *   'flight level six zero' / 'FL 60'                  -> 'fl060'
  *   'runway zero niner'                                -> 'rwy09'
+ *   'runway two six left'                              -> 'rwy26l'
  *   'one two one decimal three'                        -> '121.3'
  *   'nine tango charlie'                               -> '9tc'
  */
@@ -45,8 +46,11 @@ export class PhraseNormalizer {
       /\b(?:flight level|fl) ?(\d{2,3})\b/g,
       (_m, n: string) => `fl${n.padStart(3, '0')}`,
     );
-    // runway 09 -> rwy09
-    out = out.replace(/\brunway (\d{2})\b/g, 'rwy$1');
+    // runway 09 -> rwy09; runway 26 left -> rwy26l (parallel runways, e.g. LROP)
+    out = out.replace(
+      /\brunway (\d{2})(?: (left|right|center|centre|l|r|c)\b)?/g,
+      (_m, n: string, side?: string) => `rwy${n}${side ? side[0] : ''}`,
+    );
     // ft -> feet, kts -> knots
     out = out.replace(/\bft\b/g, 'feet').replace(/\b(?:kts|kt)\b/g, 'knots');
     return out.replace(/\s+/g, ' ').trim();

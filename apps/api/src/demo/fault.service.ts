@@ -1,8 +1,7 @@
-import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { BadRequestException, Logger } from '@nestjs/common';
 import type { AlertType, DemoTriggerResponse, FaultConfig, Targets } from '@towerwhisper/shared';
-import { DEFAULT_COMMS_CAUTION_MIN, DEFAULT_COMMS_WARNING_MIN } from '../safety/constants';
-import { toLatLon, toXy, velocity } from '../simulation/geo';
+import type { Geo } from '../simulation/geo';
+import { velocity } from '../simulation/geo';
 import { SimulationService } from '../simulation/simulation.service';
 import {
   CONFLICT_INTRUDER,
@@ -26,11 +25,10 @@ type ExecutionFault = NonNullable<FaultConfig['execution']>;
 /**
  * Holds the demo-panel fault configuration and fires scenario triggers. Faults only change
  * what the simulated pilot says or flies; the safety checks never read this configuration
- * (except the NO_CONTACT limits, which are a setting, not a fault).
+ * (except the NO_CONTACT limits, which are a setting, not a fault). One per sector.
  */
-@Injectable()
 export class FaultService {
-  private readonly logger = new Logger(FaultService.name);
+  private readonly logger: Logger;
   private config: FaultConfig;
   private selectedCallsign: string | null = null;
   private steppedOnArmed = false;
@@ -40,18 +38,17 @@ export class FaultService {
   private readonly overlayListeners: ((visible: boolean) => void)[] = [];
 
   constructor(
-    env: ConfigService,
+    commsLimits: FaultConfig['commsLimits'],
     private readonly simulation: SimulationService,
   ) {
-    const cautionMin = Number(env.get('COMMS_CAUTION_MIN') ?? DEFAULT_COMMS_CAUTION_MIN);
-    const warningMin = Number(env.get('COMMS_WARNING_MIN') ?? DEFAULT_COMMS_WARNING_MIN);
+    this.logger = new Logger(`Faults ${simulation.airspace.airport.icao}`);
     this.config = {
       target: { mode: 'selected' },
       readback: null,
       execution: null,
       radioNoise: DEFAULT_RADIO_NOISE,
       timeScale: 1,
-      commsLimits: { cautionS: cautionMin * 60, warningS: warningMin * 60 },
+      commsLimits: { ...commsLimits },
     };
   }
 
@@ -196,11 +193,12 @@ export class FaultService {
 
     // Where the subject will be in CONFLICT_MEET_S, following its turn and its climb or
     // descent; the intruder starts nearly head-on and arrives there at the same moment.
-    const meet = projectAhead(subject, CONFLICT_MEET_S);
+    const geo = this.simulation.airspace.geo;
+    const meet = projectAhead(geo, subject, CONFLICT_MEET_S);
     const from = (meet.headingDeg + 180 + CONFLICT_SPAWN_OFFSET_DEG) % 360;
     const back = velocity(from, 3600); // 1 NM/s unit vector
     const distanceNm = (CONFLICT_INTRUDER.speedKt / 3600) * CONFLICT_MEET_S;
-    const position = toLatLon({
+    const position = geo.toLatLon({
       x: meet.x + back.x * distanceNm,
       y: meet.y + back.y * distanceNm,
     });
@@ -263,6 +261,7 @@ const PROJECT_STEP_S = 1;
 
 /** Where an aircraft will be after a number of seconds, flying its cleared heading, level and speed. */
 function projectAhead(
+  geo: Geo,
   a: {
     lat: number;
     lon: number;
@@ -273,7 +272,7 @@ function projectAhead(
   },
   seconds: number,
 ): { x: number; y: number; headingDeg: number; altitudeFt: number } {
-  let { x, y } = toXy(a);
+  let { x, y } = geo.toXy(a);
   let hdg = a.headingDeg;
   let alt = a.altitudeFt;
   let turn = a.target.turnDir ?? 'any';

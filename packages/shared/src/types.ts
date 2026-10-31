@@ -109,8 +109,8 @@ export interface LatLon {
   lon: number;
 }
 
-/** LRCV runway 08/26 (AIP Romania AD 2 LRCV); the ILS serves runway 26 only. */
-export type RunwayId = '08' | '26';
+/** A runway direction of the sector's airport: '26' at LRCV, '26L' at LROP. */
+export type RunwayId = string;
 export type ApproachType = 'ILS' | 'RNP' | 'VOR';
 export type FlightCategory = 'VFR' | 'MVFR' | 'IFR' | 'LIFR';
 
@@ -139,7 +139,7 @@ export interface AirportWeather {
   weather: string | null; // present weather, e.g. '-RA BR'
   flightCategory: FlightCategory | null;
   runwayWind: RunwayWind[];
-  /** Runway direction with the most headwind (09 when calm: it has the ILS). */
+  /** Runway direction with the most headwind (the ILS runway when calm). */
   preferredRunway: RunwayId;
   /** Precipitation reported: the runway is treated as wet for landing distances. */
   wetRunway: boolean;
@@ -213,3 +213,41 @@ export type AppMode = 'full' | 'no-keys';
 
 /** Who turns PTT audio into text: Whisper on our own GPU, the OpenAI API, or nobody (typed). */
 export type SttProvider = 'local-whisper' | 'openai' | 'none';
+
+// ---------------------------------------------------------------------------
+// Sectors and accounts
+// ---------------------------------------------------------------------------
+
+/** An approach sector (ROMATSA approach unit) with its own live session. */
+export interface SectorInfo {
+  id: string; // 'craiova-app'
+  name: string; // 'Craiova Approach'
+  shortName: string; // 'CRAIOVA APP', for the top bar
+  /** Who the pilots call for landing clearance: 'Craiova Tower'. */
+  towerCallsign: string;
+  airportIcao: string;
+  airport: { icao: string; name: string; lat: number; lon: number };
+  runways: RunwayId[];
+  ilsRunway: RunwayId;
+}
+
+/** 'atc' works one sector; 'supervisor' watches every sector and manages accounts. */
+export type UserRole = 'atc' | 'supervisor';
+
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: UserRole;
+  /** The sector an ATC works; null for supervisors (and for an ATC not assigned yet). */
+  sectorId: string | null;
+  createdAt: string;
+  lastLoginAt: string | null;
+}
+
+/** Someone connected to a sector's session. */
+export interface PresenceUser {
+  id: string;
+  name: string;
+  role: UserRole;
+}

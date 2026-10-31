@@ -1,47 +1,41 @@
-import { Controller, Get, NotFoundException, Param } from '@nestjs/common';
-import type { AircraftDetails, AirspaceResponse } from '@towerwhisper/shared';
-import { AIRSPACE } from '../airspace/airspace';
-import { SimulationService } from '../simulation/simulation.service';
-import { WeatherService } from '../weather/weather.service';
-import { AIRCRAFT_TYPES, AIRPORT, RUNWAYS } from './constants';
-import { assessRunways } from './runway-advisor';
+import { Controller, Get, Headers, Param } from '@nestjs/common';
+import {
+  SECTOR_HEADER,
+  type AircraftDetails,
+  type AirspaceResponse,
+  type SectorInfo,
+} from '@towerwhisper/shared';
+import type { AuthUser } from '../auth/auth.service';
+import { CurrentUser } from '../auth/decorators';
+import { SectorRegistry } from '../sectors/sector-registry';
+import { SECTORS } from '../sectors/sectors';
 
 @Controller()
 export class AirportController {
-  constructor(
-    private readonly simulation: SimulationService,
-    private readonly weather: WeatherService,
-  ) {}
+  constructor(private readonly sectors: SectorRegistry) {}
 
-  /** GET /api/airspace — airport, runways and fixes for the scope. */
+  /** GET /api/sectors — every approach sector that can be worked. */
+  @Get('sectors')
+  list(): SectorInfo[] {
+    return SECTORS.map((s) => s.info);
+  }
+
+  /** GET /api/airspace — airport, runways and fixes of the sector, for the scope. */
   @Get('airspace')
-  airspace(): AirspaceResponse {
-    return {
-      airport: AIRPORT,
-      runways: RUNWAYS,
-      navaids: AIRSPACE.navaids,
-      fixes: AIRSPACE.fixes,
-      source: AIRSPACE.source,
-    };
+  airspace(
+    @CurrentUser() user: AuthUser,
+    @Headers(SECTOR_HEADER) sector: string | undefined,
+  ): AirspaceResponse {
+    return this.sectors.forRequest(user, sector).sector.airspace.toResponse();
   }
 
   /** GET /api/aircraft/:callsign — type data, flight plan and runway compatibility. */
   @Get('aircraft/:callsign')
-  aircraft(@Param('callsign') callsign: string): AircraftDetails {
-    const a = this.simulation.get(callsign);
-    if (!a) throw new NotFoundException(`${callsign} is not on the scope`);
-    const type = AIRCRAFT_TYPES[a.type] ?? null;
-    const flightPlan = this.simulation.getFlightPlan(callsign) ?? null;
-    const weather = this.weather.get();
-    const weight = flightPlan?.declaredLandingWeightKg ?? type?.mlwKg;
-    return {
-      callsign: a.callsign,
-      telephony: a.telephony,
-      type,
-      flightPlan,
-      remainingRoute: this.simulation.getRemainingRoute(callsign),
-      runways: type && weight ? assessRunways(type, weight, weather) : [],
-      weatherBasis: weather ? 'live' : 'none',
-    };
+  aircraft(
+    @Param('callsign') callsign: string,
+    @CurrentUser() user: AuthUser,
+    @Headers(SECTOR_HEADER) sector: string | undefined,
+  ): AircraftDetails {
+    return this.sectors.forRequest(user, sector).aircraftDetails(callsign);
   }
 }

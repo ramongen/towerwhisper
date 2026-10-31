@@ -1,6 +1,7 @@
 import { Controller, Get, NotFoundException, Param, Res } from '@nestjs/common';
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { Public } from '../auth/decorators';
 import { AUDIO_DIR, TTS_CACHE_DIR } from './constants';
 
 /** The two Express response methods we use (no @types/express dependency). */
@@ -12,6 +13,7 @@ interface FileResponse {
 const SAFE_NAME = /^[a-z0-9-]+\.(mp3|webm|ogg|mp4)$/;
 
 /** GET /api/audio/:file — pilot audio (cache or generated) and recorded PTT audio. */
+@Public()
 @Controller('audio')
 export class AudioController {
   @Get(':file')
