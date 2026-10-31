@@ -84,10 +84,10 @@ secret signs the tokens and the API says so at startup.
 
 ### Sectors
 
-Six ROMATSA approach sectors run side by side, each with its own live session (traffic, comms,
+Five ROMATSA approach sectors run side by side, each with its own live session (traffic, comms,
 alerts, demo faults, recording): **Craiova** (LRCV, the hand-made demo scenario, AIP data),
-**București** (LROP, parallel runways 08L/26R and 08R/26L), **Sibiu** (LRSB), **Timișoara** (LRTR)
-**Cluj** (LRCL) and **Oradea** (LROD). The five new ones get six generated arrivals each along the
+**București** (LROP, parallel runways 08L/26R and 08R/26L), **Timișoara** (LRTR),
+**Cluj** (LRCL) and **Oradea** (LROD). The four new ones get six generated arrivals each along the
 airport's real STAR points from AIP ENR 4.4, joining the ILS by themselves about 4 minutes apart;
 their runways are derived from published aerodrome data (approximate), and the CF/LB/RB approach
 points are simulated. Oradea lies beyond our ENR 4.4 extract (130 NM around Craiova), so its six

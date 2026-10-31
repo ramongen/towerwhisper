@@ -29,13 +29,6 @@ const DEFINITIONS: SectorDefinition[] = [
     airportIcao: 'LROP',
   },
   {
-    id: 'sibiu-app',
-    name: 'Sibiu Approach',
-    shortName: 'SIBIU APP',
-    towerCallsign: 'Sibiu Tower',
-    airportIcao: 'LRSB',
-  },
-  {
     id: 'timisoara-app',
     name: 'Timișoara Approach',
     shortName: 'TIMISOARA APP',

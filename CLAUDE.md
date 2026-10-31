@@ -105,7 +105,7 @@ Run `typecheck` and the relevant tests before saying a task is done.
   dependency). Roles: `atc` (works one sector, transmits, resolves alerts) and `supervisor` (all
   sectors read-only, statistics, replay, account management). Every REST route needs a token
   unless marked `@Public()` (health, login, audio, radar tiles, sessions and `/demo/*`).
-- Sectors (`src/sectors/sectors.ts`): Craiova, București, Sibiu, Timișoara, Cluj and Oradea Approach. Each
+- Sectors (`src/sectors/sectors.ts`): Craiova, București, Timișoara, Cluj and Oradea Approach. Each
   runs its own `SectorRuntime` (simulation, safety checks, pilots, faults, weather, comms,
   recording) side by side. An ATC always acts on its own sector; a supervisor or the demo panel
   name one with the `X-Sector-Id` header and `sector:watch` on the socket (Craiova by default).

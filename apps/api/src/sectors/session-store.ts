@@ -114,6 +114,30 @@ export class SessionStore {
     );
   }
 
+  /**
+   * A sector taken out of the app leaves nothing behind: its recorded sessions go (with
+   * their comms, alerts and radar frames), and accounts that worked it have no sector.
+   */
+  async forgetRemovedSectors(known: string[]): Promise<void> {
+    await this.persist(async () => {
+      const removed = await this.sessions.manager.query<{ id: string }[]>(
+        `DELETE FROM sessions WHERE sector_id <> ALL($1) RETURNING id`,
+        [known],
+      );
+      const users = await this.sessions.manager.query<unknown[]>(
+        `UPDATE users SET sector_id = NULL WHERE sector_id IS NOT NULL AND sector_id <> ALL($1) RETURNING id`,
+        [known],
+      );
+      const changed = (r: unknown) =>
+        Array.isArray(r) && Array.isArray(r[0]) ? r[0].length : Array.isArray(r) ? r.length : 0;
+      if (changed(removed) || changed(users)) {
+        this.logger.log(
+          `Removed sectors: ${changed(removed)} sessions deleted, ${changed(users)} accounts unassigned`,
+        );
+      }
+    });
+  }
+
   alertRaised(sessionId: string, alert: Alert): Promise<void> {
     return this.persist(() =>
       this.alerts.save({

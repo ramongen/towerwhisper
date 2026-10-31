@@ -58,6 +58,7 @@ export class SectorRegistry implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleInit(): Promise<void> {
+    await this.store.forgetRemovedSectors(SECTORS.map((s) => s.definition.id));
     await this.store.closeOpenSessions();
     for (const runtime of this.runtimes.values()) await runtime.start();
     this.logger.log(`${this.runtimes.size} sectors live: ${[...this.runtimes.keys()].join(', ')}`);

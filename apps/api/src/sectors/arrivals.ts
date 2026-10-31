@@ -125,7 +125,7 @@ export function generateArrivals(sectorId: string, airspace: Airspace): Scenario
 
 /**
  * Whether ENR 4.4 lists the point on a STAR or approach chart of this airport. The notes
- * read like 'STAR, IAC LROP', 'SID LRSB, STAR LRTM' or 'SID/STAR LRAR, SID/STAR LRTR':
+ * read like 'STAR, IAC LROP', 'SID LRCL, STAR LRTM' or 'SID/STAR LRAR, SID/STAR LRTR':
  * procedure kinds apply to the airports that follow them.
  */
 export function arrivalPointOf(routes: string | undefined, icao: string): boolean {

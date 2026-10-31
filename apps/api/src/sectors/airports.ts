@@ -62,15 +62,6 @@ const SPECS: AirportSpec[] = [
     ],
   },
   {
-    icao: 'LRSB',
-    name: 'Sibiu International',
-    lat: 45.7856,
-    lon: 24.0911,
-    elevationFt: 1496,
-    defaultRunway: '27',
-    runways: [{ ids: ['09', '27'], trueBearingDeg: 94.5, lengthM: 2630, widthM: 45, ils: ['27'] }],
-  },
-  {
     icao: 'LRTR',
     name: 'Timișoara Traian Vuia',
     lat: 45.8097,
