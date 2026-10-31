@@ -119,10 +119,11 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey));
   position: fixed;
   inset: 0;
   z-index: 30;
+  /* Centred on the whole page, both ways. */
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  padding-top: 18vh;
+  padding: var(--space-4);
   background: rgba(4, 8, 13, 0.55);
 }
 

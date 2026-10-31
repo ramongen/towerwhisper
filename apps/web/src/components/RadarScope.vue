@@ -37,7 +37,7 @@ const ROSE_RADIUS_PX = 78;
 /** A middle-button press that moves less than this is not a pan. */
 const DRAG_THRESHOLD_PX = 3;
 /** The map data (relief, radar) covers this far from the airport; panning stays inside it. */
-const COVERAGE_NM = { x: 130, y: 95 };
+const COVERAGE_NM = { x: 200, y: 94 };
 const RADAR_REFRESH_MS = 5 * 60 * 1000;
 /** Spot heights shown at zoom 1 (peaks are sorted highest first; more appear zoomed in). */
 const PEAKS_AT_ZOOM_1 = 40;
@@ -169,7 +169,22 @@ function screenToNm(x: number, y: number): { x: number; y: number } {
   };
 }
 
+/**
+ * The widest zoom that still shows only mapped area on this screen (wide monitors need a
+ * closer minimum), never below ZOOM_MIN.
+ */
+function minZoom(): number {
+  const base = basePxPerNm();
+  if (!base) return ZOOM_MIN;
+  return Math.max(
+    ZOOM_MIN,
+    width / 2 / (COVERAGE_NM.x * base),
+    height / 2 / (COVERAGE_NM.y * base),
+  );
+}
+
 function updateScale(): void {
+  view.zoom = Math.max(view.zoom, minZoom());
   pxPerNm = basePxPerNm() * view.zoom;
   zoomLabel.value = `${view.zoom.toFixed(1)}×`;
 }
@@ -187,6 +202,7 @@ function resize(): void {
   el.style.height = `${height}px`;
   el.getContext('2d')?.setTransform(dpr, 0, 0, dpr, 0, 0);
   updateScale();
+  clampView();
 }
 
 function draw(now: number): void {
@@ -803,7 +819,7 @@ function onPointerUp(event: PointerEvent): void {
 /** Zoom keeping the map point under (x, y) where it is. */
 function zoomAt(factor: number, x = width / 2, y = height / 2): void {
   const before = screenToNm(x, y);
-  view.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, view.zoom * factor));
+  view.zoom = Math.min(ZOOM_MAX, Math.max(minZoom(), view.zoom * factor));
   updateScale();
   const after = screenToNm(x, y);
   view.centerX += before.x - after.x;

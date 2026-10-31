@@ -18,8 +18,8 @@ const CACHE = resolve(process.argv[2] ?? join(ROOT, '.cache', 'terrain-tiles'));
 
 const LRCV = { lat: 44.3181, lon: 23.8886 };
 /** About 60 NM around the airport, so panning out still shows relief. */
-/** About 130 NM east-west and 95 NM north-south: what the radar shows fully zoomed out. */
-const SPAN = { lat: 1.6, lon: 3.1 };
+/** About 205 NM east-west and 95 NM north-south: wider than the radar shows fully zoomed out. */
+const SPAN = { lat: 1.6, lon: 4.8 };
 const ZOOM = 9;
 const GRID_DEG = 0.006; // ~670 m north-south
 /** Contour interval by height: dense in the plain, sparser in the mountains. */
@@ -149,8 +149,10 @@ async function elevationGrid() {
   const cols = Math.round((lonMax - lonMin) / GRID_DEG) + 1;
   const z = new Float32Array(rows * cols);
   for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++)
-      z[r * cols + c] = sample(latMin + r * GRID_DEG, lonMin + c * GRID_DEG);
+    // Nothing here is below sea level: negative values are voids in the elevation data.
+    for (let c = 0; c < cols; c++) {
+      z[r * cols + c] = Math.max(0, sample(latMin + r * GRID_DEG, lonMin + c * GRID_DEG));
+    }
   }
   return { rows, cols, z, latMin, lonMin };
 }
