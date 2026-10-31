@@ -44,6 +44,11 @@ watch(
   (list) => {
     for (const alert of list) {
       const before = heard.get(alert.id);
+      // In a replay the player sounds the alerts as their moment passes.
+      if (alerts.replayNow !== null) {
+        heard.set(alert.id, alert.severity);
+        continue;
+      }
       // New and just raised, or escalated while on screen. Alerts that were already active
       // when the page loaded (sent again after a refresh) stay silent.
       const fresh = Date.now() - Date.parse(alert.raisedAt) < FRESH_ALERT_MS;

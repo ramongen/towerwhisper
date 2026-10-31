@@ -377,12 +377,12 @@ function toggleSelect(callsign: string): void {
             <button
               type="button"
               class="voice"
-              :class="{ on: voiceActive }"
+              :class="{ on: voices }"
               :aria-pressed="voices"
               :title="
                 speed > MAX_VOICE_SPEED
-                  ? `Voices play at ${MAX_VOICE_SPEED}× or slower`
-                  : 'Pilot and controller voices'
+                  ? `Alert tones now; voices play at ${MAX_VOICE_SPEED}× or slower`
+                  : 'Pilot and controller voices, alert tones'
               "
               @click="voices = !voices"
             >
@@ -397,19 +397,13 @@ function toggleSelect(callsign: string): void {
               >
                 <path d="M4 9v6h4l5 4V5L8 9z" fill="currentColor" />
                 <path
-                  v-if="voiceActive"
+                  v-if="voices"
                   d="M16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"
                   stroke-linecap="round"
                 />
                 <path v-else d="M16 9l5 6M21 9l-5 6" stroke-linecap="round" />
               </svg>
-              {{
-                voiceActive
-                  ? 'VOICES'
-                  : speed > MAX_VOICE_SPEED
-                    ? `VOICES ≤ ${MAX_VOICE_SPEED}×`
-                    : 'MUTED'
-              }}
+              {{ !voices ? 'MUTED' : voiceActive ? 'SOUND ON' : 'ALERT TONES ONLY' }}
             </button>
           </div>
         </footer>

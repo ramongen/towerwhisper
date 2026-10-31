@@ -3,6 +3,7 @@ import { computed, onBeforeUnmount, ref, shallowRef } from 'vue';
 import { useAlertStore } from '../stores/useAlertStore';
 import { useCommsStore } from '../stores/useCommsStore';
 import { useTrafficStore } from '../stores/useTrafficStore';
+import { playAlertSound } from './useAlertSound';
 import { useRadioVoice } from './useRadioVoice';
 
 /** The radar gets a new picture this often while playing, as from the live server (4 Hz). */
@@ -39,6 +40,8 @@ export function useReplayPlayer() {
   let lastPush = 0;
   /** comms entries already on screen (index into session.comms). */
   let shownComms = 0;
+  /** The moment of the last picture: alerts raised after it sound on the next one. */
+  let lastRenderT = 0;
   let alertSignature = '';
   const commsTimes: number[] = [];
 
@@ -123,8 +126,11 @@ export function useReplayPlayer() {
     while (shownComms < s.comms.length && commsTimes[shownComms] <= t.value) {
       const entry = s.comms[shownComms];
       comms.add(entry, true);
-      if (speak && voiceActive.value && entry.audioUrl) {
-        void voice.play(entry.audioUrl, entry.transcript, VOICE_NOISE);
+      // Pilots always speak (recorded TTS, or the browser voice as live); the controller is
+      // heard when the transmission was spoken, not typed.
+      const audible = entry.speaker === 'pilot' || !!entry.audioUrl;
+      if (speak && voiceActive.value && audible) {
+        void voice.play(entry.audioUrl ?? null, entry.transcript, VOICE_NOISE);
       }
       shownComms++;
     }
@@ -139,6 +145,17 @@ export function useReplayPlayer() {
       if (endedAt <= t.value) ended.push(a);
       else active.push({ ...a, endedAt: undefined, outcome: undefined, endReason: undefined });
     }
+    // The alert tone, as on the live screen, for alerts raised since the last picture.
+    if (speak && voices.value) {
+      const raised = active.filter((a) => {
+        const at = Date.parse(a.raisedAt);
+        return at > lastRenderT && at <= t.value;
+      });
+      const worst = raised.some((a) => a.severity === 'warning') ? 'warning' : raised[0]?.severity;
+      if (worst) playAlertSound(worst);
+    }
+    lastRenderT = t.value;
+
     const signature = `${active.map((a) => a.id).join()}|${ended.length}`;
     if (signature !== alertSignature) {
       alertSignature = signature;
