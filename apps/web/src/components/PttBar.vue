@@ -9,8 +9,8 @@ import { useDemoStore } from '../stores/useDemoStore';
 import { useTrafficStore } from '../stores/useTrafficStore';
 import { api } from '../utils/api';
 
-/** Idle VU bars, as drawn in the design. */
-const IDLE_BARS = [4, 6, 5, 8, 6, 4, 5, 7, 5, 4, 6, 5, 4, 6, 5, 4, 5, 6, 4, 5];
+/** Height of every VU bar while nobody transmits (all equal). */
+const IDLE_BAR_PX = 6;
 const VU_MAX_PX = 38;
 /** Bars from this index on are drawn amber (loud). */
 const VU_LOUD_INDEX = 14;
@@ -36,24 +36,26 @@ const transmitting = computed(() => pttState.value === 'transmitting');
 const bars = computed(() =>
   mic.bands.value.map((level, i) => {
     const active = transmitting.value;
-    const h = active ? Math.max(IDLE_BARS[i], Math.round(level * VU_MAX_PX)) : IDLE_BARS[i];
+    const h = active ? Math.max(IDLE_BAR_PX, Math.round(level * VU_MAX_PX)) : IDLE_BAR_PX;
     const tone = !active ? 'idle' : i >= VU_LOUD_INDEX && level > 0.5 ? 'loud' : 'live';
     return { h, tone };
   }),
 );
 
+/** Short label in the status chip; details (errors) go on their own line inside the bar. */
 const status = computed(() => {
   switch (pttState.value) {
     case 'transmitting':
-      return `ON AIR · ${onAirS.value.toFixed(1)} s`;
+      return `ON AIR ${onAirS.value.toFixed(1)} s`;
     case 'transcribing':
       return 'TRANSCRIBING';
     case 'error':
-      return pttMessage.value ?? 'ERROR';
+      return 'ERROR';
     default:
       return 'READY';
   }
 });
+const detail = computed(() => (pttState.value === 'error' ? pttMessage.value : null));
 
 async function startPtt(): Promise<void> {
   if (pttState.value === 'transmitting' || pttState.value === 'transcribing') return;
@@ -148,135 +150,157 @@ onBeforeUnmount(() => {
 
 <template>
   <div class="ptt-bar" :class="{ text: showText }">
-    <template v-if="!showText">
+    <div class="controls">
+      <template v-if="!showText">
+        <button
+          type="button"
+          class="talk"
+          :class="{ on: transmitting }"
+          aria-label="Push to talk (hold, or hold the space bar)"
+          @pointerdown.prevent="startPtt"
+          @pointerup="stopPtt"
+          @pointerleave="stopPtt"
+          @keydown.space.prevent
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+          >
+            <rect x="9" y="2" width="6" height="12" rx="3" />
+            <path d="M5 11a7 7 0 0 0 14 0" />
+            <line x1="12" y1="18" x2="12" y2="22" />
+          </svg>
+          <span>{{ transmitting ? 'TRANSMITTING' : 'HOLD SPACE TO TALK' }}</span>
+        </button>
+        <div class="vu" aria-hidden="true">
+          <span
+            v-for="(b, i) in bars"
+            :key="i"
+            class="bar"
+            :class="b.tone"
+            :style="{ height: `${b.h}px` }"
+          />
+        </div>
+      </template>
+
+      <form v-else class="typed" @submit.prevent="sendTyped">
+        <label for="typed-transmission" class="visually-hidden">Instruction to transmit</label>
+        <input
+          id="typed-transmission"
+          v-model="typed"
+          list="scripted-phrases"
+          class="mono"
+          placeholder="Type or pick an instruction…"
+          autocomplete="off"
+        />
+        <datalist id="scripted-phrases">
+          <option v-for="p in session?.scriptedPhrases ?? []" :key="p" :value="p" />
+        </datalist>
+        <button type="submit" class="send" :disabled="!typed.trim() || pttState === 'transcribing'">
+          TRANSMIT
+        </button>
+      </form>
+
+      <div class="status mono" :class="pttState" role="status" :title="detail ?? status">
+        <svg
+          v-if="pttState === 'transcribing'"
+          class="spinner"
+          width="14"
+          height="14"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="3"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <path d="M12 3a9 9 0 1 1-9 9" />
+        </svg>
+        <span v-else class="dot" aria-hidden="true" />
+        <span class="label">{{ status }}</span>
+      </div>
+
       <button
+        v-if="!noKeys"
         type="button"
-        class="talk"
-        :class="{ on: transmitting }"
-        aria-label="Push to talk (hold, or hold the space bar)"
-        @pointerdown.prevent="startPtt"
-        @pointerup="stopPtt"
-        @pointerleave="stopPtt"
-        @keydown.space.prevent
+        class="switch"
+        :aria-label="showText ? 'Use the microphone' : 'Type instead of speaking'"
+        :title="showText ? 'Use the microphone' : 'Type instead of speaking'"
+        @click="textMode = !textMode"
       >
         <svg
-          width="18"
-          height="18"
+          v-if="showText"
+          width="16"
+          height="16"
           viewBox="0 0 24 24"
           fill="none"
           stroke="currentColor"
           stroke-width="2"
           stroke-linecap="round"
-          stroke-linejoin="round"
           aria-hidden="true"
         >
           <rect x="9" y="2" width="6" height="12" rx="3" />
           <path d="M5 11a7 7 0 0 0 14 0" />
-          <line x1="12" y1="18" x2="12" y2="22" />
         </svg>
-        <span>{{ transmitting ? 'TRANSMITTING' : 'HOLD SPACE TO TALK' }}</span>
+        <svg
+          v-else
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          aria-hidden="true"
+        >
+          <rect x="2" y="6" width="20" height="12" rx="2" />
+          <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" />
+        </svg>
       </button>
-      <div class="vu" aria-hidden="true">
-        <span
-          v-for="(b, i) in bars"
-          :key="i"
-          class="bar"
-          :class="b.tone"
-          :style="{ height: `${b.h}px` }"
-        />
-      </div>
-    </template>
-
-    <form v-else class="typed" @submit.prevent="sendTyped">
-      <label for="typed-transmission" class="visually-hidden">Instruction to transmit</label>
-      <input
-        id="typed-transmission"
-        v-model="typed"
-        list="scripted-phrases"
-        class="mono"
-        placeholder="Type or pick an instruction…"
-        autocomplete="off"
-      />
-      <datalist id="scripted-phrases">
-        <option v-for="p in session?.scriptedPhrases ?? []" :key="p" :value="p" />
-      </datalist>
-      <button type="submit" class="send" :disabled="!typed.trim() || pttState === 'transcribing'">
-        TRANSMIT
-      </button>
-    </form>
-
-    <div class="status mono" :class="pttState" role="status">
-      <svg
-        v-if="pttState === 'transcribing'"
-        class="spinner"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="3"
-        stroke-linecap="round"
-        aria-hidden="true"
-      >
-        <path d="M12 3a9 9 0 1 1-9 9" />
-      </svg>
-      <span>{{ status }}</span>
     </div>
-
-    <button
-      v-if="!noKeys"
-      type="button"
-      class="switch"
-      :aria-label="showText ? 'Use the microphone' : 'Type instead of speaking'"
-      :title="showText ? 'Use the microphone' : 'Type instead of speaking'"
-      @click="textMode = !textMode"
-    >
-      <svg
-        v-if="showText"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        aria-hidden="true"
-      >
-        <rect x="9" y="2" width="6" height="12" rx="3" />
-        <path d="M5 11a7 7 0 0 0 14 0" />
-      </svg>
-      <svg
-        v-else
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        aria-hidden="true"
-      >
-        <rect x="2" y="6" width="20" height="12" rx="2" />
-        <path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" />
-      </svg>
-    </button>
+    <p v-if="detail" class="detail mono" role="alert">{{ detail }}</p>
   </div>
 </template>
 
 <style scoped>
 .ptt-bar {
-  width: var(--ptt-width);
-  padding: 14px var(--space-4);
+  width: min(var(--ptt-width), calc(100% - 160px));
+  padding: 12px 14px;
   display: flex;
-  align-items: center;
-  gap: var(--space-4);
+  flex-direction: column;
+  gap: var(--space-2);
   background: var(--color-panel);
   border: var(--border-width) solid var(--color-border-strong);
   border-radius: var(--radius-bar);
 }
 
 .ptt-bar.text {
-  width: min(900px, calc(100% - 48px));
+  width: min(900px, calc(100% - 160px));
+}
+
+/* One row; every part either keeps a fixed size or shrinks, so nothing spills out. */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.detail {
+  margin: 0;
+  padding: 6px 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--color-warning-text);
+  background: var(--color-warning-bg);
+  border-radius: var(--radius);
 }
 
 .talk {
@@ -305,7 +329,8 @@ onBeforeUnmount(() => {
 }
 
 .vu {
-  flex-grow: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   height: 40px;
   display: flex;
   align-items: center;
@@ -313,7 +338,9 @@ onBeforeUnmount(() => {
 }
 
 .bar {
-  width: 8px;
+  flex: 1 1 0;
+  max-width: 8px;
+  min-width: 3px;
   border-radius: 2px;
   background: var(--color-border-chip);
   transition: height 60ms linear;
@@ -329,6 +356,7 @@ onBeforeUnmount(() => {
 
 .typed {
   flex-grow: 1;
+  min-width: 0;
   display: flex;
   gap: var(--space-2);
 }
@@ -361,26 +389,53 @@ onBeforeUnmount(() => {
   cursor: default;
 }
 
+/* Status chip: fixed width, so READY / ON AIR 12.3 s / TRANSCRIBING / ERROR never move or overflow. */
 .status {
-  flex-shrink: 0;
-  min-width: 150px;
+  flex: 0 0 156px;
+  height: 36px;
+  padding: 0 10px;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: center;
   gap: var(--space-2);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   letter-spacing: 0.06em;
   color: var(--color-text-muted);
+  background: var(--color-panel-raised);
+  border: var(--border-width) solid var(--color-border-strong);
+  border-radius: 18px;
+}
+
+.label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.status.ready {
+  color: var(--color-ok);
 }
 
 .status.transmitting,
 .status.error {
   color: var(--color-warning);
+  background: var(--color-warning-bg);
+  border-color: var(--color-warning);
 }
 
 .status.transcribing {
   color: var(--color-atc);
+  background: var(--color-atc-bg);
+  border-color: var(--color-atc);
 }
 
 .switch {
