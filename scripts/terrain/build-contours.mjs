@@ -3,7 +3,7 @@
 //   node scripts/terrain/build-contours.mjs [tile-cache-dir]
 //
 // Elevation: AWS Terrain Tiles (Terrarium PNG, public, no key; derived from SRTM and others).
-// Run once; the JSON is committed, so the app never needs the network for the map.
+// Run once; the JSON and the .bin raster are committed, so the app never needs the network for the map.
 // No dependencies: PNG decoding (zlib), marching squares and simplification are below.
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
@@ -11,17 +11,29 @@ import { fileURLToPath } from 'node:url';
 import { inflateSync } from 'node:zlib';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..');
-const OUT = join(ROOT, 'apps', 'web', 'public', 'terrain', 'lrcv-contours.json');
+const OUT_DIR = join(ROOT, 'apps', 'web', 'public', 'terrain');
+const OUT = join(OUT_DIR, 'lrcv-contours.json');
+const OUT_ELEVATION = join(OUT_DIR, 'lrcv-elevation.bin');
 const CACHE = resolve(process.argv[2] ?? join(ROOT, '.cache', 'terrain-tiles'));
 
 const LRCV = { lat: 44.3181, lon: 23.8886 };
 /** About 60 NM around the airport, so panning out still shows relief. */
-const SPAN = { lat: 1.0, lon: 1.4 };
+/** About 130 NM east-west and 95 NM north-south: what the radar shows fully zoomed out. */
+const SPAN = { lat: 1.6, lon: 3.1 };
 const ZOOM = 9;
-const GRID_DEG = 0.004; // ~440 m north-south
-const INTERVAL_M = 50;
-const MAJOR_EVERY = 4; // a stronger line every 200 m
-const SIMPLIFY_DEG = 0.0015;
+const GRID_DEG = 0.006; // ~670 m north-south
+/** Contour interval by height: dense in the plain, sparser in the mountains. */
+const intervalAt = (elevM) => (elevM < 600 ? 50 : elevM < 1500 ? 100 : 200);
+/** A stronger line every this many metres. */
+const MAJOR_M = 500;
+const SIMPLIFY_DEG = 0.002;
+/** Elevation raster for the relief heatmap (Int16, metres, rows north to south). */
+const RASTER_DEG = 0.01;
+/** Spot heights: local maxima this high, at least this far apart, at most this many. */
+const PEAK_MIN_M = 300;
+const PEAK_WINDOW = 4; // cells each side
+const PEAK_SEPARATION_DEG = 0.12;
+const PEAK_MAX = 80;
 const MIN_POINTS = 4;
 const TILE_URL = (z, x, y) =>
   `https://s3.amazonaws.com/elevation-tiles-prod/terrarium/${z}/${x}/${y}.png`;
@@ -267,26 +279,90 @@ console.log(
   `elevation ${Math.round(min)}-${Math.round(max)} m over a ${grid.rows}x${grid.cols} grid`,
 );
 
+// Contours, with an interval that grows with height.
 const levels = [];
 let points = 0;
-for (let elev = Math.ceil(min / INTERVAL_M) * INTERVAL_M; elev <= max; elev += INTERVAL_M) {
+for (let elev = Math.ceil(min / 50) * 50; elev <= max; elev += 50) {
+  if (elev % intervalAt(elev) !== 0) continue;
   const lines = contour(grid, elev)
     .map((line) => simplify(line, SIMPLIFY_DEG))
     .filter((line) => line.length >= MIN_POINTS)
     .map((line) => line.flatMap(([lon, lat]) => [+lon.toFixed(4), +lat.toFixed(4)]));
   if (!lines.length) continue;
   points += lines.reduce((n, l) => n + l.length / 2, 0);
-  levels.push({ elevM: elev, lines });
+  levels.push({ elevM: elev, major: elev % MAJOR_M === 0, lines });
 }
 
-mkdirSync(dirname(OUT), { recursive: true });
+// Elevation raster for the heatmap: resample the grid at RASTER_DEG, rows north to south.
+const step = Math.round((RASTER_DEG / GRID_DEG) * 1000) / 1000;
+const latMax = grid.latMin + (grid.rows - 1) * GRID_DEG;
+const rows = Math.floor(((grid.rows - 1) * GRID_DEG) / RASTER_DEG) + 1;
+const cols = Math.floor(((grid.cols - 1) * GRID_DEG) / RASTER_DEG) + 1;
+const raster = new Int16Array(rows * cols);
+for (let r = 0; r < rows; r++) {
+  for (let c = 0; c < cols; c++) {
+    const gr = Math.min(
+      grid.rows - 1,
+      Math.round((latMax - r * RASTER_DEG - grid.latMin) / GRID_DEG),
+    );
+    const gc = Math.min(grid.cols - 1, Math.round((c * RASTER_DEG) / GRID_DEG));
+    raster[r * cols + c] = Math.max(-100, Math.round(grid.z[gr * grid.cols + gc]));
+  }
+}
+
+// Spot heights: highest local maxima, spread out.
+const candidates = [];
+for (let r = PEAK_WINDOW; r < rows - PEAK_WINDOW; r++) {
+  for (let c = PEAK_WINDOW; c < cols - PEAK_WINDOW; c++) {
+    const v = raster[r * cols + c];
+    if (v < PEAK_MIN_M) continue;
+    let top = true;
+    for (let dr = -PEAK_WINDOW; dr <= PEAK_WINDOW && top; dr++) {
+      for (let dc = -PEAK_WINDOW; dc <= PEAK_WINDOW; dc++) {
+        if ((dr || dc) && raster[(r + dr) * cols + c + dc] > v) {
+          top = false;
+          break;
+        }
+      }
+    }
+    if (top)
+      candidates.push({
+        lat: latMax - r * RASTER_DEG,
+        lon: grid.lonMin + c * RASTER_DEG,
+        elevM: v,
+      });
+  }
+}
+candidates.sort((a, b) => b.elevM - a.elevM);
+const peaks = [];
+for (const p of candidates) {
+  if (peaks.length >= PEAK_MAX) break;
+  if (peaks.some((q) => Math.hypot(q.lat - p.lat, (q.lon - p.lon) * 0.72) < PEAK_SEPARATION_DEG))
+    continue;
+  peaks.push(p);
+}
+
+mkdirSync(OUT_DIR, { recursive: true });
+writeFileSync(OUT_ELEVATION, Buffer.from(raster.buffer));
 writeFileSync(
   OUT,
   JSON.stringify({
     source: 'AWS Terrain Tiles (Terrarium), derived from SRTM and other public DEMs',
-    intervalM: INTERVAL_M,
-    majorEvery: MAJOR_EVERY,
     levels,
+    peaks: peaks.map((p) => [+p.lat.toFixed(4), +p.lon.toFixed(4), p.elevM]),
+    elevation: {
+      file: 'lrcv-elevation.bin',
+      format: 'int16le, metres, rows north to south',
+      latMax: +latMax.toFixed(4),
+      lonMin: +grid.lonMin.toFixed(4),
+      stepDeg: RASTER_DEG,
+      rows,
+      cols,
+      minM: Math.round(min),
+      maxM: Math.round(max),
+    },
   }),
 );
-console.log(`${levels.length} levels, ${points} points -> ${OUT}`);
+console.log(
+  `${levels.length} levels, ${points} points, ${peaks.length} peaks, raster ${rows}x${cols} (step ${step}) -> ${OUT_DIR}`,
+);

@@ -226,6 +226,22 @@ export interface DemoTriggerResponse {
   message: string;
 }
 
+/**
+ * GET /weather/radar — latest precipitation radar frame (RainViewer composite) for the scope.
+ * Tiles are served through the API at tileUrl (with {x} and {y}), Web Mercator, zoom `zoom`.
+ */
+export interface WeatherRadarResponse {
+  available: boolean;
+  time: string | null;
+  zoom: number;
+  tileUrl: string;
+  /** Tile index range covering the scope area. */
+  xMin: number;
+  xMax: number;
+  yMin: number;
+  yMax: number;
+}
+
 /** GET /weather -> AirportWeather, or 204 when no source answered yet. */
 export type WeatherResponse = AirportWeather;
 

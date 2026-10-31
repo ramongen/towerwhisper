@@ -54,6 +54,30 @@
   --radar-aircraft: #c9d4e0;
   --radar-compass: #3d5266;
   --radar-compass-major: #7d90a3;
+  /* Relief heatmap: elevation (m) to colour, dark enough for the scope; shaded in code. */
+  --terrain-heat-stops:
+    0 #07191b, 100 #0b2626, 200 #133328, 400 #26402a, 700 #403f22, 1000 #4c3420, 1500 #4d2b28,
+    2000 #5a4352, 2500 #8f8a99;
+  --terrain-heat-gradient: linear-gradient(
+    90deg,
+    #07191b,
+    #133328 8%,
+    #26402a 16%,
+    #403f22 28%,
+    #4c3420 40%,
+    #4d2b28 60%,
+    #5a4352 80%,
+    #8f8a99
+  );
+  --terrain-heat-opacity: 0.85;
+  --radar-peak: #e8d9b0;
+  /* Weather radar overlay in airborne weather-radar colours, and its legend keys. */
+  --wx-radar-opacity: 0.8;
+  --wx-faint: #0b7a2a;
+  --wx-light: #04e904;
+  --wx-moderate: #fdf802;
+  --wx-heavy: #fd0000;
+  --wx-extreme: #f800fd;
   --radar-rose-bg: rgba(7, 12, 18, 0.72); /* behind the selected aircraft's heading rose */
   --radar-terrain: rgba(120, 140, 160, 0.13); /* relief contours: grey, quiet */
   --radar-terrain-major: rgba(140, 160, 180, 0.24);

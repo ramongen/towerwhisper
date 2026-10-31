@@ -17,3 +17,14 @@ export const CATEGORY_LIMITS = {
 export const METRES_PER_STATUTE_MILE = 1609.34;
 /** Visibility '10+' statute miles: reported as 10 km or more. */
 export const UNLIMITED_VISIBILITY_M = 9999;
+
+/** Precipitation radar: RainViewer public composite (no key), zoom 7 is the finest it serves. */
+export const RADAR_MAPS_URL = 'https://api.rainviewer.com/public/weather-maps.json';
+export const RADAR_ZOOM = 7;
+/** NEXRAD-like palette: green, yellow, red, magenta, as on an airborne weather radar. */
+export const RADAR_COLOR_SCHEME = 6;
+/** Area served around the airport (degrees), the same as the terrain map. */
+export const RADAR_AREA_DEG = { lat: 1.6, lon: 3.1 };
+/** New frames every 10 min; check every 5. */
+export const RADAR_REFRESH_MS = 5 * 60 * 1000;
+export const RADAR_TILE_TTL_MS = 10 * 60 * 1000;

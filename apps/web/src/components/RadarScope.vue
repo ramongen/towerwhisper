@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { Aircraft, AirspaceResponse } from '@towerwhisper/shared';
+import type { Aircraft, AirspaceResponse, WeatherRadarResponse } from '@towerwhisper/shared';
 import { storeToRefs } from 'pinia';
 import { onBeforeUnmount, onMounted, ref, watchEffect } from 'vue';
 import { useAlertStore, type AlertLevel } from '../stores/useAlertStore';
@@ -7,8 +7,9 @@ import { useDemoStore } from '../stores/useDemoStore';
 import { radarFeed, useTrafficStore } from '../stores/useTrafficStore';
 import { api } from '../utils/api';
 import { formatAge, heading, levelLine } from '../utils/format';
-import { loadTerrain, type TerrainLevel } from '../utils/terrain';
+import { loadTerrain, parseStops, type Terrain } from '../utils/terrain';
 import { readTokens } from '../utils/tokens';
+import { levelsFromTokens, recolourTile } from '../utils/weatherRadar';
 
 /** Craiova (LRCV): the centre of the scope. */
 const LRCV = { lat: 44.31806, lon: 23.88861 };
@@ -35,6 +36,32 @@ const HIT_RADIUS_PX = 22;
 const ROSE_RADIUS_PX = 78;
 /** A middle-button press that moves less than this is not a pan. */
 const DRAG_THRESHOLD_PX = 3;
+/** The map data (relief, radar) covers this far from the airport; panning stays inside it. */
+const COVERAGE_NM = { x: 130, y: 95 };
+const RADAR_REFRESH_MS = 5 * 60 * 1000;
+/** Spot heights shown at zoom 1 (peaks are sorted highest first; more appear zoomed in). */
+const PEAKS_AT_ZOOM_1 = 40;
+const MAP_MODE_KEY = 'towerwhisper.mapMode';
+
+/**
+ * Map background: contour lines; relief heatmap with spot heights; or contours with the
+ * live precipitation radar on top, as on an airborne weather radar.
+ */
+type MapMode = 'contours' | 'terrain' | 'wx';
+const MAP_MODES: { id: MapMode; label: string }[] = [
+  { id: 'contours', label: 'CONTOURS' },
+  { id: 'terrain', label: 'TERRAIN' },
+  { id: 'wx', label: 'WX RADAR' },
+];
+
+function savedMode(): MapMode {
+  try {
+    const saved = localStorage.getItem(MAP_MODE_KEY);
+    return MAP_MODES.some((m) => m.id === saved) ? (saved as MapMode) : 'contours';
+  } catch {
+    return 'contours';
+  }
+}
 
 const traffic = useTrafficStore();
 const { selectedCallsign } = storeToRefs(traffic);
@@ -45,12 +72,25 @@ const wrapper = ref<HTMLDivElement | null>(null);
 const canvas = ref<HTMLCanvasElement | null>(null);
 const panning = ref(false);
 const zoomLabel = ref('1.0×');
+const mapMode = ref<MapMode>(savedMode());
+const radarTime = ref<string | null>(null);
+
+function setMapMode(id: MapMode): void {
+  mapMode.value = id;
+  try {
+    localStorage.setItem(MAP_MODE_KEY, id);
+  } catch {
+    // Storage blocked: the choice simply is not remembered.
+  }
+}
 
 // Reactive state copied into plain variables, so the 60 fps loop never touches Vue reactivity.
 let selected: string | null = null;
 let levels = new Map<string, AlertLevel>();
 let limits = { cautionS: 900, warningS: 1800 };
+let mode: MapMode = 'contours';
 watchEffect(() => {
+  mode = mapMode.value;
   selected = selectedCallsign.value;
   levels = new Map(alerts.levelByCallsign);
   if (demo.faults) limits = { ...demo.faults.commsLimits };
@@ -66,6 +106,15 @@ function loadColors() {
     roseBg: '--radar-rose-bg',
     terrain: '--radar-terrain',
     terrainMajor: '--radar-terrain-major',
+    heatStops: '--terrain-heat-stops',
+    heatOpacity: '--terrain-heat-opacity',
+    peak: '--radar-peak',
+    wxOpacity: '--wx-radar-opacity',
+    wxFaint: '--wx-faint',
+    wxLight: '--wx-light',
+    wxModerate: '--wx-moderate',
+    wxHeavy: '--wx-heavy',
+    wxExtreme: '--wx-extreme',
     centreline: '--radar-centreline',
     runway: '--radar-runway',
     label: '--radar-label',
@@ -88,7 +137,11 @@ let pxPerNm = 10;
 let frame = 0;
 let resizeObserver: ResizeObserver | null = null;
 let airspace: AirspaceResponse | null = null;
-let terrain: TerrainLevel[] = [];
+let terrain: Terrain = { levels: [], peaks: [], heat: null };
+/** Live precipitation radar tiles of the latest frame, by 'x/y'. */
+/** Recoloured in airborne weather-radar colours once loaded. */
+let wx: { info: WeatherRadarResponse; tiles: Map<string, HTMLCanvasElement> } | null = null;
+let radarTimer: ReturnType<typeof setInterval> | undefined;
 /** Screen positions of the last frame, for click hit-testing. */
 let hitTargets: { callsign: string; x: number; y: number; box: DOMRect }[] = [];
 /** Mouse position over the scope, for the heading-to-cursor line of the selected aircraft. */
@@ -141,11 +194,18 @@ function draw(now: number): void {
   if (ctx && width > 0) {
     ctx.fillStyle = colors.bg;
     ctx.fillRect(0, 0, width, height);
-    drawTerrain(ctx);
+    if (mode === 'terrain') {
+      drawHeat(ctx);
+      drawContours(ctx, true);
+    } else {
+      drawContours(ctx, false);
+      if (mode === 'wx') drawWeatherRadar(ctx);
+    }
     drawRings(ctx);
     drawCompass(ctx);
     drawAirport(ctx);
     drawFixes(ctx);
+    if (mode === 'terrain') drawPeaks(ctx);
     drawRoute(ctx, now);
     drawProbe(ctx, now);
     drawTraffic(ctx, now);
@@ -154,18 +214,120 @@ function draw(now: number): void {
 }
 
 /** Relief contours, built once in NM and drawn with one transform per frame. */
-function drawTerrain(ctx: CanvasRenderingContext2D): void {
-  if (!terrain.length) return;
+function drawContours(ctx: CanvasRenderingContext2D, majorOnly: boolean): void {
+  if (!terrain.levels.length) return;
   const origin = nmToScreen(0, 0);
   ctx.save();
   ctx.translate(origin.x, origin.y);
   ctx.scale(pxPerNm, -pxPerNm);
-  for (const level of terrain) {
+  for (const level of terrain.levels) {
+    if (majorOnly && !level.major) continue;
     ctx.strokeStyle = level.major ? colors.terrainMajor : colors.terrain;
     ctx.lineWidth = (level.major ? 1.2 : 0.8) / pxPerNm;
     ctx.stroke(level.path);
   }
   ctx.restore();
+}
+
+/** Screen rectangle of a lat/lon box (the map projection is linear in lat and lon). */
+function boxToScreen(latMax: number, latMin: number, lonMin: number, lonMax: number) {
+  const tl = toScreen(latMax, lonMin);
+  const br = toScreen(latMin, lonMax);
+  return { x: tl.x, y: tl.y, w: br.x - tl.x, h: br.y - tl.y };
+}
+
+/** Relief heatmap: hypsometric colours with hill-shading, pre-rendered once. */
+function drawHeat(ctx: CanvasRenderingContext2D): void {
+  const heat = terrain.heat;
+  if (!heat) return;
+  const r = boxToScreen(heat.latMax, heat.latMin, heat.lonMin, heat.lonMax);
+  ctx.save();
+  ctx.globalAlpha = Number(colors.heatOpacity) || 0.85;
+  ctx.imageSmoothingEnabled = true;
+  ctx.drawImage(heat.image, r.x, r.y, r.w, r.h);
+  ctx.restore();
+}
+
+/** Spot heights in feet, as on an ATC terrain map; zoomed out only the highest ones. */
+function drawPeaks(ctx: CanvasRenderingContext2D): void {
+  ctx.font = `600 11px ${colors.font}`;
+  ctx.fillStyle = colors.peak;
+  const count = Math.round(PEAKS_AT_ZOOM_1 * view.zoom * view.zoom);
+  for (const p of terrain.peaks.slice(0, count)) {
+    const { x, y } = toScreen(p.lat, p.lon);
+    if (x < -20 || y < -20 || x > width + 20 || y > height + 20) continue;
+    ctx.beginPath();
+    ctx.moveTo(x, y - 4);
+    ctx.lineTo(x + 4, y + 3);
+    ctx.lineTo(x - 4, y + 3);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillText(p.elevFt.toLocaleString('en-US'), x + 6, y + 4);
+  }
+}
+
+/** Latitude of the top edge of Web Mercator tile row y at zoom z. */
+function tileLat(y: number, z: number): number {
+  const n = Math.PI - (2 * Math.PI * y) / 2 ** z;
+  return (180 / Math.PI) * Math.atan(Math.sinh(n));
+}
+
+/** Live precipitation radar tiles, drawn over the contour map. */
+function drawWeatherRadar(ctx: CanvasRenderingContext2D): void {
+  if (!wx) return;
+  const { zoom } = wx.info;
+  ctx.save();
+  ctx.globalAlpha = Number(colors.wxOpacity) || 0.8;
+  ctx.imageSmoothingEnabled = false; // radar pixels, not a blur
+  for (const [key, img] of wx.tiles) {
+    const [x, y] = key.split('/').map(Number);
+    const lonMin = (x / 2 ** zoom) * 360 - 180;
+    const lonMax = ((x + 1) / 2 ** zoom) * 360 - 180;
+    const r = boxToScreen(tileLat(y, zoom), tileLat(y + 1, zoom), lonMin, lonMax);
+    ctx.drawImage(img, r.x, r.y, r.w, r.h);
+  }
+  ctx.restore();
+}
+
+/** Keeps the view over the area the map data covers. */
+function clampView(): void {
+  const halfW = width / 2 / pxPerNm;
+  const halfH = height / 2 / pxPerNm;
+  const limitX = Math.max(0, COVERAGE_NM.x - halfW);
+  const limitY = Math.max(0, COVERAGE_NM.y - halfH);
+  view.centerX = Math.min(limitX, Math.max(-limitX, view.centerX));
+  view.centerY = Math.min(limitY, Math.max(-limitY, view.centerY));
+}
+
+async function loadWeatherRadar(): Promise<void> {
+  try {
+    const info = await api<WeatherRadarResponse>('GET', '/weather/radar');
+    if (!info.available) return;
+    if (info.time === wx?.info.time) return;
+    const tiles = new Map<string, HTMLCanvasElement>();
+    const palette = levelsFromTokens({
+      faint: colors.wxFaint,
+      light: colors.wxLight,
+      moderate: colors.wxModerate,
+      heavy: colors.wxHeavy,
+      extreme: colors.wxExtreme,
+    });
+    for (let x = info.xMin; x <= info.xMax; x++) {
+      for (let y = info.yMin; y <= info.yMax; y++) {
+        const img = new Image();
+        img.src =
+          info.tileUrl.replace('{x}', String(x)).replace('{y}', String(y)) + `?t=${info.time}`;
+        img.onload = () => {
+          const recoloured = recolourTile(img, palette);
+          if (recoloured) tiles.set(`${x}/${y}`, recoloured);
+        };
+      }
+    }
+    wx = { info, tiles };
+    radarTime.value = info.time;
+  } catch {
+    // No radar right now; the next refresh tries again.
+  }
 }
 
 function drawRings(ctx: CanvasRenderingContext2D): void {
@@ -247,11 +409,12 @@ function drawAirport(ctx: CanvasRenderingContext2D): void {
     ctx.setLineDash([]);
     ctx.font = `12px ${colors.font}`;
     ctx.fillStyle = colors.muted;
-    const label = out(CENTRELINE_NM - 3);
+    // Under the centreline, half way out, clear of the approach fix labels.
+    const label = out(CENTRELINE_NM / 2);
     ctx.fillText(
       `ILS ${rwy.id} · ${rwy.ils.ident} ${rwy.ils.frequencyMhz}`,
-      label.x - 40,
-      label.y - 8,
+      label.x - 50,
+      label.y + 18,
     );
   }
 
@@ -627,6 +790,7 @@ function onPointerMove(event: PointerEvent): void {
   drag.moved = true;
   view.centerX = drag.centerX - dx / pxPerNm;
   view.centerY = drag.centerY + dy / pxPerNm;
+  clampView();
 }
 
 function onPointerUp(event: PointerEvent): void {
@@ -644,6 +808,7 @@ function zoomAt(factor: number, x = width / 2, y = height / 2): void {
   const after = screenToNm(x, y);
   view.centerX += before.x - after.x;
   view.centerY += before.y - after.y;
+  clampView();
 }
 
 function onWheel(event: WheelEvent): void {
@@ -665,7 +830,7 @@ async function loadMap(): Promise<void> {
   } catch {
     // The scope works without fixes; they come back on the next load.
   }
-  terrain = await loadTerrain(LRCV, COS_LAT0);
+  terrain = await loadTerrain(LRCV, COS_LAT0, parseStops(colors.heatStops));
 }
 
 onMounted(() => {
@@ -676,12 +841,15 @@ onMounted(() => {
   // Fonts arrive after the first frames; re-read tokens once they are ready.
   void document.fonts?.ready.then(() => (colors = loadColors()));
   void loadMap();
+  void loadWeatherRadar();
+  radarTimer = setInterval(() => void loadWeatherRadar(), RADAR_REFRESH_MS);
   frame = requestAnimationFrame(draw);
 });
 
 onBeforeUnmount(() => {
   cancelAnimationFrame(frame);
   resizeObserver?.disconnect();
+  clearInterval(radarTimer);
 });
 </script>
 
@@ -701,6 +869,38 @@ onBeforeUnmount(() => {
       @auxclick.prevent
       @wheel="onWheel"
     />
+    <div class="map-modes mono" role="group" aria-label="Map background">
+      <button
+        v-for="m in MAP_MODES"
+        :key="m.id"
+        type="button"
+        :class="{ on: mapMode === m.id }"
+        :aria-pressed="mapMode === m.id"
+        @click="setMapMode(m.id)"
+      >
+        {{ m.label }}
+      </button>
+    </div>
+    <div v-if="mapMode === 'terrain'" class="map-legend mono" aria-label="Terrain legend">
+      <span class="scale terrain-scale" aria-hidden="true" />
+      <span class="ticks"
+        ><span>0</span><span>2,000</span><span>5,000</span><span>8,000 ft</span></span
+      >
+      <span class="note">SPOT HEIGHTS IN FT · SRTM</span>
+    </div>
+    <div v-else-if="mapMode === 'wx'" class="map-legend mono" aria-label="Weather radar legend">
+      <span class="wx-keys">
+        <span><i class="key light" />LGT</span>
+        <span><i class="key moderate" />MOD</span>
+        <span><i class="key heavy" />HVY</span>
+        <span><i class="key extreme" />EXTR</span>
+      </span>
+      <span class="note">
+        {{
+          radarTime ? `PRECIP RADAR ${radarTime.slice(11, 16)}Z · RAINVIEWER` : 'RADAR UNAVAILABLE'
+        }}
+      </span>
+    </div>
     <div class="map-controls" role="group" aria-label="Map view">
       <button type="button" aria-label="Zoom in" title="Zoom in" @click="zoomAt(ZOOM_STEP)">
         <svg
@@ -771,6 +971,109 @@ canvas {
 
 canvas.panning {
   cursor: grabbing;
+}
+
+/* Map background switcher, top centre of the scope. */
+.map-modes {
+  position: absolute;
+  top: var(--space-4);
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--color-panel-overlay);
+  border: var(--border-width) solid var(--color-border-strong);
+  border-radius: var(--radius-card);
+}
+
+.map-modes button {
+  min-height: 32px;
+  padding: 0 var(--space-3);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  background: transparent;
+  border: var(--border-width) solid transparent;
+  border-radius: var(--radius);
+}
+
+.map-modes button.on {
+  color: var(--color-atc);
+  background: var(--color-atc-selected-bg);
+  border-color: var(--color-atc);
+}
+
+/* Under the map switcher, small, so it never hides traffic for long. */
+.map-legend {
+  position: absolute;
+  bottom: 120px;
+  left: var(--space-4);
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--color-text-muted);
+  background: var(--color-panel-overlay);
+  border: var(--border-width) solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.scale {
+  width: 220px;
+  height: 8px;
+  border-radius: 4px;
+}
+
+.terrain-scale {
+  background: var(--terrain-heat-gradient);
+}
+
+.ticks {
+  width: 220px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.wx-keys {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.wx-keys span {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.key {
+  width: 12px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.key.light {
+  background: var(--wx-light);
+}
+
+.key.moderate {
+  background: var(--wx-moderate);
+}
+
+.key.heavy {
+  background: var(--wx-heavy);
+}
+
+.key.extreme {
+  background: var(--wx-extreme);
+}
+
+.note {
+  letter-spacing: 0.06em;
+  color: var(--color-text-faint);
 }
 
 .map-controls {

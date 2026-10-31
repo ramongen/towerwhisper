@@ -50,7 +50,14 @@ const RUNWAYS = [
 
 // ENR 4.1 / AD 2.19
 const NAVAIDS = [
-  { ident: 'CRV', name: 'CRAIOVA', type: 'DVOR/DME', frequencyMhz: '110.200', lat: dms(44, 19, 7), lon: dms(23, 55, 21.9) },
+  {
+    ident: 'CRV',
+    name: 'CRAIOVA',
+    type: 'DVOR/DME',
+    frequencyMhz: '110.200',
+    lat: dms(44, 19, 7),
+    lon: dms(23, 55, 21.9),
+  },
 ];
 
 // AD 2.9-51 ILS Z RWY 26: initial approach fixes and intermediate fix.
@@ -65,7 +72,10 @@ for (const m of text.matchAll(re)) {
   const lon = dms(m[5], m[6], m[7]);
   const distanceNm = Math.hypot((lon - AIRPORT.lon) * 60 * cosLat, (lat - AIRPORT.lat) * 60);
   if (distanceNm > RADIUS_NM) continue;
-  const routes = m[8].replace(/\s*FRA.*$/, '').replace(/\s*NIL\s*$/, '').trim();
+  const routes = m[8]
+    .replace(/\s*FRA.*$/, '')
+    .replace(/\s*NIL\s*$/, '')
+    .trim();
   fixes.push({
     name: m[1],
     lat,
@@ -80,6 +90,10 @@ for (const name of Object.keys(APPROACH_ROLES)) {
 
 writeFileSync(
   OUT,
-  JSON.stringify({ source: AIRAC, airport: AIRPORT, runways: RUNWAYS, navaids: NAVAIDS, fixes }, null, 2) + '\n',
+  JSON.stringify(
+    { source: AIRAC, airport: AIRPORT, runways: RUNWAYS, navaids: NAVAIDS, fixes },
+    null,
+    2,
+  ) + '\n',
 );
 console.log(`${fixes.length} fixes within ${RADIUS_NM} NM -> ${OUT}`);
