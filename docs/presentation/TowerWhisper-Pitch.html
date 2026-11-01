@@ -311,8 +311,8 @@
     <g>
       <rect class="box" x="976" y="40" width="216" height="190" rx="16"/>
       <text class="t-name" x="1084" y="108" text-anchor="middle">Parser</text>
-      <text class="t-sub" x="1084" y="152" text-anchor="middle">ICAO, reguli</text>
-      <text class="t-sub" x="1084" y="190" text-anchor="middle">Claude: rezervă</text>
+      <text class="t-sub" x="1084" y="152" text-anchor="middle">frazeologie</text>
+      <text class="t-sub" x="1084" y="190" text-anchor="middle">ICAO, reguli</text>
     </g>
     <g>
       <rect class="box-ok" x="1220" y="40" width="216" height="190" rx="16"/>
@@ -343,8 +343,7 @@
   </div>
   <aside class="notes">1:45–2:30 · Controlorul ține Space și vorbește. Browserul înregistrează și trimite audio-ul la backend,
     care îl dă lui Whisper, rulat local într-un container Docker, pe GPU dacă există, altfel pe CPU: audio-ul
-    nu pleacă din laptop. Textul trece prin parserul de frazeologie ICAO, cu reguli; Claude intervine doar
-    ca rezervă, pe text, când nicio regulă nu se potrivește. Verificările de siguranță sunt cod determinist,
+    nu pleacă din laptop. Textul trece prin parserul de frazeologie ICAO, bazat pe reguli. Verificările de siguranță sunt cod determinist,
     fără AI: AI-ul doar înțelege vorbirea, nu ia decizii. (Precizare dacă întreabă: o cheie OpenAI, dacă e
     configurată, e doar rezervă pentru transcriere; în configurația de demo nu e.)</aside>
 </section>
