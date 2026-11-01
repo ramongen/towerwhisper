@@ -1,0 +1,395 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TowerWhisper — pitch 3 minute</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap">
+<!-- Design tokens: the same file the app uses. -->
+<link rel="stylesheet" href="../../apps/web/src/styles/tokens.css">
+<style>
+  /*
+   * 3-minute pitch: the deck runs behind the speakers. Few words, big type (read from the back
+   * of a room), real screenshots. Same look as TowerWhisper-slides.html.
+   *   open the file          one slide at a time; arrows / click to move, N for speaker notes
+   *   ?print                 every slide, for the PDF export
+   *   ?slide=n               slide n alone (for checking one page)
+   */
+  :root {
+    --p-huge: 220px;
+    --p-title: 96px;
+    --p-big: 64px;
+    --p-body: 48px;
+    --p-small: 36px;
+    --pad-x: 128px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: #000; }
+  body { font-family: var(--font-ui); color: var(--color-text); -webkit-font-smoothing: antialiased; }
+  .mono { font-family: var(--font-data); }
+  p { margin: 0; }
+
+  .slide {
+    width: 1920px; height: 1080px; position: relative; overflow: hidden;
+    background: var(--color-bg);
+    padding: 96px var(--pad-x);
+    display: flex; flex-direction: column;
+  }
+  .center { justify-content: center; }
+  .kicker {
+    font-family: var(--font-data); font-size: var(--p-small); font-weight: 700;
+    letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-text-muted);
+  }
+  .atc { color: var(--color-atc); }
+  .ok { color: var(--color-ok); }
+  .muted { color: var(--color-text-muted); }
+  .secondary { color: var(--color-text-secondary); }
+  .notes { display: none; }
+
+  /* 1. Title */
+  .logo { width: 220px; height: 220px; border-radius: 48px; display: block; }
+
+  /* 3. Three columns */
+  .cols { display: flex; gap: 56px; }
+  .col-card {
+    flex: 1; padding: 64px 48px 56px; text-align: center;
+    background: var(--color-panel); border: 2px solid var(--color-border-strong); border-radius: 24px;
+  }
+  .col-card svg { width: 160px; height: 160px; display: block; margin: 0 auto 40px; }
+  .col-card p { font-size: var(--p-big); font-weight: 700; line-height: 1.15; }
+
+  /* 4. Full-bleed screenshot */
+  .bleed { padding: 0; }
+  .bleed img { width: 1920px; height: 1080px; display: block; }
+  .live-label {
+    position: absolute; left: 896px; top: 108px;
+    display: flex; align-items: center; gap: 16px;
+    padding: 12px 30px; border-radius: 40px;
+    font-family: var(--font-data); font-size: 32px; font-weight: 700; letter-spacing: 0.14em;
+    color: var(--color-warning-text); background: rgba(10, 16, 23, 0.92);
+    border: 2px solid var(--color-warning);
+  }
+  .live-label i { width: 18px; height: 18px; border-radius: 50%; background: var(--color-warning); }
+
+  /* 5. Alert screenshot, phone, alert types */
+  .shot { display: block; border: 2px solid var(--color-border-strong); border-radius: 20px; }
+  .phone {
+    width: 300px; border: 12px solid #1b2733; border-radius: 40px; overflow: hidden; background: #000;
+  }
+  .phone img { display: block; width: 100%; }
+  .chips { display: flex; flex-wrap: wrap; gap: 18px 22px; }
+  .chip {
+    display: flex; align-items: center; gap: 16px;
+    padding: 14px 26px; border-radius: 16px; font-size: var(--p-small); font-weight: 600;
+    background: var(--color-panel); border: 2px solid var(--color-border-strong);
+  }
+  .chip i { width: 24px; height: 24px; border-radius: 6px; flex: none; }
+  .chip i.warning { background: var(--color-warning); }
+  .chip i.caution { background: var(--color-caution); }
+
+  /* 6. Flow */
+  svg text { font-family: var(--font-ui); fill: var(--color-text); }
+  svg .t-name { font-size: 38px; font-weight: 700; }
+  svg .t-sub { font-size: 26px; fill: var(--color-text-secondary); }
+  svg .t-edge { font-family: var(--font-data); font-size: 26px; fill: var(--color-text-muted); }
+  svg .box { fill: var(--color-panel); stroke: var(--color-border-control); stroke-width: 2.5; }
+  svg .box-atc { fill: var(--color-atc-bg); stroke: var(--color-atc); stroke-width: 2.5; }
+  svg .box-ok { fill: var(--color-panel); stroke: var(--color-ok); stroke-width: 2.5; }
+  svg .box-warn { fill: var(--color-warning-bg); stroke: var(--color-warning); stroke-width: 2.5; }
+  svg .arrow { stroke: var(--color-text-muted); stroke-width: 4; fill: none; }
+  svg .lead { stroke: var(--color-text-faint); stroke-width: 3; fill: none; stroke-dasharray: 10 8; }
+  .callout {
+    position: absolute; padding: 28px 36px; border-radius: 20px;
+    font-size: 44px; font-weight: 700; line-height: 1.2;
+    background: var(--color-panel);
+  }
+
+  /* 7. Business */
+  .facts { display: flex; flex-direction: column; gap: 40px; }
+  .fact { display: flex; align-items: baseline; gap: 40px; }
+  .fact .kicker { width: 360px; flex: none; }
+  .fact p { font-size: var(--p-big); font-weight: 700; line-height: 1.15; }
+  .steps { display: flex; align-items: stretch; gap: 0; margin-top: 88px; }
+  .step {
+    flex: 1; padding: 36px 36px 40px; border-radius: 20px;
+    background: var(--color-panel); border: 2px solid var(--color-border-strong);
+  }
+  .step .n { font-family: var(--font-data); font-size: 32px; font-weight: 700; color: var(--color-atc); margin-bottom: 14px; }
+  .step p { font-size: 44px; font-weight: 700; line-height: 1.2; }
+  .step.last { border-color: var(--color-atc); background: var(--color-atc-bg); }
+  .step-arrow { width: 96px; flex: none; display: grid; place-items: center; }
+  .step-arrow svg { width: 64px; height: 64px; }
+
+  /* Viewer: one slide at a time, scaled to the window. */
+  body.viewer { height: 100vh; overflow: hidden; display: grid; place-items: center; }
+  body.viewer .slide { display: none; position: absolute; left: 50%; top: 50%; transform-origin: center; }
+  body.viewer .slide.on { display: flex; }
+  body.single .slide { display: none; }
+  body.single .slide.on { display: flex; }
+  .notes-panel {
+    display: none; position: fixed; left: 0; right: 0; bottom: 0; z-index: 10;
+    padding: 18px 28px; max-height: 40vh; overflow: auto;
+    font: 20px/1.45 var(--font-ui); color: var(--color-text);
+    background: rgba(10, 16, 23, 0.96); border-top: 2px solid var(--color-atc);
+  }
+  body.show-notes .notes-panel { display: block; }
+  @page { size: 1920px 1080px; margin: 0; }
+  @media print { .slide { break-after: page; } .notes-panel { display: none !important; } }
+</style>
+</head>
+<body>
+
+<!-- 1. Titlu (0:00) -->
+<section class="slide center">
+  <svg width="900" height="900" viewBox="0 0 1100 1100" style="position:absolute;right:-400px;top:90px" aria-hidden="true">
+    <g fill="none" stroke="var(--radar-ring)" stroke-width="2">
+      <circle cx="550" cy="550" r="160"/><circle cx="550" cy="550" r="300"/><circle cx="550" cy="550" r="440"/>
+    </g>
+    <line x1="550" y1="60" x2="550" y2="1040" stroke="var(--radar-ring)" stroke-width="2"/>
+    <line x1="60" y1="550" x2="1040" y2="550" stroke="var(--radar-ring)" stroke-width="2"/>
+    <path d="M550 550 L550 110 A440 440 0 0 1 931 330 Z" fill="var(--color-atc)" fill-opacity="0.08"/>
+    <line x1="550" y1="550" x2="931" y2="330" stroke="var(--color-atc)" stroke-width="3" stroke-opacity="0.6"/>
+  </svg>
+  <div style="display:flex;align-items:center;gap:56px;margin-bottom:56px">
+    <!-- The app's own icon (apps/web/public/favicon.svg). -->
+    <svg class="logo" viewBox="0 0 64 64" aria-hidden="true">
+      <rect width="64" height="64" rx="14" fill="#0a1017" stroke="#1f4a55" stroke-width="1"/>
+      <circle cx="32" cy="32" r="22" fill="none" stroke="#1f4a55" stroke-width="3"/>
+      <circle cx="32" cy="32" r="12" fill="none" stroke="#1f4a55" stroke-width="3"/>
+      <path d="M32 32 L32 10 A22 22 0 0 1 51 21 Z" fill="#3fd0e8" fill-opacity="0.35"/>
+      <path d="M32 32 L51 21" stroke="#3fd0e8" stroke-width="3.5" stroke-linecap="round"/>
+      <circle cx="32" cy="32" r="3.5" fill="#3fd0e8"/>
+      <rect x="40" y="38" width="7" height="7" fill="none" stroke="#e6edf3" stroke-width="2.5"/>
+    </svg>
+    <h1 style="font-size:150px;line-height:1;margin:0;font-weight:800;letter-spacing:-0.02em">TowerWhisper</h1>
+  </div>
+  <p style="font-size:var(--p-big);line-height:1.25;max-width:1150px" class="secondary">Copilot AI pentru controlorul<br>de trafic aerian</p>
+  <p class="kicker atc" style="margin-top:72px">Ardeal Team</p>
+  <aside class="notes">0:00 · Ne prezentăm: TowerWhisper, un copilot AI pentru controlorul de trafic aerian.</aside>
+</section>
+
+<!-- 2. Tenerife (0:00–0:25) -->
+<section class="slide center" style="align-items:center;text-align:center">
+  <p class="mono muted" style="font-size:var(--p-big);font-weight:500;letter-spacing:0.04em">27 martie 1977 · Tenerife</p>
+  <p style="font-size:var(--p-huge);font-weight:800;line-height:1.05;letter-spacing:-0.03em;margin:48px 0 64px">583 de vieți</p>
+  <p class="secondary" style="font-size:var(--p-body)">O comunicare radio neînțeleasă.</p>
+  <aside class="notes">0:00–0:25 · Tenerife, 27 martie 1977: 583 de oameni au murit. Între cauze, o comunicare radio
+    neînțeleasă între turn și echipaj. (Nu spunem că TowerWhisper ar fi prevenit accidentul.) Vocea pe
+    frecvență e și azi canalul principal, iar o confirmare greșită poate trece neobservată.</aside>
+</section>
+
+<!-- 3. Ce face (0:25–0:50) -->
+<section class="slide center">
+  <div class="cols">
+    <div class="col-card">
+      <!-- Controller: headset -->
+      <svg viewBox="0 0 64 64" fill="none" stroke="var(--color-atc)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M12 36v-6a20 20 0 0 1 40 0v6"/>
+        <rect x="8" y="34" width="10" height="16" rx="4"/>
+        <rect x="46" y="34" width="10" height="16" rx="4"/>
+        <path d="M51 50c0 6-6 8-14 8h-3"/>
+        <circle cx="31" cy="58" r="2.5" fill="var(--color-atc)"/>
+      </svg>
+      <p>Ascultă controlorul</p>
+    </div>
+    <div class="col-card">
+      <!-- Pilot: aircraft with radio waves -->
+      <svg viewBox="0 0 64 64" fill="none" stroke="var(--color-pilot)" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M30 8c2 0 3 2 3 5v11l18 10v5l-18-5v10l5 4v4l-8-2-8 2v-4l5-4V34l-18 5v-5l18-10V13c0-3 1-5 3-5z" transform="translate(-4 4)"/>
+        <path d="M50 10a12 12 0 0 1 0 17"/>
+        <path d="M56 5a20 20 0 0 1 0 27"/>
+      </svg>
+      <p>Ascultă pilotul</p>
+    </div>
+    <div class="col-card">
+      <!-- Radar -->
+      <svg viewBox="0 0 64 64" fill="none" stroke-width="3.5" stroke-linecap="round" aria-hidden="true">
+        <circle cx="32" cy="32" r="26" stroke="var(--color-border-control)"/>
+        <circle cx="32" cy="32" r="14" stroke="var(--color-border-control)"/>
+        <path d="M32 32 L32 6 A26 26 0 0 1 54 18 Z" fill="var(--color-ok)" fill-opacity="0.25" stroke="none"/>
+        <path d="M32 32 L54 18" stroke="var(--color-ok)"/>
+        <rect x="40" y="38" width="8" height="8" stroke="var(--color-text)" stroke-width="3"/>
+      </svg>
+      <p>Urmărește radarul</p>
+    </div>
+  </div>
+  <p style="font-size:var(--p-big);font-weight:700;text-align:center;margin-top:88px">Dacă nu se potrivesc, controlorul <span class="atc">află imediat.</span></p>
+  <aside class="notes">0:25–0:50 · TowerWhisper ascultă ce spune controlorul, ascultă ce confirmă pilotul și urmărește pe
+    radar ce face avionul. Dacă instrucțiunea, confirmarea și manevra nu se potrivesc, controlorul primește
+    imediat o alertă care spune exact ce nu e în regulă.</aside>
+</section>
+
+<!-- 4. Live demo (0:50) -->
+<section class="slide bleed">
+  <img src="screens/pitch-controller.png" width="1920" height="1080" alt="Ecranul controlorului cu trafic în jurul Craiovei">
+  <div class="live-label"><i></i>LIVE DEMO</div>
+  <aside class="notes">0:50 · Trecem la aplicație. (Dacă demo-ul live nu merge, vorbim peste acest ecran: radarul cu traficul
+    din jurul Craiovei, comunicațiile în dreapta, readback confirmat cu verde.)</aside>
+</section>
+
+<!-- 5. Ce prinde (până la 1:45) -->
+<section class="slide center">
+  <div style="display:flex;gap:56px;align-items:center">
+    <!-- Crop of screens/02-hearback-mismatch.png (x 560-1262, y 390-690), scaled 1.766x. -->
+    <div class="shot" role="img" aria-label="Alerta HEARBACK MISMATCH: s-a cerut 4000 ft, pilotul a confirmat 6000 ft"
+         style="width:1240px;height:530px;background:url(screens/02-hearback-mismatch.png) -989px -689px / 3391px auto no-repeat"></div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:20px">
+      <div class="phone"><img src="screens/05-demo-panel.png" alt="Panoul de demo pe telefon"></div>
+      <p class="secondary" style="font-size:30px;text-align:center;line-height:1.25">erori injectate live<br>de pe telefon</p>
+    </div>
+  </div>
+  <div class="chips" style="margin-top:56px">
+    <span class="chip"><i class="warning"></i>readback greșit</span>
+    <span class="chip"><i class="caution"></i>readback incomplet</span>
+    <span class="chip"><i class="caution"></i>fără răspuns</span>
+    <span class="chip"><i class="warning"></i>viraj greșit</span>
+    <span class="chip"><i class="warning"></i>depășire de nivel</span>
+    <span class="chip"><i class="caution"></i><i class="warning" style="margin-left:-8px"></i>fără contact</span>
+  </div>
+  <aside class="notes">Până la 1:45 · Aici: s-a cerut 4000 de picioare, pilotul a confirmat 6000, alerta spune exact asta.
+    Prinde readback greșit sau incomplet, lipsa răspunsului, viraj în sens opus, depășirea nivelului și
+    avioanele cu care nu s-a mai vorbit de mult (timer galben, apoi roșu). Erorile le injectăm live de pe
+    telefon, din panoul de demo.</aside>
+</section>
+
+<!-- 6. Cum funcționează vocea (1:45–2:30) -->
+<section class="slide" style="padding-top:190px">
+  <p class="kicker" style="margin-bottom:56px">Vocea, de la microfon la alertă</p>
+  <svg viewBox="0 0 1680 330" width="1680" height="330" role="img"
+       aria-label="Microfon, browser, backend NestJS, Whisper local, parser ICAO, verificări de siguranță, alertă">
+    <defs>
+      <marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="var(--color-text-muted)"/></marker>
+    </defs>
+    <!-- 7 steps, 200 wide, 44 apart: x = 0, 244, 488, 732, 976, 1220, 1464 -->
+    <g>
+      <rect class="box-atc" x="0" y="40" width="216" height="190" rx="16"/>
+      <text class="t-name" x="108" y="120" text-anchor="middle">Microfon</text>
+      <text class="t-sub" x="108" y="168" text-anchor="middle">tasta Space</text>
+    </g>
+    <g>
+      <rect class="box" x="244" y="40" width="216" height="190" rx="16"/>
+      <text class="t-name" x="352" y="120" text-anchor="middle">Browser</text>
+      <text class="t-sub" x="352" y="168" text-anchor="middle">înregistrează</text>
+    </g>
+    <g>
+      <rect class="box" x="488" y="40" width="216" height="190" rx="16"/>
+      <text class="t-name" x="596" y="120" text-anchor="middle">Backend</text>
+      <text class="t-sub" x="596" y="168" text-anchor="middle">NestJS</text>
+    </g>
+    <g>
+      <rect class="box-atc" x="732" y="40" width="216" height="190" rx="16"/>
+      <text class="t-name" x="840" y="108" text-anchor="middle">Whisper</text>
+      <text class="t-sub" x="840" y="152" text-anchor="middle">local, Docker</text>
+      <text class="t-sub" x="840" y="190" text-anchor="middle">GPU sau CPU</text>
+    </g>
+    <g>
+      <rect class="box" x="976" y="40" width="216" height="190" rx="16"/>
+      <text class="t-name" x="1084" y="108" text-anchor="middle">Parser</text>
+      <text class="t-sub" x="1084" y="152" text-anchor="middle">ICAO, reguli</text>
+      <text class="t-sub" x="1084" y="190" text-anchor="middle">Claude: rezervă</text>
+    </g>
+    <g>
+      <rect class="box-ok" x="1220" y="40" width="216" height="190" rx="16"/>
+      <text class="t-name" x="1328" y="108" text-anchor="middle">Verificări</text>
+      <text class="t-sub" x="1328" y="152" text-anchor="middle">cod determinist</text>
+      <text class="t-sub" x="1328" y="190" text-anchor="middle">fără AI</text>
+    </g>
+    <g>
+      <rect class="box-warn" x="1464" y="40" width="216" height="190" rx="16"/>
+      <text class="t-name" x="1572" y="120" text-anchor="middle">Alertă</text>
+      <text class="t-sub" x="1572" y="168" text-anchor="middle">cu motivul</text>
+    </g>
+    <g class="arrow" marker-end="url(#ah)">
+      <line x1="218" y1="135" x2="240" y2="135"/><line x1="462" y1="135" x2="484" y2="135"/>
+      <line x1="706" y1="135" x2="728" y2="135"/><line x1="950" y1="135" x2="972" y2="135"/>
+      <line x1="1194" y1="135" x2="1216" y2="135"/><line x1="1438" y1="135" x2="1460" y2="135"/>
+    </g>
+    <text class="t-edge" x="961" y="28" text-anchor="middle">text</text>
+    <!-- Leads to the two callouts below -->
+    <path class="lead" d="M840 232 V330"/>
+    <path class="lead" d="M1328 232 V330"/>
+  </svg>
+  <div class="callout" style="left:560px;top:624px;width:580px;border:2px solid var(--color-atc)">
+    <span class="atc">Audio-ul nu părăsește laptopul.</span>
+  </div>
+  <div class="callout" style="left:1160px;top:624px;width:660px;border:2px solid var(--color-ok)">
+    AI-ul înțelege vorbirea.<br><span class="ok">Nu ia decizii de siguranță.</span>
+  </div>
+  <aside class="notes">1:45–2:30 · Controlorul ține Space și vorbește. Browserul înregistrează și trimite audio-ul la backend,
+    care îl dă lui Whisper, rulat local într-un container Docker, pe GPU dacă există, altfel pe CPU: audio-ul
+    nu pleacă din laptop. Textul trece prin parserul de frazeologie ICAO, cu reguli; Claude intervine doar
+    ca rezervă, pe text, când nicio regulă nu se potrivește. Verificările de siguranță sunt cod determinist,
+    fără AI: AI-ul doar înțelege vorbirea, nu ia decizii. (Precizare dacă întreabă: o cheie OpenAI, dacă e
+    configurată, e doar rezervă pentru transcriere; în configurația de demo nu e.)</aside>
+</section>
+
+<!-- 7. Business (2:30–2:50) -->
+<section class="slide center">
+  <div class="facts">
+    <div class="fact"><span class="kicker">Cine plătește</span><p>Furnizorii de trafic aerian<br><span class="muted" style="font-size:var(--p-body);font-weight:600">ex. ROMATSA</span></p></div>
+    <div class="fact"><span class="kicker">Cum</span><p>Instalat la client, în rețeaua lui,<br><span class="atc">fără cloud</span></p></div>
+  </div>
+  <div class="steps">
+    <div class="step"><p class="n">1</p><p>Centre de pregătire</p></div>
+    <div class="step-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div>
+    <div class="step"><p class="n">2</p><p>Testare în paralel cu un sector real</p></div>
+    <div class="step-arrow"><svg viewBox="0 0 24 24" fill="none" stroke="var(--color-text-muted)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h15M13 6l6 6-6 6"/></svg></div>
+    <div class="step last"><p class="n">3</p><p>Operațional</p></div>
+  </div>
+  <aside class="notes">2:30–2:50 · Plătesc furnizorii de servicii de trafic aerian, ca ROMATSA; EASA e regulatorul, nu clientul.
+    Se instalează la client, în rețeaua lui, fără cloud. Începem cu centrele de pregătire, apoi testare în
+    paralel cu un sector real (shadow mode: alertele doar se înregistrează), abia apoi operațional.</aside>
+</section>
+
+<!-- 8. Încheiere (2:50–3:00) -->
+<section class="slide center">
+  <p style="font-size:84px;font-weight:800;line-height:1.15;letter-spacing:-0.01em;max-width:1600px">
+    Controlorul decide.<br><span class="atc">TowerWhisper</span> se asigură că nimic<br>nu trece neauzit.
+  </p>
+  <p class="mono secondary" style="font-size:var(--p-small);margin-top:96px">github.com/ramongen/towerwhisper</p>
+  <aside class="notes">2:50–3:00 · Controlorul decide. TowerWhisper se asigură că nimic nu trece neauzit. Mulțumim!</aside>
+</section>
+
+<div class="notes-panel" aria-live="polite"></div>
+
+<script>
+  (function () {
+    const slides = [...document.querySelectorAll('.slide')];
+    const total = slides.length;
+    const params = new URLSearchParams(location.search);
+    if (params.has('print')) return;
+    if (params.has('slide')) {
+      document.body.classList.add('single');
+      slides[Number(params.get('slide')) - 1]?.classList.add('on');
+      return;
+    }
+    document.body.classList.add('viewer');
+    const panel = document.querySelector('.notes-panel');
+    let current = Math.min(Math.max(Number(location.hash.slice(1)) || 1, 1), total) - 1;
+    function fit() {
+      const k = Math.min(innerWidth / 1920, innerHeight / 1080);
+      slides.forEach((s) => (s.style.transform = `translate(-50%, -50%) scale(${k})`));
+    }
+    function show(i) {
+      current = Math.min(Math.max(i, 0), total - 1);
+      slides.forEach((s, j) => s.classList.toggle('on', j === current));
+      const note = slides[current].querySelector('.notes');
+      panel.textContent = `${current + 1} / ${total} · ${note ? note.textContent.replace(/\s+/g, ' ').trim() : ''}`;
+      history.replaceState(null, '', '#' + (current + 1));
+    }
+    addEventListener('resize', fit);
+    addEventListener('keydown', (e) => {
+      if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) show(current + 1);
+      if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) show(current - 1);
+      if (e.key === 'Home') show(0);
+      if (e.key === 'End') show(total - 1);
+      if (e.key === 'n' || e.key === 'N') document.body.classList.toggle('show-notes');
+    });
+    addEventListener('click', (e) => show(current + (e.clientX < innerWidth / 3 ? -1 : 1)));
+    fit();
+    show(current);
+  })();
+</script>
+</body>
+</html>
