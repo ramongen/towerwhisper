@@ -73,7 +73,7 @@
   .live-label i { width: 18px; height: 18px; border-radius: 50%; background: var(--color-warning); }
 
   /* 5. Alert screenshot, phone, alert types */
-  .shot { display: block; border: 2px solid var(--color-border-strong); border-radius: 20px; }
+  .shot { display: block; flex: none; border: 2px solid var(--color-border-strong); border-radius: 20px; }
   .phone {
     width: 300px; border: 12px solid #1b2733; border-radius: 40px; overflow: hidden; background: #000;
   }
@@ -253,7 +253,32 @@
     telefon, din panoul de demo.</aside>
 </section>
 
-<!-- 6. Cum funcționează vocea (1:45–2:30) -->
+<!-- 6. Supervizor: toate sectoarele -->
+<section class="slide center">
+  <p class="kicker atc" style="margin-bottom:14px">Supervizor</p>
+  <p style="font-size:var(--p-big);font-weight:700;margin-bottom:48px">Toate sectoarele, live, dintr-o privire.</p>
+  <!-- Crop of screens/pitch-supervisor-overview.png (x 100-1820, y 70-690): sector cards and statistics. -->
+  <div class="shot" role="img" aria-label="Dashboard-ul supervizorului: cinci sectoare live, alertele active și statisticile pe 24 de ore"
+       style="width:1664px;height:600px;background:url(screens/pitch-supervisor-overview.png) -97px -68px / 1857px auto no-repeat"></div>
+  <aside class="notes">Supervizorul vede toate cele cinci sectoare în paralel: cine e logat, alertele active, cât durează
+    până sunt rezolvate și cum evoluează pe ultimele 24 de ore.</aside>
+</section>
+
+<!-- 7. Supervizor: replay la un incident -->
+<section class="slide" style="padding-top:56px;align-items:center">
+  <p style="font-size:var(--p-big);font-weight:700;margin-bottom:32px;align-self:flex-start">
+    <span class="kicker atc" style="display:block;margin-bottom:14px">Replay la incident</span>
+    Revezi incidentul: radar, voci, alerte.
+  </p>
+  <!-- Crop of screens/pitch-supervisor-replay.png (x 320-1920, y 56-1080): the replay without the session list, timeline included. -->
+  <div class="shot" role="img" aria-label="Replay la un incident din Timișoara: ATC a cerut viraj dreapta, pilotul a confirmat stânga"
+       style="width:1156px;height:740px;background:url(screens/pitch-supervisor-replay.png) -231px -40px / 1388px auto no-repeat"></div>
+  <aside class="notes">Orice alertă se deschide în replay, cu 20 de secunde înainte: aici, la Timișoara, controlorul a cerut
+    viraj dreapta la 280, pilotul a confirmat stânga. Se văd radarul, transmisiile, cu vocile înregistrate,
+    și alerta, pe un timeline. Util pentru investigații și pentru pregătire.</aside>
+</section>
+
+<!-- 8. Cum funcționează vocea (1:45–2:30) -->
 <section class="slide" style="padding-top:190px">
   <p class="kicker" style="margin-bottom:56px">Vocea, de la microfon la alertă</p>
   <svg viewBox="0 0 1680 330" width="1680" height="330" role="img"
@@ -324,7 +349,7 @@
     configurată, e doar rezervă pentru transcriere; în configurația de demo nu e.)</aside>
 </section>
 
-<!-- 7. Business (2:30–2:50) -->
+<!-- 9. Business (2:30–2:50) -->
 <section class="slide center">
   <div class="facts">
     <div class="fact"><span class="kicker">Cine plătește</span><p>Furnizorii de trafic aerian<br><span class="muted" style="font-size:var(--p-body);font-weight:600">ex. ROMATSA</span></p></div>
@@ -342,7 +367,7 @@
     paralel cu un sector real (shadow mode: alertele doar se înregistrează), abia apoi operațional.</aside>
 </section>
 
-<!-- 8. Încheiere (2:50–3:00) -->
+<!-- 10. Încheiere (2:50–3:00) -->
 <section class="slide center">
   <p style="font-size:84px;font-weight:800;line-height:1.15;letter-spacing:-0.01em;max-width:1600px">
     Controlorul decide.<br><span class="atc">TowerWhisper</span> se asigură că nimic<br>nu trece neauzit.
